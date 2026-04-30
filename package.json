@@ -12,6 +12,8 @@
     "lint:fix": "eslint . --ext .ts,.vue --fix"
   },
   "dependencies": {
+    "@vercel/analytics": "^2.0.1",
+    "@vercel/speed-insights": "^2.0.0",
     "axios": "^1.15.0",
     "clsx": "^2.1.1",
     "echarts": "^6.0.0",
