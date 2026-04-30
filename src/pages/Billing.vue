@@ -226,16 +226,12 @@
 
           <!-- 服务费类型 -->
           <div class="hidden">
-            <label class="block text-sm font-medium text-dunhuang-text mb-2">{{
-              t("billing.fee_type")
-            }}</label>
             <select
               v-model="bill.fee_type"
               required
               class="w-full bg-dunhuang-bg border border-dunhuang-yellow/50 rounded-lg p-3 focus:ring-2 focus:ring-dunhuang-red outline-none"
             >
-              <option value="PERCENTAGE">{{ t("billing.percentage") }}</option>
-              <option value="FIXED">{{ t("billing.fixed") }}</option>
+              <option value="FIXED">固定金额</option>
             </select>
           </div>
 
@@ -1057,13 +1053,7 @@ const tableSumSubtotal = computed(() =>
 const tableSumFee = computed(() =>
   Number(
     paginatedBills.value
-      .reduce((s, b) => {
-        const v =
-          b.fee_type === "PERCENTAGE"
-            ? (b.subtotal || 0) * ((b.fee_value || 0) / 100)
-            : b.fee_value || 0;
-        return s + v;
-      }, 0)
+      .reduce((s, b) => s + ((b.total_amount || 0) - (b.subtotal || 0)), 0)
       .toFixed(2),
   ),
 );
@@ -1120,10 +1110,8 @@ const formatUpdateDiff = (
     ]);
 
     if (oldD.fee_type !== newD.fee_type || oldD.fee_value !== newD.fee_value) {
-      const fmt = (type: string, val: number) =>
-        type === "PERCENTAGE" ? `${val}%` : `¥${val}`;
-      const oldFee = fmt(oldD.fee_type, oldD.fee_value);
-      const newFee = fmt(newD.fee_type, newD.fee_value);
+      const oldFee = `¥${oldD.fee_value}`;
+      const newFee = `¥${newD.fee_value}`;
       if (oldFee !== newFee)
         result.push({ label: "服务费", old: oldFee, new: newFee });
     }
@@ -1173,11 +1161,6 @@ const subtotal = computed(() => {
 });
 
 const fee = computed(() => {
-  if (bill.value.fee_type === "PERCENTAGE") {
-    return Number(
-      (subtotal.value * ((bill.value.fee_value || 0) / 100)).toFixed(2),
-    );
-  }
   return Number((bill.value.fee_value || 0).toFixed(2));
 });
 
@@ -1289,10 +1272,8 @@ const getSpeciesName = (id: number) => {
 };
 
 const formatFee = (b: any) => {
-  if (b.fee_type === "PERCENTAGE") {
-    return `${b.fee_value}%`;
-  }
-  return `+ ¥ ${b.fee_value.toFixed(2)}`;
+  const actualFee = (b.total_amount || 0) - (b.subtotal || 0);
+  return `+ ¥ ${actualFee.toFixed(2)}`;
 };
 
 const saveBill = async () => {

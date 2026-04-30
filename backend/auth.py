@@ -13,7 +13,7 @@ from database import get_db
 SECRET_KEY = "dunhuang-fish-platform-super-secret-key" # In production, use an env var
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24 * 7 # 7 days
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/token")
 
 def verify_password(plain_password, hashed_password):
     if plain_password is None or hashed_password is None:

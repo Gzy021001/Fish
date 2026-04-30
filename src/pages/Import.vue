@@ -133,18 +133,14 @@
                 <td class="p-3">{{ row.weight.toFixed(2) }}</td>
                 <td class="p-3 font-mono">¥ {{ row.unit_price.toFixed(2) }}</td>
                 <td class="p-3">
-                  {{
-                    row.fee_type === "PERCENTAGE"
-                      ? row.fee_value + "%"
-                      : "+ ¥ " + row.fee_value.toFixed(2)
-                  }}
+                  + ¥ {{ row.fee_value.toFixed(2) }}
                 </td>
                 <td class="p-3 font-bold text-dunhuang-red">
                   ¥ {{ calculateRowTotal(row).toFixed(2) }}
                 </td>
               </tr>
               <tr v-if="importRows.length === 0">
-                <td colspan="7" class="p-8 text-center text-dunhuang-text/50">
+                <td colspan="6" class="p-8 text-center text-dunhuang-text/50">
                   未解析到有效数据
                 </td>
               </tr>
@@ -211,14 +207,12 @@ const downloadTemplate = () => {
       品种名称: "东星斑",
       重量: "1.5",
       单价: "120.00",
-      服务费类型: "按比例",
       服务费: "5",
     },
     {
       品种名称: "老虎斑",
       重量: "2.0",
       单价: "85.00",
-      服务费类型: "固定金额",
       服务费: "10",
     },
   ];
@@ -230,7 +224,6 @@ const downloadTemplate = () => {
     { wch: 15 }, // 品种名称
     { wch: 10 }, // 重量
     { wch: 10 }, // 单价
-    { wch: 12 }, // 服务费类型
     { wch: 10 }, // 服务费
   ];
 
@@ -241,12 +234,7 @@ const downloadTemplate = () => {
 
 const calculateRowTotal = (row: any) => {
   const sub = row.weight * row.unit_price;
-  let f = 0;
-  if (row.fee_type === "PERCENTAGE") {
-    f = sub * (row.fee_value / 100);
-  } else {
-    f = row.fee_value;
-  }
+  const f = row.fee_value;
   return Number((sub + f).toFixed(2));
 };
 
@@ -276,10 +264,7 @@ const handleFileUpload = (event: Event) => {
           const weight = parseFloat(row["重量"] || row["Weight"] || 0);
           const unit_price = parseFloat(row["单价"] || row["UnitPrice"] || 0);
           const currency = "CNY";
-          const fee_type =
-            (row["服务费类型"] || row["FeeType"]) === "固定金额"
-              ? "FIXED"
-              : "PERCENTAGE";
+          const fee_type = "FIXED";
           const fee_value = parseFloat(
             row["服务费"] || row["服务费数值"] || row["FeeValue"] || 0,
           );

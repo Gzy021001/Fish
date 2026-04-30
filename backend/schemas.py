@@ -38,7 +38,7 @@ class BillBase(BaseModel):
     weight: float
     unit_price: float
     currency: str = "CNY"
-    fee_type: str = "PERCENTAGE"
+    fee_type: str = "FIXED"
     fee_value: float
     status: str = "DRAFT"
 

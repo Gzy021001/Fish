@@ -32,16 +32,9 @@ def get_bill_or_404(bill_id: int, db: Session):
 #  业务计算函数
 # ============================================================
 
-def calculate_bill_amounts(weight: float, unit_price: float, fee_type: str, fee_value: float):
-    """
-    计算单据金额：小计 → 服务费 → 总金额
-    返回 (subtotal, fee, total_amount)
-    """
+def calculate_bill_amounts(weight: float, unit_price: float, fee_value: float):
     subtotal = round(weight * unit_price, 2)
-    if fee_type == "PERCENTAGE":
-        fee = round(subtotal * (fee_value / 100.0), 2)
-    else:
-        fee = round(fee_value, 2)
+    fee = round(fee_value, 2)
     total_amount = round(subtotal + fee, 2)
     return subtotal, fee, total_amount
 

@@ -27,7 +27,7 @@ class Bill(Base):
     unit_price = Column(Float)
     currency = Column(String(10))
     subtotal = Column(Float)
-    fee_type = Column(String(20)) # "PERCENTAGE" or "FIXED"
+    fee_type = Column(String(20), default="FIXED")
     fee_value = Column(Float)
     total_amount = Column(Float)
     status = Column(String(20), default="DRAFT") # "DRAFT" (开单中), "COMPLETED" (已结算历史)
