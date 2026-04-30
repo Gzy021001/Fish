@@ -1,0 +1,59 @@
+from pathlib import Path
+from fastapi import HTTPException
+from sqlalchemy.orm import Session
+import models
+
+BASE_DIR = Path(__file__).resolve().parent
+UPLOAD_DIR = BASE_DIR / "uploads"
+SPECIES_UPLOAD_DIR = UPLOAD_DIR / "species"
+
+
+# ============================================================
+#  通用查询辅助函数
+# ============================================================
+
+def get_species_or_404(species_id: int, db: Session):
+    """按 ID 查找品种，不存在则返回 404"""
+    species = db.query(models.Species).filter(models.Species.id == species_id).first()
+    if not species:
+        raise HTTPException(status_code=404, detail="未找到该品种")
+    return species
+
+
+def get_bill_or_404(bill_id: int, db: Session):
+    """按 ID 查找单据，不存在则返回 404"""
+    bill = db.query(models.Bill).filter(models.Bill.id == bill_id).first()
+    if not bill:
+        raise HTTPException(status_code=404, detail="未找到该单据")
+    return bill
+
+
+# ============================================================
+#  业务计算函数
+# ============================================================
+
+def calculate_bill_amounts(weight: float, unit_price: float, fee_type: str, fee_value: float):
+    """
+    计算单据金额：小计 → 服务费 → 总金额
+    返回 (subtotal, fee, total_amount)
+    """
+    subtotal = round(weight * unit_price, 2)
+    if fee_type == "PERCENTAGE":
+        fee = round(subtotal * (fee_value / 100.0), 2)
+    else:
+        fee = round(fee_value, 2)
+    total_amount = round(subtotal + fee, 2)
+    return subtotal, fee, total_amount
+
+
+# ============================================================
+#  文件处理函数
+# ============================================================
+
+def delete_species_image_file(image_url: str | None):
+    """删除品种图片文件"""
+    if not image_url:
+        return
+    image_path = BASE_DIR / image_url.lstrip("/").replace("/", "\\")
+    if image_path.exists() and image_path.is_file():
+        image_path.unlink()

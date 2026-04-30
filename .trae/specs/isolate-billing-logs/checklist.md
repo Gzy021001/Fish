@@ -1,0 +1,3 @@
+- [x] `Billing.vue` does not display historical bills upon initial load.
+- [x] Creating a new bill in `Billing.vue` displays it in the Billing list.
+- [x] Editing a historical bill in `Logs.vue` does not affect the Billing page (since Billing page won't have it).
