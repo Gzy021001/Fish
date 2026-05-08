@@ -12,26 +12,32 @@
       </div>
 
       <div class="flex-1 relative min-h-[400px]">
-        <div
-          v-if="loading"
-          class="absolute inset-0 flex items-center justify-center z-20 bg-white/50 backdrop-blur-sm rounded-xl"
-        >
+        <Transition name="fade">
           <div
-            class="animate-spin rounded-full h-12 w-12 border-b-2 border-dunhuang-blue"
-          ></div>
-        </div>
-        <div
-          v-else-if="!hasTrendData && !errorMsg"
-          class="absolute inset-0 flex items-center justify-center text-dunhuang-text/50"
-        >
-          最近暂无价格走势数据
-        </div>
-        <div
-          v-else-if="errorMsg"
-          class="absolute inset-0 flex items-center justify-center text-dunhuang-red"
-        >
-          {{ errorMsg }}
-        </div>
+            v-if="loading"
+            class="absolute inset-0 flex items-center justify-center z-20 bg-white/50 backdrop-blur-sm rounded-xl"
+          >
+            <div
+              class="animate-spin rounded-full h-12 w-12 border-b-2 border-dunhuang-blue"
+            ></div>
+          </div>
+        </Transition>
+        <Transition name="fade">
+          <div
+            v-if="!loading && !hasTrendData && !errorMsg"
+            class="absolute inset-0 flex items-center justify-center text-dunhuang-text/50"
+          >
+            最近暂无价格走势数据
+          </div>
+        </Transition>
+        <Transition name="fade">
+          <div
+            v-if="!loading && errorMsg"
+            class="absolute inset-0 flex items-center justify-center text-dunhuang-red"
+          >
+            {{ errorMsg }}
+          </div>
+        </Transition>
         <div
           v-show="hasTrendData"
           ref="chartRef"
@@ -43,7 +49,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, computed } from "vue";
+import { ref, onMounted, onUnmounted, computed } from "vue";
 import { useI18n } from "vue-i18n";
 import * as echarts from "echarts";
 import api from "../api";
@@ -138,6 +144,7 @@ const fetchAllTrends = async () => {
       // Let the global interceptor handle the redirect
     } else {
       errorMsg.value = "获取价格走势失败。";
+      trendDataMap.value = {};
     }
   } finally {
     loading.value = false;
@@ -198,6 +205,8 @@ const renderChart = () => {
       const color = colorPalette[colorIndex % colorPalette.length];
       colorIndex++;
 
+      const unit = sp.default_unit ?? "";
+
       series.push({
         name: spName,
         type: "line",
@@ -214,8 +223,16 @@ const renderChart = () => {
           color: color,
         },
         data: prices,
+        unit,
       });
     }
+
+    const formatPrice = (value: number): string => {
+      const strVal = String(value);
+      const dotIndex = strVal.indexOf(".");
+      if (dotIndex === -1) return `${strVal}.00`;
+      return `${strVal.substring(0, dotIndex)}.${(strVal.substring(dotIndex + 1) + "00").substring(0, 2)}`;
+    };
 
     const option = {
       legend: {
@@ -229,17 +246,21 @@ const renderChart = () => {
         backgroundColor: "#fdfaf3",
         borderColor: "#c4a35a",
         textStyle: { color: "#3d3226" },
-        valueFormatter: (value: number | string) => {
-          if (value === null || value === undefined || value === "") return "-";
-          // 直接截取两位小数，不进行四舍五入
-          const strVal = String(value);
-          const dotIndex = strVal.indexOf(".");
-          if (dotIndex === -1) {
-            return `${strVal}.00`;
+        formatter: (params: any[]) => {
+          if (!params || params.length === 0) return "";
+          const date = params[0].axisValue;
+          let html = `<div style="font-weight:600;margin-bottom:4px">${date}</div>`;
+          for (const p of params) {
+            if (p.value === null || p.value === undefined) continue;
+            const unit =
+              p.seriesIndex != null
+                ? (option.series?.[p.seriesIndex]?.unit ?? "")
+                : "";
+            const unitSuffix = unit ? `/${unit}` : "";
+            const val = formatPrice(p.value);
+            html += `${p.marker} ${p.seriesName}：${val}${unitSuffix}<br/>`;
           }
-          const intPart = strVal.substring(0, dotIndex);
-          const decPart = strVal.substring(dotIndex + 1);
-          return `${intPart}.${(decPart + "00").substring(0, 2)}`;
+          return html;
         },
       },
       grid: {
@@ -261,16 +282,7 @@ const renderChart = () => {
         axisLine: { show: true, lineStyle: { color: "#c4a35a" } },
         axisLabel: {
           color: "#3d3226",
-          formatter: (value: number) => {
-            const strVal = String(value);
-            const dotIndex = strVal.indexOf(".");
-            if (dotIndex === -1) {
-              return `${strVal}.00`;
-            }
-            const intPart = strVal.substring(0, dotIndex);
-            const decPart = strVal.substring(dotIndex + 1);
-            return `${intPart}.${(decPart + "00").substring(0, 2)}`;
-          },
+          formatter: (value: number) => formatPrice(value),
         },
         splitLine: {
           lineStyle: { color: "#c4a35a", type: "dashed", opacity: 0.3 },
@@ -283,11 +295,21 @@ const renderChart = () => {
   }, 100);
 };
 
+const handleResize = () => {
+  chartInstance?.resize();
+};
+
 onMounted(() => {
   fetchSpecies();
 
-  window.addEventListener("resize", () => {
-    chartInstance?.resize();
-  });
+  window.addEventListener("resize", handleResize);
+});
+
+onUnmounted(() => {
+  window.removeEventListener("resize", handleResize);
+  if (chartInstance) {
+    chartInstance.dispose();
+    chartInstance = null;
+  }
 });
 </script>

@@ -1,5 +1,5 @@
 <template>
-  <div class="min-h-screen flex bg-dunhuang-bg font-sans">
+  <div class="h-screen flex overflow-hidden bg-dunhuang-bg font-sans">
     <!-- 侧边栏 -->
     <aside
       class="w-60 flex flex-col z-10"
@@ -189,7 +189,7 @@
       </header>
 
       <!-- 页面内容 -->
-      <div class="flex-1 p-6 overflow-auto">
+      <div class="flex-1 p-6 overflow-auto custom-scrollbar">
         <router-view v-slot="{ Component }">
           <transition name="fade" mode="out-in">
             <component :is="Component" />

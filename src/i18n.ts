@@ -16,7 +16,7 @@ const messages = {
       logs: '历史单据',
     },
     billing: {
-      species_name: '品种名称',
+      species_name: '品种',
       weight: '重量',
       unit: '单位',
       unit_price: '单价',

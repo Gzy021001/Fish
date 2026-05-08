@@ -25,8 +25,16 @@ export function dateStr(dateStr: string | undefined | null): string {
   return d.toLocaleDateString("zh-CN")
 }
 
+export function formatMoney(value: number | undefined | null): string {
+  if (value == null || !Number.isFinite(value)) return "0.00"
+  return value.toLocaleString("zh-CN", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  })
+}
+
 // ============================================================
-//  审计日志差异对比
+//  操作记录差异对比
 // ============================================================
 
 export interface DiffItem {

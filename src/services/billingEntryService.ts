@@ -1,0 +1,68 @@
+import api from "../api"
+
+export interface ImportRow {
+  name_zh: string
+  unit_price: number
+}
+
+export interface BillEntryInput {
+  species_id: number
+  weight: number
+  unit_price: number
+  fee_value: number
+}
+
+export async function ensureSpecies(
+  nameZh: string,
+  defaultPrice: number,
+  existingList: any[],
+): Promise<any> {
+  const found = existingList.find((s) => s.name_zh === nameZh)
+  if (found) return found
+
+  const spRes = await api.post("/species", {
+    name_zh: nameZh,
+    default_price: defaultPrice,
+    default_unit: "公斤",
+  })
+  const species = spRes.data
+  existingList.push(species)
+  return species
+}
+
+export function buildBillPayload(entry: BillEntryInput) {
+  return {
+    species_id: entry.species_id,
+    weight: entry.weight,
+    unit_price: entry.unit_price,
+    fee_type: "FIXED",
+    fee_value: entry.fee_value,
+    currency: "CNY",
+    status: "COMPLETED",
+  }
+}
+
+export async function saveEntry(entry: BillEntryInput) {
+  const payload = buildBillPayload(entry)
+  const response = await api.post("/bills", payload)
+  return response.data
+}
+
+export async function saveImportedRows(
+  rows: ImportRow[],
+  speciesList: any[],
+): Promise<number> {
+  let saved = 0
+  for (const row of rows) {
+    const species = await ensureSpecies(row.name_zh, row.unit_price, speciesList)
+    const payload: BillEntryInput = {
+      species_id: species.id,
+      weight: 0,
+      unit_price: row.unit_price,
+      fee_value: 0,
+    }
+    await saveEntry(payload)
+    saved++
+  }
+  return saved
+}
