@@ -41,32 +41,39 @@
           <template v-if="bill.id">
             <div
               v-if="editingSpecies"
-              class="rounded-xl border-2 border-dunhuang-red bg-dunhuang-red/5 p-4 flex items-center gap-4"
+              class="rounded-2xl bg-gradient-to-br from-dunhuang-red/[0.06] to-dunhuang-bg p-6 flex items-stretch gap-6 shadow-md ring-1 ring-dunhuang-red/10"
             >
-              <img
-                v-if="editingSpecies.image_url"
-                :src="editingSpecies.image_url"
-                :alt="editingSpecies.name_zh"
-                class="w-16 h-16 rounded-full object-cover border-2 border-dunhuang-yellow/30 shadow-sm"
-              />
               <div
-                v-else
-                class="w-16 h-16 rounded-full bg-dunhuang-yellow/10 border-2 border-dunhuang-yellow/30 flex items-center justify-center text-dunhuang-blue shadow-sm"
+                class="shrink-0 w-32 h-32 rounded-2xl overflow-hidden shadow-md ring-1 ring-dunhuang-yellow/20"
               >
-                <span class="text-xl font-bold">{{
-                  editingSpecies.name_zh
-                    ? editingSpecies.name_zh.charAt(0)
-                    : "?"
-                }}</span>
+                <img
+                  v-if="editingSpecies.image_url"
+                  :src="editingSpecies.image_url"
+                  :alt="editingSpecies.name_zh"
+                  class="w-full h-full object-cover"
+                />
+                <div
+                  v-else
+                  class="w-full h-full bg-dunhuang-yellow/[0.08] flex items-center justify-center text-dunhuang-blue"
+                >
+                  <span class="text-4xl font-bold font-serif opacity-40">{{
+                    editingSpecies.name_zh
+                      ? editingSpecies.name_zh.charAt(0)
+                      : "?"
+                  }}</span>
+                </div>
               </div>
-              <div>
-                <h4 class="font-medium text-dunhuang-blue text-lg">
+              <div class="flex flex-col justify-center min-w-0">
+                <h4 class="font-bold text-dunhuang-blue text-xl mb-2">
                   {{ editingSpecies.name_zh }}
                 </h4>
-                <div class="text-xs text-dunhuang-text/60 mt-1 tabular-nums">
-                  默认: {{ formatMoney(editingSpecies.default_price) }}/{{
-                    editingSpecies.default_unit
-                  }}
+                <div class="text-sm text-dunhuang-text/60 tabular-nums">
+                  参考价
+                  <span
+                    class="text-dunhuang-red font-mono font-bold text-base"
+                    >{{ formatMoney(editingSpecies.default_price) }}</span
+                  >
+                  元/{{ editingSpecies.default_unit }}
                 </div>
               </div>
             </div>
@@ -78,13 +85,10 @@
                   >{{ t("billing.unit_price") }}（元）</label
                 >
                 <input
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  v-model.number="bill.unit_price"
+                  type="text"
+                  :value="(+bill.unit_price || 0).toFixed(2)"
                   disabled
-                  required
-                  class="w-full bg-dunhuang-bg border border-dunhuang-yellow/50 rounded-lg p-3 focus:ring-2 focus:ring-dunhuang-red outline-none font-mono text-dunhuang-red text-lg text-center [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none disabled:opacity-50 disabled:cursor-not-allowed"
+                  class="w-full bg-dunhuang-bg border border-dunhuang-yellow/50 rounded-lg p-3 focus:ring-2 focus:ring-dunhuang-red outline-none font-mono text-dunhuang-red disabled:opacity-50 disabled:cursor-not-allowed"
                 />
               </div>
               <div>
@@ -92,13 +96,12 @@
                   >重量 ({{ editingSpecies?.default_unit ?? "公斤" }})</label
                 >
                 <input
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  v-model.number="bill.weight"
-                  @blur="bill.weight = Number((bill.weight || 0).toFixed(2))"
+                  type="text"
+                  inputmode="decimal"
+                  v-model="bill.weight"
+                  @blur="bill.weight = (+bill.weight || 0).toFixed(2)"
                   required
-                  class="w-full bg-dunhuang-bg border border-dunhuang-yellow/50 rounded-lg p-3 focus:ring-2 focus:ring-dunhuang-red outline-none [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+                  class="w-full bg-dunhuang-bg border border-dunhuang-yellow/50 rounded-lg p-3 focus:ring-2 focus:ring-dunhuang-red outline-none font-mono"
                 />
               </div>
               <div class="hidden">
@@ -111,15 +114,12 @@
                   >服务费（元）</label
                 >
                 <input
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  v-model.number="bill.fee_value"
-                  @blur="
-                    bill.fee_value = Number((bill.fee_value || 0).toFixed(2))
-                  "
+                  type="text"
+                  inputmode="decimal"
+                  v-model="bill.fee_value"
+                  @blur="bill.fee_value = (+bill.fee_value || 0).toFixed(2)"
                   required
-                  class="w-full bg-dunhuang-bg border border-dunhuang-yellow/50 rounded-lg p-3 focus:ring-2 focus:ring-dunhuang-red outline-none [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+                  class="w-full bg-dunhuang-bg border border-dunhuang-yellow/50 rounded-lg p-3 focus:ring-2 focus:ring-dunhuang-red outline-none font-mono"
                 />
               </div>
             </div>
@@ -270,15 +270,17 @@
                           >单价（元）</label
                         >
                         <input
-                          type="number"
-                          step="0.01"
-                          min="0"
+                          type="text"
                           :value="
-                            getEntrySpecies(entry.species_id)?.default_price ??
-                            entry.unit_price
+                            (
+                              getEntrySpecies(entry.species_id)
+                                ?.default_price ??
+                              entry.unit_price ??
+                              0
+                            ).toFixed(2)
                           "
                           disabled
-                          class="w-full bg-dunhuang-bg border border-dunhuang-yellow/40 rounded-lg px-2.5 py-1.5 text-sm focus:ring-2 focus:ring-dunhuang-red outline-none font-mono text-dunhuang-red [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none disabled:opacity-50 disabled:cursor-not-allowed"
+                          class="w-full bg-dunhuang-bg border border-dunhuang-yellow/40 rounded-lg px-2.5 py-1.5 text-sm focus:ring-2 focus:ring-dunhuang-red outline-none font-mono text-dunhuang-red disabled:opacity-50 disabled:cursor-not-allowed"
                         />
                       </div>
                       <div>
@@ -286,16 +288,11 @@
                           >重量 ({{ getEntryUnit(entry.species_id) }})</label
                         >
                         <input
-                          type="number"
-                          step="0.01"
-                          min="0"
-                          v-model.number="entry.weight"
-                          @blur="
-                            entry.weight = Number(
-                              (entry.weight || 0).toFixed(2),
-                            )
-                          "
-                          class="w-full bg-dunhuang-bg border border-dunhuang-yellow/40 rounded-lg px-2.5 py-1.5 text-sm focus:ring-2 focus:ring-dunhuang-red outline-none font-mono [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+                          type="text"
+                          inputmode="decimal"
+                          v-model="entry.weight"
+                          @blur="entry.weight = (+entry.weight || 0).toFixed(2)"
+                          class="w-full bg-dunhuang-bg border border-dunhuang-yellow/40 rounded-lg px-2.5 py-1.5 text-sm focus:ring-2 focus:ring-dunhuang-red outline-none font-mono"
                         />
                       </div>
                       <div>
@@ -303,16 +300,13 @@
                           >服务费（元）</label
                         >
                         <input
-                          type="number"
-                          step="0.01"
-                          min="0"
-                          v-model.number="entry.fee_value"
+                          type="text"
+                          inputmode="decimal"
+                          v-model="entry.fee_value"
                           @blur="
-                            entry.fee_value = Number(
-                              (entry.fee_value || 0).toFixed(2),
-                            )
+                            entry.fee_value = (+entry.fee_value || 0).toFixed(2)
                           "
-                          class="w-full bg-dunhuang-bg border border-dunhuang-yellow/40 rounded-lg px-2.5 py-1.5 text-sm focus:ring-2 focus:ring-dunhuang-red outline-none font-mono [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+                          class="w-full bg-dunhuang-bg border border-dunhuang-yellow/40 rounded-lg px-2.5 py-1.5 text-sm focus:ring-2 focus:ring-dunhuang-red outline-none font-mono"
                         />
                       </div>
                     </div>
@@ -406,13 +400,15 @@
               </div>
             </div>
 
-            <button
-              type="submit"
-              :disabled="saving"
-              class="px-6 py-2 rounded text-sm font-medium transition-colors bg-dunhuang-red text-white hover:bg-dunhuang-red/90 shadow-md disabled:opacity-50"
-            >
-              {{ saving ? "保存中..." : t("billing.save") }}
-            </button>
+            <div class="flex justify-end w-full md:w-auto md:ml-auto">
+              <button
+                type="submit"
+                :disabled="saving"
+                class="px-6 py-2 rounded text-sm font-medium transition-colors bg-dunhuang-red text-white hover:bg-dunhuang-red/90 shadow-md disabled:opacity-50"
+              >
+                {{ saving ? "保存中..." : t("billing.save") }}
+              </button>
+            </div>
           </div>
         </form>
       </div>
@@ -445,40 +441,113 @@
 
           <div class="flex gap-2 items-center">
             <!-- 日期筛选 -->
-            <div
-              class="flex items-center bg-dunhuang-bg/50 border border-dunhuang-blue/15 rounded-lg px-2.5 transition-all duration-200 hover:border-dunhuang-blue/35 focus-within:border-dunhuang-blue focus-within:ring-2 focus-within:ring-dunhuang-blue/15 focus-within:bg-white h-8"
-            >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                width="15"
-                height="15"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="1.5"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                class="text-dunhuang-blue/50 shrink-0"
-              >
-                <rect width="18" height="18" x="3" y="4" rx="2" ry="2" />
-                <line x1="16" x2="16" y1="2" y2="6" />
-                <line x1="8" x2="8" y1="2" y2="6" />
-                <line x1="3" x2="21" y1="10" y2="10" />
-              </svg>
-              <input
-                type="date"
-                v-model="filterDate"
-                @change="fetchBills"
-                class="bg-transparent border-none text-sm text-dunhuang-blue font-medium focus:outline-none focus:ring-0 p-0 w-[135px] ml-1.5 cursor-pointer [&::-webkit-calendar-picker-indicator]:cursor-pointer [&::-webkit-calendar-picker-indicator]:opacity-40 hover:[&::-webkit-calendar-picker-indicator]:opacity-70 transition-opacity"
-              />
+            <div class="relative">
               <button
-                v-if="filterDate"
+                @click="showDatePicker = !showDatePicker"
+                :class="[
+                  'flex items-center gap-1.5 rounded-lg px-3 h-8 text-sm font-medium transition-all duration-200',
+                  dateRangeLabel
+                    ? 'bg-dunhuang-blue/[0.08] text-dunhuang-blue border border-dunhuang-blue/20 hover:border-dunhuang-blue/40'
+                    : 'bg-dunhuang-bg/50 text-dunhuang-text/40 border border-dunhuang-blue/15 hover:text-dunhuang-text/60 hover:border-dunhuang-blue/35',
+                ]"
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="14"
+                  height="14"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="1.5"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  class="shrink-0"
+                >
+                  <rect width="18" height="18" x="3" y="4" rx="2" ry="2" />
+                  <line x1="16" x2="16" y1="2" y2="6" />
+                  <line x1="8" x2="8" y1="2" y2="6" />
+                  <line x1="3" x2="21" y1="10" y2="10" />
+                </svg>
+                <span>{{ dateRangeLabel || "选择筛选日期" }}</span>
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="12"
+                  height="12"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  class="shrink-0"
+                  :class="showDatePicker ? 'rotate-180' : ''"
+                >
+                  <polyline points="6 9 12 15 18 9" />
+                </svg>
+              </button>
+              <button
+                v-if="filterDateFrom || filterDateTo"
                 @click="clearDateFilter"
-                class="ml-0.5 text-dunhuang-text/30 hover:text-dunhuang-red text-xs leading-none px-0.5 transition-colors"
+                class="ml-0.5 text-dunhuang-text/30 hover:text-dunhuang-red text-xs leading-none transition-colors"
                 title="清除日期筛选"
               >
                 ✕
               </button>
+
+              <Transition name="fade">
+                <div
+                  v-if="showDatePicker"
+                  class="absolute top-full mt-1.5 right-0 bg-white rounded-xl shadow-xl border border-dunhuang-yellow/20 p-4 z-30 min-w-[260px]"
+                  @click.stop
+                >
+                  <div class="space-y-3">
+                    <div class="flex items-center gap-2">
+                      <span class="text-xs text-dunhuang-text/50 w-6 shrink-0"
+                        >从</span
+                      >
+                      <input
+                        type="date"
+                        :value="filterDateFrom"
+                        @input="
+                          filterDateFrom = ($event.target as HTMLInputElement)
+                            .value
+                        "
+                        class="flex-1 bg-dunhuang-bg border border-dunhuang-yellow/30 rounded-lg px-3 py-1.5 text-sm text-dunhuang-blue focus:ring-2 focus:ring-dunhuang-blue/20 focus:border-dunhuang-blue outline-none [&::-webkit-calendar-picker-indicator]:cursor-pointer"
+                      />
+                    </div>
+                    <div class="flex items-center gap-2">
+                      <span class="text-xs text-dunhuang-text/50 w-6 shrink-0"
+                        >至</span
+                      >
+                      <input
+                        type="date"
+                        :value="filterDateTo"
+                        @input="
+                          filterDateTo = ($event.target as HTMLInputElement)
+                            .value
+                        "
+                        class="flex-1 bg-dunhuang-bg border border-dunhuang-yellow/30 rounded-lg px-3 py-1.5 text-sm text-dunhuang-blue focus:ring-2 focus:ring-dunhuang-blue/20 focus:border-dunhuang-blue outline-none [&::-webkit-calendar-picker-indicator]:cursor-pointer"
+                      />
+                    </div>
+                  </div>
+                  <div
+                    class="flex justify-end gap-2 mt-4 pt-3 border-t border-dunhuang-yellow/10"
+                  >
+                    <button
+                      @click="showDatePicker = false"
+                      class="px-3 py-1.5 rounded-lg text-xs text-dunhuang-text/60 hover:bg-dunhuang-yellow/10 transition-colors"
+                    >
+                      取消
+                    </button>
+                    <button
+                      @click="dateApply"
+                      class="px-4 py-1.5 rounded-lg text-xs font-medium bg-dunhuang-blue text-white hover:bg-dunhuang-blue/90 transition-colors shadow-sm"
+                    >
+                      确认
+                    </button>
+                  </div>
+                </div>
+              </Transition>
             </div>
 
             <!-- 搜索 -->
@@ -902,9 +971,9 @@
                 class="flex justify-between items-center py-2.5 border-b border-dunhuang-yellow/10"
               >
                 <span class="text-dunhuang-text/50 text-sm">重量（公斤）</span>
-                <span class="font-medium text-sm"
-                  >{{ formatMoney(viewingBill?.weight) }} 斤</span
-                >
+                <span class="font-medium text-sm">{{
+                  formatMoney(viewingBill?.weight)
+                }}</span>
               </div>
               <div
                 class="flex justify-between items-center py-2.5 border-b border-dunhuang-yellow/10"
@@ -1004,27 +1073,24 @@
                     class="text-dunhuang-text/80 text-xs space-y-1.5"
                   >
                     <div
-                      class="text-dunhuang-text/40 mb-1 border-b border-dunhuang-yellow/10 pb-1"
-                    >
-                      数据变更明细：
-                    </div>
-                    <div
                       v-for="item in formatUpdateDiff(
                         log.old_data,
                         log.new_data,
                       )"
                       :key="item.label"
-                      class="flex gap-2 items-center whitespace-nowrap"
+                      class="flex items-center gap-2 px-2.5 py-1.5 rounded-md bg-dunhuang-red/[0.06] border-l-[3px] border-dunhuang-red/40"
                     >
                       <span
-                        class="w-14 shrink-0 text-dunhuang-text/50 text-[11px]"
-                        >{{ item.label }}:</span
+                        class="shrink-0 text-dunhuang-red font-semibold text-[11px] min-w-[3.5rem]"
+                        >{{ item.label }}</span
                       >
-                      <span class="line-through text-dunhuang-red/60">{{
+                      <span class="text-dunhuang-red/40 line-through">{{
                         item.old
                       }}</span>
-                      <span class="text-dunhuang-blue">→</span>
-                      <span class="text-dunhuang-green">{{ item.new }}</span>
+                      <span class="text-dunhuang-blue mx-0.5">→</span>
+                      <span class="text-dunhuang-green font-semibold">{{
+                        item.new
+                      }}</span>
                     </div>
                   </div>
                   <div
@@ -1086,7 +1152,7 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted } from "vue";
+import { onMounted, ref } from "vue";
 import { useI18n } from "vue-i18n";
 import { useRouter } from "vue-router";
 import { dateTimeStr, formatMoney } from "../lib/utils";
@@ -1098,6 +1164,12 @@ import { useBillAudit } from "../composables/useBillAudit";
 
 const { t } = useI18n();
 const router = useRouter();
+
+const showDatePicker = ref(false);
+const dateApply = () => {
+  showDatePicker.value = false;
+  fetchBills();
+};
 
 const tabs = [
   { key: "current", label: "最新单据" },
@@ -1132,7 +1204,9 @@ const {
 
 const {
   activeTab,
-  filterDate,
+  filterDateFrom,
+  filterDateTo,
+  dateRangeLabel,
   billingSearch,
   bills,
   selectedBillIds,

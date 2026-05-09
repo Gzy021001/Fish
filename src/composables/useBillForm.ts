@@ -5,18 +5,18 @@ import { saveEntry } from "../services/billingEntryService"
 
 export interface BillEntry {
   species_id: number
-  weight: number
+  weight: string
   unit_price: number
-  fee_value: number
+  fee_value: string
 }
 
 export interface BillFormState {
   id: number | null
   species_id: string
-  weight: number
+  weight: string
   unit_price: number
   fee_type: string
-  fee_value: number
+  fee_value: string
   currency: string
   status: string
 }
@@ -28,11 +28,11 @@ export function useBillForm(speciesList: Ref<any[]>) {
   const bill = ref<BillFormState>({
     id: null,
     species_id: "",
-    weight: 0,
+    weight: "0.00",
     unit_price: 0,
     currency: "CNY",
     fee_type: "FIXED",
-    fee_value: 0,
+    fee_value: "0.00",
     status: "DRAFT",
   })
 
@@ -42,9 +42,9 @@ export function useBillForm(speciesList: Ref<any[]>) {
     const sp = speciesList.value.find((s) => s.id === speciesId)
     return {
       species_id: speciesId,
-      weight: 0,
+      weight: "0.00",
       unit_price: sp?.default_price ?? 0,
-      fee_value: 0,
+      fee_value: "0.00",
     }
   }
 
@@ -83,14 +83,14 @@ export function useBillForm(speciesList: Ref<any[]>) {
 
   const batchSubtotal = computed(() =>
     billEntries.value.reduce(
-      (s, e) => s + Number(((e.weight || 0) * (e.unit_price || 0)).toFixed(2)),
+      (s, e) => s + Number(((+e.weight || 0) * (+e.unit_price || 0)).toFixed(2)),
       0,
     ),
   )
 
   const batchFee = computed(() =>
     billEntries.value.reduce(
-      (s, e) => s + Number((e.fee_value || 0).toFixed(2)),
+      (s, e) => s + Number((+e.fee_value || 0).toFixed(2)),
       0,
     ),
   )
@@ -100,10 +100,10 @@ export function useBillForm(speciesList: Ref<any[]>) {
   )
 
   const editSubtotal = computed(() =>
-    Number(((bill.value.weight || 0) * (bill.value.unit_price || 0)).toFixed(2)),
+    Number(((+bill.value.weight || 0) * (+bill.value.unit_price || 0)).toFixed(2)),
   )
 
-  const editFee = computed(() => Number((bill.value.fee_value || 0).toFixed(2)))
+  const editFee = computed(() => Number((+bill.value.fee_value || 0).toFixed(2)))
 
   const editTotal = computed(() =>
     Number((editSubtotal.value + editFee.value).toFixed(2)),
@@ -112,16 +112,16 @@ export function useBillForm(speciesList: Ref<any[]>) {
   const goBackToList = () => {
     showForm.value = false
     bill.value.id = null
-    bill.value.weight = 0
+    bill.value.weight = "0.00"
   }
 
   const saveBill = async (onSaved?: (data: any) => void) => {
     if (bill.value.id) {
-      if (!Number.isFinite(bill.value.weight) || bill.value.weight <= 0) {
+      if (!Number.isFinite(+bill.value.weight) || +bill.value.weight <= 0) {
         alert("重量必须大于0")
         return
       }
-      if (!Number.isFinite(bill.value.unit_price) || bill.value.unit_price <= 0) {
+      if (!Number.isFinite(+bill.value.unit_price) || +bill.value.unit_price <= 0) {
         alert("单价必须大于0")
         return
       }
@@ -130,6 +130,9 @@ export function useBillForm(speciesList: Ref<any[]>) {
         const payload = {
           ...bill.value,
           species_id: Number(bill.value.species_id),
+          weight: Number(bill.value.weight),
+          fee_value: Number(bill.value.fee_value),
+          unit_price: Number(bill.value.unit_price),
           status: "COMPLETED",
         }
         const response = await api.put(`/bills/${bill.value.id}`, payload)
@@ -147,7 +150,7 @@ export function useBillForm(speciesList: Ref<any[]>) {
     }
 
     const validEntries = billEntries.value.filter(
-      (e) => e.weight > 0 && e.unit_price > 0,
+      (e) => +e.weight > 0 && e.unit_price > 0,
     )
     if (validEntries.length === 0) {
       alert("请选择品种并填写重量和单价")
@@ -158,7 +161,11 @@ export function useBillForm(speciesList: Ref<any[]>) {
     try {
       let saved = 0
       for (const entry of validEntries) {
-        const data = await saveEntry(entry)
+        const data = await saveEntry({
+          ...entry,
+          weight: Number(entry.weight),
+          fee_value: Number(entry.fee_value),
+        })
         if (onSaved) onSaved(data)
         saved++
       }
@@ -177,14 +184,14 @@ export function useBillForm(speciesList: Ref<any[]>) {
     bill.value = {
       id: b.id,
       species_id: String(b.species_id),
-      weight: b.weight,
+      weight: Number(b.weight ?? 0).toFixed(2),
       unit_price: b.unit_price,
       currency: b.currency,
       fee_type: "FIXED",
       fee_value:
         b.fee_type === "PERCENTAGE"
-          ? Number((b.weight * b.unit_price * (b.fee_value / 100)).toFixed(2))
-          : b.fee_value,
+          ? (b.weight * b.unit_price * (b.fee_value / 100)).toFixed(2)
+          : Number(b.fee_value ?? 0).toFixed(2),
       status: b.status,
     }
     showForm.value = true

@@ -37,13 +37,13 @@ export function useBillAudit(speciesList: Ref<any[]>) {
           label: "品种",
           format: (v) => getSpeciesName(v as number),
         },
-        { key: "weight", label: "重量", format: (v) => `${v} kg` },
-        { key: "unit_price", label: "单价", format: (v) => String(v) },
+        { key: "weight", label: "重量", format: (v) => v },
+        { key: "unit_price", label: "单价", format: (v) => v },
       ])
 
       if (oldD.fee_type !== newD.fee_type || oldD.fee_value !== newD.fee_value) {
-        const oldFee = String(oldD.fee_value)
-        const newFee = String(newD.fee_value)
+        const oldFee = String(Number(oldD.fee_value || 0).toFixed(2))
+        const newFee = String(Number(newD.fee_value || 0).toFixed(2))
         if (oldFee !== newFee)
           result.push({ label: "服务费", old: oldFee, new: newFee })
       }

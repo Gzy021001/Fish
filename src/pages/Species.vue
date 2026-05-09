@@ -1,7 +1,15 @@
 <template>
   <div
-    class="bg-white rounded-2xl shadow-md border border-dunhuang-yellow/30 p-8"
+    class="bg-white rounded-2xl shadow-md border border-dunhuang-yellow/30 p-8 relative"
   >
+    <Transition name="fade">
+      <div
+        v-if="errorMsg"
+        class="absolute top-4 left-1/2 -translate-x-1/2 z-50 max-w-md w-auto px-5 py-2.5 bg-dunhuang-red/95 text-white rounded-lg text-sm shadow-lg backdrop-blur"
+      >
+        {{ errorMsg }}
+      </div>
+    </Transition>
     <div class="flex items-center justify-between mb-6">
       <div class="flex items-center gap-4">
         <!-- 搜索 -->
@@ -27,14 +35,24 @@
             type="text"
             v-model="speciesSearch"
             placeholder="搜索品种..."
+            @keydown.enter="handleSearch"
             class="bg-transparent border-none text-sm text-dunhuang-blue font-medium focus:outline-none focus:ring-0 p-0 w-40 ml-2"
           />
           <button
             v-if="speciesSearch"
-            @click="speciesSearch = ''"
+            @click="handleClearSearch"
             class="text-dunhuang-text/40 hover:text-dunhuang-red text-sm leading-none px-1"
           >
             ✕
+          </button>
+          <button
+            @click="handleSearch"
+            class="ml-1 text-dunhuang-blue hover:text-dunhuang-blue/70 transition-colors shrink-0"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="11" cy="11" r="8"></circle>
+              <line x1="21" x2="16.65" y1="21" y2="16.65"></line>
+            </svg>
           </button>
         </div>
       </div>
@@ -59,13 +77,6 @@
           + 新增品种
         </button>
       </div>
-    </div>
-
-    <div
-      v-if="errorMsg"
-      class="mb-4 p-3 bg-dunhuang-red/10 text-dunhuang-red rounded border border-dunhuang-red/20 text-sm shrink-0"
-    >
-      {{ errorMsg }}
     </div>
 
     <div
@@ -341,18 +352,17 @@
                   >
                   <div class="relative">
                     <input
-                      type="number"
-                      step="0.01"
-                      min="0"
-                      v-model.number="newSp.default_price"
+                      type="text"
+                      inputmode="decimal"
+                      v-model="newSp.default_price"
                       required
                       @keydown.enter.prevent
                       @blur="
-                        newSp.default_price = Number(
-                          (newSp.default_price || 0).toFixed(2),
-                        )
+                        newSp.default_price = (
+                          +newSp.default_price || 0
+                        ).toFixed(2)
                       "
-                      class="w-full bg-dunhuang-bg border border-dunhuang-yellow/50 rounded-lg py-3 px-4 text-center focus:ring-2 focus:ring-dunhuang-blue outline-none font-mono text-sm transition-shadow [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+                      class="w-full bg-dunhuang-bg border border-dunhuang-yellow/50 rounded-lg py-3 px-4 text-center focus:ring-2 focus:ring-dunhuang-blue outline-none font-mono text-sm transition-shadow"
                     />
                   </div>
                 </div>
@@ -701,7 +711,7 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, ref, computed, watch } from "vue";
+import { onMounted, ref, computed } from "vue";
 import { useRouter } from "vue-router";
 import * as XLSX from "xlsx";
 import api from "../api";
@@ -729,17 +739,22 @@ const showAddModal = ref(false);
 const errorMsg = ref("");
 const speciesSearch = ref("");
 
-watch(speciesSearch, () => {
+const handleSearch = () => {
   currentPage.value = 1;
-});
+  fetchSpecies();
+};
+
+const handleClearSearch = () => {
+  speciesSearch.value = "";
+  currentPage.value = 1;
+  fetchSpecies();
+};
 
 const currentPage = ref(1);
 const pageSize = 10;
 
 const filteredSpecies = computed(() => {
-  const q = speciesSearch.value.trim().toLowerCase();
-  if (!q) return species.value;
-  return species.value.filter((sp) => sp.name_zh.toLowerCase().includes(q));
+  return species.value;
 });
 
 const totalItems = computed(() => filteredSpecies.value.length);
@@ -804,7 +819,7 @@ const saving = ref(false);
 const newSp = ref({
   name_zh: "",
   default_unit: "公斤",
-  default_price: 0,
+  default_price: "0.00",
   image_url: null as string | null,
 });
 
@@ -846,7 +861,7 @@ const closeAddModal = () => {
   newSp.value = {
     name_zh: "",
     default_unit: "公斤",
-    default_price: 0,
+    default_price: "0.00",
     image_url: null,
   };
   selectedFile.value = null;
@@ -862,7 +877,11 @@ const closeAddModal = () => {
 const fetchSpecies = async () => {
   errorMsg.value = "";
   try {
-    const res = await api.get("/species");
+    const params = new URLSearchParams()
+    const q = speciesSearch.value.trim()
+    if (q) params.set("q", q)
+    const url = params.toString() ? `/species?${params.toString()}` : "/species"
+    const res = await api.get(url);
     species.value = res.data || [];
   } catch (error: any) {
     if (isAuthError(error)) return;
@@ -872,14 +891,26 @@ const fetchSpecies = async () => {
 };
 
 const addSpecies = async () => {
-  if (newSp.value.default_price <= 0) {
-    alert("单价必须大于0");
-    return;
+  const name = newSp.value.name_zh.trim()
+  if (!name) {
+    errorMsg.value = "请输入品种名称"
+    return
+  }
+  if (+newSp.value.default_price <= 0) {
+    errorMsg.value = "单价必须大于0"
+    return
+  }
+  if (species.value.some((s) => s.name_zh === name)) {
+    errorMsg.value = `品种「${name}」已存在，请勿重复添加`
+    return
   }
   saving.value = true;
   try {
     // 1. Create species first
-    const res = await api.post("/species", newSp.value);
+    const res = await api.post("/species", {
+      ...newSp.value,
+      default_price: Number(newSp.value.default_price),
+    });
     const createdSpecies = res.data;
 
     // 2. Upload image if selected

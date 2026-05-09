@@ -6,7 +6,8 @@ import { dateTimeStr, formatMoney } from "../lib/utils"
 
 export function useBillTable(speciesList: Ref<any[]>) {
   const activeTab = ref("current")
-  const filterDate = ref("")
+  const filterDateFrom = ref("")
+  const filterDateTo = ref("")
   const billingSearch = ref("")
   const bills = ref<any[]>([])
   const selectedBillIds = ref<number[]>([])
@@ -22,7 +23,8 @@ export function useBillTable(speciesList: Ref<any[]>) {
     (newTab) => {
       billingSearch.value = ""
       if (newTab === "history") {
-        filterDate.value = ""
+        filterDateFrom.value = ""
+        filterDateTo.value = ""
       }
     },
   )
@@ -131,12 +133,31 @@ export function useBillTable(speciesList: Ref<any[]>) {
     return formatMoney(actualFee)
   }
 
+  const formatDateLabel = (d: string) => {
+    if (!d) return ""
+    const parts = d.split("-")
+    if (parts.length !== 3) return d
+    return `${parseInt(parts[1])}月${parseInt(parts[2])}日`
+  }
+
+  const dateRangeLabel = computed(() => {
+    const from = filterDateFrom.value
+    const to = filterDateTo.value
+    if (from && to) return `${formatDateLabel(from)} — ${formatDateLabel(to)}`
+    if (from) return `${formatDateLabel(from)} 起`
+    if (to) return `至 ${formatDateLabel(to)}`
+    return ""
+  })
+
   const fetchBills = async () => {
     try {
       const params = new URLSearchParams()
       params.set("limit", "0")
-      if (filterDate.value) {
-        params.set("date", filterDate.value)
+      if (filterDateFrom.value) {
+        params.set("date_from", filterDateFrom.value)
+      }
+      if (filterDateTo.value) {
+        params.set("date_to", filterDateTo.value)
       }
       const res = await api.get(`/bills?${params.toString()}`)
       bills.value = res.data || []
@@ -155,7 +176,8 @@ export function useBillTable(speciesList: Ref<any[]>) {
   }
 
   const clearDateFilter = () => {
-    filterDate.value = ""
+    filterDateFrom.value = ""
+    filterDateTo.value = ""
     fetchBills()
   }
 
@@ -247,7 +269,9 @@ export function useBillTable(speciesList: Ref<any[]>) {
 
   return {
     activeTab,
-    filterDate,
+    filterDateFrom,
+    filterDateTo,
+    dateRangeLabel,
     billingSearch,
     bills,
     selectedBillIds,

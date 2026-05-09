@@ -5,6 +5,14 @@
         linear-gradient(180deg, #fdf8f2 0%, #f8eee0 15%, #f2e4cc 35%, #ece0c4 55%, #e8d8b8 75%, #e5d2ac 100%);
     "
   >
+    <Transition name="fade">
+      <p
+        v-if="errorMsg"
+        class="absolute top-6 left-1/2 -translate-x-1/2 z-50 px-5 py-2.5 bg-red-700/90 text-white rounded-lg text-sm shadow-lg backdrop-blur"
+      >
+        {{ errorMsg }}
+      </p>
+    </Transition>
     <!-- 穹顶天光 — 模拟石窟顶部开口自然光 -->
     <div class="absolute top-0 left-1/2 -translate-x-1/2 w-[900px] h-[55%] pointer-events-none"
       style="
@@ -71,10 +79,6 @@
             </svg>
             登 录
           </button>
-
-          <p v-if="errorMsg" class="text-xs text-red-700 text-center py-2.5 rounded bg-red-50/80 border border-red-200/60">
-            {{ errorMsg }}
-          </p>
         </form>
       </div>
     </div>
