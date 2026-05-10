@@ -1,9 +1,29 @@
 <template>
-  <div class="h-full flex flex-col">
+  <div class="h-full flex flex-col space-y-6 overflow-y-auto">
+    <div class="flex items-center gap-4 flex-none">
+      <div class="flex items-center gap-2 bg-white rounded-xl shadow-sm border border-dunhuang-yellow/30 px-4 py-2.5">
+        <span class="text-sm text-dunhuang-text/50 font-medium">年份</span>
+        <select
+          v-model="selectedYear"
+          class="bg-transparent text-dunhuang-blue font-bold text-sm outline-none cursor-pointer pr-2 appearance-none"
+          @change="onYearChange"
+        >
+          <option
+            v-for="y in availableYears"
+            :key="y"
+            :value="y"
+          >
+            {{ y }} 年
+          </option>
+        </select>
+        <svg class="w-3.5 h-3.5 text-dunhuang-blue/50 pointer-events-none -ml-1" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M6 9l6 6 6-6"/></svg>
+      </div>
+    </div>
+
     <div
-      class="bg-white rounded-2xl shadow-md border border-dunhuang-yellow/30 p-8 flex-1 flex flex-col"
+      class="bg-white rounded-2xl shadow-md border border-dunhuang-yellow/30 p-8 flex flex-col"
     >
-      <div class="flex items-center justify-between mb-8 flex-none">
+      <div class="flex items-center justify-between mb-6 flex-none">
         <h3
           class="text-2xl font-serif text-dunhuang-blue flex items-center gap-3 font-bold"
         >
@@ -11,7 +31,7 @@
         </h3>
       </div>
 
-      <div class="flex-1 relative min-h-[400px]">
+      <div class="relative" style="height: 420px">
         <Transition name="fade">
           <div
             v-if="loading"
@@ -24,7 +44,7 @@
         </Transition>
         <Transition name="fade">
           <div
-            v-if="!loading && !hasTrendData && !errorMsg"
+            v-if="!loading && !hasTrendData && !trendErrorMsg"
             class="absolute inset-0 flex items-center justify-center text-dunhuang-text/50"
           >
             最近暂无价格走势数据
@@ -32,15 +52,144 @@
         </Transition>
         <Transition name="fade">
           <div
-            v-if="!loading && errorMsg"
+            v-if="!loading && trendErrorMsg"
             class="absolute inset-0 flex items-center justify-center text-dunhuang-red"
           >
-            {{ errorMsg }}
+            {{ trendErrorMsg }}
           </div>
         </Transition>
         <div
           v-show="hasTrendData"
-          ref="chartRef"
+          ref="priceChartRef"
+          class="absolute inset-0 w-full h-full"
+        ></div>
+      </div>
+    </div>
+
+    <div
+      class="bg-white rounded-2xl shadow-md border border-dunhuang-yellow/30 p-8 flex flex-col"
+    >
+      <div class="flex items-center justify-between mb-6 flex-none">
+        <h3
+          class="text-2xl font-serif text-dunhuang-blue flex items-center gap-3 font-bold"
+        >
+          放生统计
+        </h3>
+      </div>
+
+      <div
+        v-if="hasBillData"
+        class="grid grid-cols-2 gap-5 mb-4 flex-none"
+      >
+        <div class="relative overflow-hidden rounded-2xl bg-gradient-to-br from-dunhuang-bg to-dunhuang-card border border-dunhuang-yellow/25 px-5 py-3.5 shadow-sm">
+          <div class="absolute top-0 right-0 w-14 h-14 rounded-bl-full bg-dunhuang-blue/5 -mr-3 -mt-3"></div>
+          <div class="relative z-10 flex items-baseline gap-2 whitespace-nowrap">
+            <div class="w-1.5 h-1.5 rounded-full bg-dunhuang-blue shrink-0"></div>
+            <span class="text-xs text-dunhuang-text/40 tracking-wider uppercase">总重量</span>
+            <span class="text-xl font-bold text-dunhuang-blue tabular-nums">{{ formatPrice(grandTotalWeight) }}</span>
+            <span class="text-xs text-dunhuang-text/40">公斤</span>
+          </div>
+        </div>
+        <div class="relative overflow-hidden rounded-2xl bg-gradient-to-br from-dunhuang-bg to-dunhuang-card border border-dunhuang-yellow/25 px-5 py-3.5 shadow-sm">
+          <div class="absolute top-0 right-0 w-14 h-14 rounded-bl-full bg-dunhuang-red/5 -mr-3 -mt-3"></div>
+          <div class="relative z-10 flex items-baseline gap-2 whitespace-nowrap">
+            <div class="w-1.5 h-1.5 rounded-full bg-dunhuang-red shrink-0"></div>
+            <span class="text-xs text-dunhuang-text/40 tracking-wider uppercase">总金额</span>
+            <span class="text-xl font-bold text-dunhuang-red tabular-nums">{{ fmtYuan(grandTotalAmount) }}</span>
+            <span class="text-xs text-dunhuang-text/40">元</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="relative" style="height: 420px">
+        <Transition name="fade">
+          <div
+            v-if="loading"
+            class="absolute inset-0 flex items-center justify-center z-20 bg-white/50 backdrop-blur-sm rounded-xl"
+          >
+            <div
+              class="animate-spin rounded-full h-12 w-12 border-b-2 border-dunhuang-blue"
+            ></div>
+          </div>
+        </Transition>
+        <Transition name="fade">
+          <div
+            v-if="!loading && !hasBillData && !billsErrorMsg"
+            class="absolute inset-0 flex items-center justify-center text-dunhuang-text/50"
+          >
+            暂无放生统计数据
+          </div>
+        </Transition>
+        <Transition name="fade">
+          <div
+            v-if="!loading && billsErrorMsg"
+            class="absolute inset-0 flex items-center justify-center text-dunhuang-red"
+          >
+            {{ billsErrorMsg }}
+          </div>
+        </Transition>
+        <div
+          v-show="hasBillData"
+          ref="billsChartRef"
+          class="absolute inset-0 w-full h-full"
+        ></div>
+      </div>
+    </div>
+
+    <div
+      class="bg-white rounded-2xl shadow-md border border-dunhuang-yellow/30 p-8 flex flex-col"
+    >
+      <div class="flex items-center justify-between mb-6 flex-none">
+        <h3
+          class="text-2xl font-serif text-dunhuang-blue flex items-center gap-3 font-bold"
+        >
+          物命总重量
+        </h3>
+      </div>
+
+      <div
+        v-if="hasSpeciesWeightData"
+        class="relative overflow-hidden rounded-2xl bg-gradient-to-br from-dunhuang-bg to-dunhuang-card border border-dunhuang-yellow/25 px-5 py-3.5 shadow-sm mb-4 flex-none self-start"
+      >
+        <div class="absolute top-0 right-0 w-14 h-14 rounded-bl-full bg-dunhuang-blue/5 -mr-3 -mt-3"></div>
+        <div class="relative z-10 flex items-baseline gap-2 whitespace-nowrap">
+          <div class="w-1.5 h-1.5 rounded-full bg-dunhuang-blue shrink-0"></div>
+          <span class="text-xs text-dunhuang-text/40 tracking-wider uppercase">总重量</span>
+          <span class="text-xl font-bold text-dunhuang-blue tabular-nums">{{ formatPrice(grandTotalWeight) }}</span>
+          <span class="text-xs text-dunhuang-text/40">公斤</span>
+        </div>
+      </div>
+
+      <div class="relative" style="height: 420px">
+        <Transition name="fade">
+          <div
+            v-if="loading"
+            class="absolute inset-0 flex items-center justify-center z-20 bg-white/50 backdrop-blur-sm rounded-xl"
+          >
+            <div
+              class="animate-spin rounded-full h-12 w-12 border-b-2 border-dunhuang-blue"
+            ></div>
+          </div>
+        </Transition>
+        <Transition name="fade">
+          <div
+            v-if="!loading && !hasSpeciesWeightData && !billsErrorMsg"
+            class="absolute inset-0 flex items-center justify-center text-dunhuang-text/50"
+          >
+            暂无物命重量数据
+          </div>
+        </Transition>
+        <Transition name="fade">
+          <div
+            v-if="!loading && billsErrorMsg"
+            class="absolute inset-0 flex items-center justify-center text-dunhuang-red"
+          >
+            {{ billsErrorMsg }}
+          </div>
+        </Transition>
+        <div
+          v-show="hasSpeciesWeightData"
+          ref="speciesWeightChartRef"
           class="absolute inset-0 w-full h-full"
         ></div>
       </div>
@@ -55,26 +204,60 @@ import * as echarts from "echarts";
 import api from "../api";
 import { isAuthError } from "../lib/error";
 
-// ============================================================
-//  仪表盘：品种价格趋势图表
-// ============================================================
-
 const { t } = useI18n();
 
 const speciesList = ref<any[]>([]);
-// Use an object to store trend data for multiple species: { species_id: trendDataArray }
 const trendDataMap = ref<Record<number, any[]>>({});
+const billWeekMap = ref<
+  Map<string, { total_amount: number; total_weight: number }>
+>(new Map());
+const speciesWeekWeightMap = ref<Map<string, Map<number, number>>>(new Map());
 const loading = ref(false);
-const errorMsg = ref("");
+const trendErrorMsg = ref("");
+const billsErrorMsg = ref("");
+
+const currentYear = new Date().getFullYear();
+const selectedYear = ref(currentYear);
+
+const availableYears = computed(() => {
+  const years: number[] = [];
+  for (let y = 2024; y <= currentYear + 3; y++) {
+    years.push(y);
+  }
+  return years;
+});
 
 const hasTrendData = computed(() => {
   return Object.values(trendDataMap.value).some((data) => data.length > 0);
 });
 
-const chartRef = ref<HTMLElement | null>(null);
-let chartInstance: echarts.ECharts | null = null;
+const hasBillData = computed(() => {
+  return billWeekMap.value.size > 0;
+});
 
-// Define a color palette for different species lines
+const hasSpeciesWeightData = computed(() => {
+  return speciesWeekWeightMap.value.size > 0;
+});
+
+const grandTotalWeight = computed(() => {
+  let sum = 0;
+  billWeekMap.value.forEach((v) => (sum += v.total_weight));
+  return Number(sum.toFixed(2));
+});
+
+const grandTotalAmount = computed(() => {
+  let sum = 0;
+  billWeekMap.value.forEach((v) => (sum += v.total_amount));
+  return Number(sum.toFixed(2));
+});
+
+const priceChartRef = ref<HTMLElement | null>(null);
+const billsChartRef = ref<HTMLElement | null>(null);
+const speciesWeightChartRef = ref<HTMLElement | null>(null);
+let priceChartInstance: echarts.ECharts | null = null;
+let billsChartInstance: echarts.ECharts | null = null;
+let speciesWeightChartInstance: echarts.ECharts | null = null;
+
 const colorPalette = [
   "#8b6914",
   "#5a7d5a",
@@ -88,93 +271,153 @@ const colorPalette = [
   "#4a5d6b",
 ];
 
+const dayLabel = (dateStr: string): string => {
+  const d = new Date(dateStr);
+  return `${d.getMonth() + 1}/${d.getDate()}`;
+};
+
+const formatPrice = (value: number): string => {
+  const strVal = String(value);
+  const dotIndex = strVal.indexOf(".");
+  if (dotIndex === -1) return `${strVal}.00`;
+  return `${strVal.substring(0, dotIndex)}.${(strVal.substring(dotIndex + 1) + "00").substring(0, 2)}`;
+};
+
+const fmtYuan = (v: number) => `¥${formatPrice(v)}`;
+
+// ---- 数据获取 ----
+
 const fetchSpecies = async () => {
+  loading.value = true;
   try {
-    errorMsg.value = "";
+    trendErrorMsg.value = "";
+    billsErrorMsg.value = "";
     const res = await api.get("/species");
     speciesList.value = res.data || [];
     if (speciesList.value.length > 0) {
-      await fetchAllTrends();
+      await Promise.all([fetchAllTrends(), fetchBills()]);
     }
+    if (hasTrendData.value) renderPriceChart();
+    if (hasBillData.value) renderBillsChart();
+    if (hasSpeciesWeightData.value) renderSpeciesWeightChart();
   } catch (error: any) {
     if (isAuthError(error)) return;
-    console.error("Failed to fetch species", error);
-    if (error.response && error.response.status === 404) {
-      errorMsg.value = "请求的品种数据接口不存在，请检查后端路由。";
-    } else if (error.message?.includes("timeout")) {
-      errorMsg.value = "请求品种数据超时，请检查网络。";
-    } else {
-      errorMsg.value = "获取品种数据失败。";
-    }
+    trendErrorMsg.value = "获取品种数据失败。";
+  } finally {
+    loading.value = false;
   }
 };
 
 const fetchAllTrends = async () => {
-  loading.value = true;
-  errorMsg.value = "";
   try {
-    // Fetch trends for all species concurrently
     const promises = speciesList.value.map((sp) =>
       api
-        .get(`/stats/price-trend?species_id=${sp.id}`)
+        .get(`/stats/price-trend?species_id=${sp.id}&year=${selectedYear.value}`)
         .then((res) => ({ id: sp.id, data: res.data }))
         .catch((err) => {
           console.error(`Failed to fetch trend for species ${sp.id}`, err);
           return { id: sp.id, data: [] };
         }),
     );
-
     const results = await Promise.all(promises);
     const newTrendDataMap: Record<number, any[]> = {};
-
     results.forEach((res) => {
-      if (res.data && res.data.length > 0) {
-        newTrendDataMap[res.id] = res.data;
-      }
+      if (res.data && res.data.length > 0) newTrendDataMap[res.id] = res.data;
     });
-
     trendDataMap.value = newTrendDataMap;
-
-    if (hasTrendData.value) {
-      renderChart();
-    }
   } catch (error: any) {
     console.error("Failed to fetch trends", error);
-    if (isAuthError(error)) {
-      // Let the global interceptor handle the redirect
-    } else {
-      errorMsg.value = "获取价格走势失败。";
+    if (!isAuthError(error)) {
+      trendErrorMsg.value = "获取价格走势失败。";
       trendDataMap.value = {};
     }
-  } finally {
-    loading.value = false;
   }
 };
 
-const renderChart = () => {
-  setTimeout(() => {
-    if (!chartRef.value) return;
-    if (chartInstance) {
-      chartInstance.dispose();
+const fetchBills = async () => {
+  try {
+    const res = await api.get("/bills?limit=0");
+    const bills = res.data || [];
+    const map = new Map<
+      string,
+      { total_amount: number; total_weight: number }
+    >();
+    const spWeightMap = new Map<string, Map<number, number>>();
+    for (const b of bills) {
+      if (!b.created_at) continue;
+      const d = new Date(b.created_at);
+      if (d.getFullYear() !== selectedYear.value) continue;
+      const key = d.toISOString().slice(0, 10);
+      const cur = map.get(key) || { total_amount: 0, total_weight: 0 };
+      cur.total_amount += Number(b.total_amount || 0);
+      cur.total_weight += Number(b.weight || 0);
+      map.set(key, cur);
+
+      if (!spWeightMap.has(key)) spWeightMap.set(key, new Map());
+      const spMap = spWeightMap.get(key)!;
+      const spId = Number(b.species_id);
+      spMap.set(spId, (spMap.get(spId) || 0) + Number(b.weight || 0));
     }
+    billWeekMap.value = map;
+    speciesWeekWeightMap.value = spWeightMap;
+  } catch (error: any) {
+    if (!isAuthError(error)) {
+      billsErrorMsg.value = "获取放生数据失败。";
+    }
+  }
+};
 
-    chartInstance = echarts.init(chartRef.value);
+// ---- 年份切换 ----
 
-    // Collect all unique dates across all species to form a unified x-axis
-    const allDatesSet = new Set<string>();
-    Object.values(trendDataMap.value).forEach((dataArray) => {
-      dataArray.forEach((item) => allDatesSet.add(item.date));
+const onYearChange = async () => {
+  if (speciesList.value.length === 0) return;
+  trendErrorMsg.value = "";
+  billsErrorMsg.value = "";
+  loading.value = true;
+  try {
+    await Promise.all([fetchAllTrends(), fetchBills()]);
+  } finally {
+    loading.value = false;
+  }
+  if (hasTrendData.value) renderPriceChart();
+  if (hasBillData.value) renderBillsChart();
+  if (hasSpeciesWeightData.value) renderSpeciesWeightChart();
+};
+
+// ---- 日数据提取 ----
+
+const computeDayData = () => {
+  const allDaySet = new Set<string>();
+  Object.values(trendDataMap.value).forEach((dataArray) => {
+    dataArray.forEach((item) => {
+      if (item.date) {
+        allDaySet.add(item.date);
+      }
     });
+  });
+  billWeekMap.value.forEach((_, k) => allDaySet.add(k));
 
-    // Sort dates chronologically
-    const dates = Array.from(allDatesSet).sort(
-      (a, b) => new Date(a).getTime() - new Date(b).getTime(),
-    );
+  const dayKeys = Array.from(allDaySet).sort();
+  const dayLabels = dayKeys.map((k) => dayLabel(k));
 
-    // Build series data
-    const series = [];
-    const legendData = [];
+  return { dayKeys, dayLabels };
+};
 
+// ---- 图表1: 价格走势 ----
+
+const renderPriceChart = () => {
+  setTimeout(() => {
+    if (!priceChartRef.value) return;
+    if (priceChartInstance) priceChartInstance.dispose();
+
+    priceChartInstance = echarts.init(priceChartRef.value);
+
+    const { dayKeys, dayLabels } = computeDayData();
+
+    if (dayKeys.length === 0) return;
+
+    const series: any[] = [];
+    const legendData: string[] = [];
     let colorIndex = 0;
 
     for (const [spIdStr, dataArray] of Object.entries(trendDataMap.value)) {
@@ -185,131 +428,370 @@ const renderChart = () => {
       const spName = sp.name_zh;
       legendData.push(spName);
 
-      // Map data to the unified dates array. If a date is missing for this species, it will be null (breaking the line) or we could carry over previous price.
-      // ECharts handles nulls well by breaking the line, which is often more accurate than interpolating.
-      const pricesMap = new Map<string, number>();
-      dataArray.forEach((item) => pricesMap.set(item.date, item.avg_price));
+      const dayPriceMap = new Map<string, number>();
+      dataArray.forEach((item: any) => {
+        if (!item.date || item.avg_price == null) return;
+        dayPriceMap.set(item.date, Number(item.avg_price));
+      });
 
-      const prices = dates.map((d) =>
-        pricesMap.has(d)
-          ? {
-              value: pricesMap.get(d),
-              label: {
-                show: false,
-                formatter: (params: any) => params.value.toFixed(2),
-              },
-            }
-          : null,
-      );
+      const prices = dayKeys.map((dk) => {
+        const price = dayPriceMap.get(dk);
+        return price != null ? Number(price.toFixed(2)) : null;
+      });
 
       const color = colorPalette[colorIndex % colorPalette.length];
       colorIndex++;
-
-      const unit = sp.default_unit ?? "";
 
       series.push({
         name: spName,
         type: "line",
         smooth: true,
         symbol: "circle",
-        symbolSize: 6,
-        itemStyle: {
-          color: color,
-          borderColor: "#faf5ea",
-          borderWidth: 1,
-        },
-        lineStyle: {
-          width: 3,
-          color: color,
-        },
+        symbolSize: 8,
+        itemStyle: { color, borderColor: color, borderWidth: 1.5 },
+        lineStyle: { width: 2.5, color },
         data: prices,
-        unit,
+        unit: sp.default_unit ?? "",
       });
     }
 
-    const formatPrice = (value: number): string => {
-      const strVal = String(value);
-      const dotIndex = strVal.indexOf(".");
-      if (dotIndex === -1) return `${strVal}.00`;
-      return `${strVal.substring(0, dotIndex)}.${(strVal.substring(dotIndex + 1) + "00").substring(0, 2)}`;
-    };
+    if (series.length === 0) return;
 
-    const option = {
+    const option: any = {
       legend: {
         data: legendData,
-        bottom: 0,
-        textStyle: { color: "#3d3226" },
+        bottom: 8,
+        textStyle: { color: "#3d3226", fontSize: 11 },
         icon: "circle",
       },
       tooltip: {
-        trigger: "axis",
+        trigger: "item",
         backgroundColor: "#fdfaf3",
         borderColor: "#c4a35a",
-        textStyle: { color: "#3d3226" },
-        formatter: (params: any[]) => {
-          if (!params || params.length === 0) return "";
-          const date = params[0].axisValue;
-          let html = `<div style="font-weight:600;margin-bottom:4px">${date}</div>`;
-          for (const p of params) {
-            if (p.value === null || p.value === undefined) continue;
-            const unit =
-              p.seriesIndex != null
-                ? (option.series?.[p.seriesIndex]?.unit ?? "")
-                : "";
-            const unitSuffix = unit ? `/${unit}` : "";
-            const val = formatPrice(p.value);
-            html += `${p.marker} ${p.seriesName}：${val}${unitSuffix}<br/>`;
-          }
-          return html;
+        textStyle: { color: "#3d3226", fontSize: 12 },
+        formatter: (params: any) => {
+          if (!params || params.value === null || params.value === undefined) return "";
+          const unit = option.series?.[params.seriesIndex]?.unit ?? "";
+          const unitSuffix = unit ? ` /${unit}` : "";
+          return `${params.marker} ${params.seriesName}:${formatPrice(params.value)}${unitSuffix}`;
         },
       },
       grid: {
-        left: "3%",
-        right: "4%",
-        bottom: "10%",
-        top: "5%",
+        left: "4%",
+        right: "6%",
+        bottom: "12%",
+        top: "10%",
         containLabel: true,
       },
       xAxis: {
         type: "category",
-        boundaryGap: false,
-        data: dates,
+        boundaryGap: true,
+        data: dayLabels,
         axisLine: { lineStyle: { color: "#c4a35a" } },
-        axisLabel: { color: "#3d3226" },
+        axisLabel: { color: "#3d3226", fontSize: 10 },
+        axisTick: { show: false },
       },
       yAxis: {
         type: "value",
+        name: "均价 (元)",
+        nameTextStyle: { color: "#3d322660", fontSize: 10 },
         axisLine: { show: true, lineStyle: { color: "#c4a35a" } },
         axisLabel: {
           color: "#3d3226",
-          formatter: (value: number) => formatPrice(value),
+          formatter: (v: number) => formatPrice(v),
+          fontSize: 10,
         },
         splitLine: {
-          lineStyle: { color: "#c4a35a", type: "dashed", opacity: 0.3 },
+          lineStyle: { color: "#c4a35a", type: "dashed", opacity: 0.2 },
         },
       },
-      series: series,
+      series,
     };
 
-    chartInstance.setOption(option);
+    priceChartInstance.setOption(option);
+  }, 100);
+};
+
+// ---- 图表2: 每周放生统计 ----
+
+const renderBillsChart = () => {
+  setTimeout(() => {
+    if (!billsChartRef.value) return;
+    if (billsChartInstance) billsChartInstance.dispose();
+
+    billsChartInstance = echarts.init(billsChartRef.value);
+
+    const allDaySet = new Set<string>();
+    billWeekMap.value.forEach((_, k) => allDaySet.add(k));
+
+    const dayKeys = Array.from(allDaySet).sort();
+    if (dayKeys.length === 0) return;
+
+    const dayLabels = dayKeys.map((k) => dayLabel(k));
+
+    const weightData = dayKeys.map((dk) => {
+      const b = billWeekMap.value.get(dk);
+      return b ? Number(b.total_weight.toFixed(2)) : 0;
+    });
+
+    const amountData = dayKeys.map((dk) => {
+      const b = billWeekMap.value.get(dk);
+      return b ? Number(b.total_amount.toFixed(2)) : 0;
+    });
+
+    const option: any = {
+      legend: {
+        data: ["总重量", "总金额"],
+        bottom: 8,
+        textStyle: { color: "#3d3226", fontSize: 11 },
+        icon: "circle",
+      },
+      tooltip: {
+        trigger: "item",
+        backgroundColor: "#fdfaf3",
+        borderColor: "#c4a35a",
+        textStyle: { color: "#3d3226", fontSize: 12 },
+        formatter: (params: any) => {
+          if (!params || params.value === null || params.value === undefined) return "";
+          if (params.seriesIndex === 0) {
+            return `${params.marker} 总重量：${formatPrice(params.value)} 公斤`;
+          }
+          return `${params.marker} 总金额：${fmtYuan(params.value)}`;
+        },
+      },
+      grid: {
+        left: "4%",
+        right: "6%",
+        bottom: "12%",
+        top: "10%",
+        containLabel: true,
+      },
+      xAxis: {
+        type: "category",
+        boundaryGap: true,
+        data: dayLabels,
+        axisLine: { lineStyle: { color: "#c4a35a" } },
+        axisLabel: { color: "#3d3226", fontSize: 10 },
+        axisTick: { show: false },
+      },
+      yAxis: [
+        {
+          type: "value",
+          name: "总重量 (公斤)",
+          nameTextStyle: { color: "#3d322660", fontSize: 10 },
+          axisLine: { show: true, lineStyle: { color: "#c4a35a" } },
+          axisLabel: {
+            color: "#3d3226",
+            formatter: (v: number) => v.toFixed(1),
+            fontSize: 10,
+          },
+          splitLine: {
+            lineStyle: { color: "#c4a35a", type: "dashed", opacity: 0.2 },
+          },
+        },
+        {
+          type: "value",
+          name: "总金额 (元)",
+          nameTextStyle: { color: "#b8733360", fontSize: 10 },
+          axisLine: { show: true, lineStyle: { color: "#b8733340" } },
+          axisLabel: {
+            color: "#b87333",
+            formatter: (v: number) => fmtYuan(v),
+            fontSize: 10,
+          },
+          splitLine: { show: false },
+        },
+      ],
+      series: [
+        {
+          name: "总重量",
+          type: "bar",
+          yAxisIndex: 0,
+          barWidth: "6%",
+          itemStyle: {
+            color: "#8b6914",
+            borderRadius: [4, 4, 0, 0],
+          },
+          data: weightData,
+        },
+        {
+          name: "总金额",
+          type: "line",
+          yAxisIndex: 1,
+          smooth: true,
+          symbol: "circle",
+          symbolSize: 8,
+          itemStyle: { color: "#b87333", borderColor: "#b87333", borderWidth: 1.5 },
+          lineStyle: { width: 2.5, color: "#b87333" },
+          data: amountData,
+        },
+      ],
+    };
+
+    billsChartInstance.setOption(option);
+  }, 100);
+};
+
+// ---- 图表3: 每周物命总重量 ----
+
+const renderSpeciesWeightChart = () => {
+  setTimeout(() => {
+    if (!speciesWeightChartRef.value) return;
+    if (speciesWeightChartInstance) speciesWeightChartInstance.dispose();
+
+    speciesWeightChartInstance = echarts.init(speciesWeightChartRef.value);
+
+    const allDaySet = new Set<string>();
+    speciesWeekWeightMap.value.forEach((_, k) => allDaySet.add(k));
+
+    const dayKeys = Array.from(allDaySet).sort();
+    if (dayKeys.length === 0) return;
+
+    const dayLabels = dayKeys.map((k) => dayLabel(k));
+
+    const activeSpeciesIds = new Set<number>();
+    speciesWeekWeightMap.value.forEach((spMap) => {
+      spMap.forEach((_, spId) => activeSpeciesIds.add(spId));
+    });
+
+    const activeSpecies = speciesList.value.filter((s) =>
+      activeSpeciesIds.has(s.id),
+    );
+
+    if (activeSpecies.length === 0) return;
+
+    const series: any[] = [];
+    const legendData: string[] = [];
+    let colorIndex = 0;
+
+    for (const sp of activeSpecies) {
+      const spName = sp.name_zh;
+      legendData.push(spName);
+
+      const data = dayKeys.map((dk) => {
+        const spMap = speciesWeekWeightMap.value.get(dk);
+        if (!spMap) return 0;
+        return Number((spMap.get(sp.id) || 0).toFixed(2));
+      });
+
+      const color = colorPalette[colorIndex % colorPalette.length];
+      colorIndex++;
+
+      series.push({
+        name: spName,
+        type: "bar",
+        stack: "total",
+        barWidth: "8%",
+        itemStyle: { color },
+        emphasis: { focus: "series" },
+        data,
+      });
+    }
+
+    const totalPerDay = dayKeys.map((dk) => {
+      const spMap = speciesWeekWeightMap.value.get(dk);
+      if (!spMap) return 0;
+      let sum = 0;
+      spMap.forEach((v) => (sum += v));
+      return Number(sum.toFixed(2));
+    });
+
+    series.push({
+      name: "合计",
+      type: "bar",
+      stack: "total",
+      barWidth: "8%",
+      itemStyle: { color: "transparent" },
+      tooltip: { show: false },
+      emphasis: { disabled: true },
+      label: {
+        show: true,
+        position: "top",
+        color: "#3d3226",
+        fontSize: 11,
+        fontWeight: "bold",
+        formatter: (p: any) => totalPerDay[p.dataIndex] > 0 ? formatPrice(totalPerDay[p.dataIndex]) + " 公斤" : "",
+      },
+      data: totalPerDay.map(() => 0),
+    });
+
+    const option: any = {
+      legend: {
+        data: legendData,
+        bottom: 8,
+        textStyle: { color: "#3d3226", fontSize: 11 },
+        icon: "circle",
+      },
+      tooltip: {
+        trigger: "item",
+        backgroundColor: "#fdfaf3",
+        borderColor: "#c4a35a",
+        textStyle: { color: "#3d3226", fontSize: 12 },
+        formatter: (params: any) => {
+          if (!params || params.value === null || params.value === undefined) return "";
+          return `${params.marker} ${params.seriesName}：${formatPrice(params.value)} 公斤`;
+        },
+      },
+      grid: {
+        left: "4%",
+        right: "6%",
+        bottom: "12%",
+        top: "10%",
+        containLabel: true,
+      },
+      xAxis: {
+        type: "category",
+        boundaryGap: true,
+        data: dayLabels,
+        axisLine: { lineStyle: { color: "#c4a35a" } },
+        axisLabel: { color: "#3d3226", fontSize: 10 },
+        axisTick: { show: false },
+      },
+      yAxis: {
+        type: "value",
+        name: "重量 (公斤)",
+        nameTextStyle: { color: "#3d322660", fontSize: 10 },
+        axisLine: { show: true, lineStyle: { color: "#c4a35a" } },
+        axisLabel: {
+          color: "#3d3226",
+          formatter: (v: number) => v.toFixed(1),
+          fontSize: 10,
+        },
+        splitLine: {
+          lineStyle: { color: "#c4a35a", type: "dashed", opacity: 0.2 },
+        },
+      },
+      series,
+    };
+
+    speciesWeightChartInstance.setOption(option);
   }, 100);
 };
 
 const handleResize = () => {
-  chartInstance?.resize();
+  priceChartInstance?.resize();
+  billsChartInstance?.resize();
+  speciesWeightChartInstance?.resize();
 };
 
 onMounted(() => {
   fetchSpecies();
-
   window.addEventListener("resize", handleResize);
 });
 
 onUnmounted(() => {
   window.removeEventListener("resize", handleResize);
-  if (chartInstance) {
-    chartInstance.dispose();
-    chartInstance = null;
+  if (priceChartInstance) {
+    priceChartInstance.dispose();
+    priceChartInstance = null;
+  }
+  if (billsChartInstance) {
+    billsChartInstance.dispose();
+    billsChartInstance = null;
+  }
+  if (speciesWeightChartInstance) {
+    speciesWeightChartInstance.dispose();
+    speciesWeightChartInstance = null;
   }
 });
 </script>

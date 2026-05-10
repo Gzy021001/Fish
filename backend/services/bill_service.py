@@ -150,24 +150,28 @@ def delete_bill(bill_id: int, user: models.User, db: Session):
     return {"message": "Bill deleted successfully"}
 
 
-def get_price_trend(species_id: int, db: Session):
-    thirty_days_ago = datetime.utcnow() - timedelta(days=30)
-
+def get_price_trend(species_id: int, db: Session, year: int = None):
     species = db.query(models.Species).filter(models.Species.id == species_id).first()
     if not species:
         raise HTTPException(status_code=404, detail="未找到该品种")
 
-    results = (
+    query = (
         db.query(
             func.date(models.Bill.created_at).label("date"),
             func.avg(models.Bill.unit_price).label("avg_price"),
         )
-        .filter(
-            models.Bill.species_id == species.id,
-            models.Bill.created_at >= thirty_days_ago,
-        )
-        .group_by(func.date(models.Bill.created_at))
-        .all()
+        .filter(models.Bill.species_id == species.id)
     )
+
+    if year:
+        query = query.filter(
+            models.Bill.created_at >= datetime(year, 1, 1),
+            models.Bill.created_at < datetime(year + 1, 1, 1),
+        )
+    else:
+        thirty_days_ago = datetime.utcnow() - timedelta(days=30)
+        query = query.filter(models.Bill.created_at >= thirty_days_ago)
+
+    results = query.group_by(func.date(models.Bill.created_at)).all()
 
     return [{"date": str(r.date), "avg_price": float(r.avg_price)} for r in results]

@@ -29,7 +29,7 @@ const messages = {
       save: '保存单据'
     },
     dashboard: {
-      price_trend: '近30天价格走势',
+      price_trend: '物命周单价趋势',
       select_species: '选择品种',
     }
   }
