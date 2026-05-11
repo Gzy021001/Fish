@@ -107,6 +107,9 @@
                   <th class="p-3 border-b border-dunhuang-yellow/40">
                     单价（元）
                   </th>
+                  <th class="p-3 border-b border-dunhuang-yellow/40">
+                    放生日期
+                  </th>
                 </tr>
               </thead>
               <tbody>
@@ -120,9 +123,12 @@
                   <td class="p-3 tabular-nums">
                     {{ formatMoney(row.unit_price) }}
                   </td>
+                  <td class="p-3 text-sm">
+                    {{ row.release_date || "-" }}
+                  </td>
                 </tr>
                 <tr v-if="importRows.length === 0">
-                  <td colspan="3" class="p-8 text-center text-dunhuang-text/50">
+                  <td colspan="4" class="p-8 text-center text-dunhuang-text/50">
                     未解析到有效数据
                   </td>
                 </tr>
@@ -188,17 +194,19 @@ const downloadTemplate = () => {
       序号: 1,
       品种: "东星斑",
       "单价（元）": "120.00",
+      "放生日期": "2025-01-15",
     },
     {
       序号: 2,
       品种: "老虎斑",
       "单价（元）": "85.00",
+      "放生日期": "2025-01-15",
     },
   ];
 
   const worksheet = XLSX.utils.json_to_sheet(templateData);
 
-  worksheet["!cols"] = [{ wch: 8 }, { wch: 15 }, { wch: 12 }];
+  worksheet["!cols"] = [{ wch: 8 }, { wch: 15 }, { wch: 12 }, { wch: 14 }];
 
   const workbook = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(workbook, worksheet, "导入模板");
@@ -228,10 +236,12 @@ const handleFileUpload = (event: Event) => {
         .map((row: any) => {
           const name_zh = row["品种"] || row["名称"] || "";
           const unit_price = parseFloat(row["单价（元）"] || row["单价"] || 0);
+          const release_date = row["放生日期"] || row["日期"] || "";
 
           return {
             name_zh,
             unit_price,
+            release_date: release_date ? String(release_date).trim() : undefined,
           };
         })
         .filter((r) => r.name_zh && r.unit_price > 0);

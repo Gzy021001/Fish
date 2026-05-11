@@ -8,6 +8,7 @@ export interface BillEntry {
   weight: string
   unit_price: number
   fee_value: string
+  release_date: string
 }
 
 export interface BillFormState {
@@ -19,6 +20,7 @@ export interface BillFormState {
   fee_value: string
   currency: string
   status: string
+  release_date: string
 }
 
 export function useBillForm(speciesList: Ref<any[]>) {
@@ -34,6 +36,7 @@ export function useBillForm(speciesList: Ref<any[]>) {
     fee_type: "FIXED",
     fee_value: "0.00",
     status: "DRAFT",
+    release_date: "",
   })
 
   const billEntries = ref<BillEntry[]>([])
@@ -45,6 +48,7 @@ export function useBillForm(speciesList: Ref<any[]>) {
       weight: "0.00",
       unit_price: sp?.default_price ?? 0,
       fee_value: "0.00",
+      release_date: "",
     }
   }
 
@@ -134,6 +138,7 @@ export function useBillForm(speciesList: Ref<any[]>) {
           fee_value: Number(bill.value.fee_value),
           unit_price: Number(bill.value.unit_price),
           status: "COMPLETED",
+          release_date: bill.value.release_date || null,
         }
         const response = await api.put(`/bills/${bill.value.id}`, payload)
         if (onSaved) onSaved(response.data)
@@ -165,6 +170,7 @@ export function useBillForm(speciesList: Ref<any[]>) {
           ...entry,
           weight: Number(entry.weight),
           fee_value: Number(entry.fee_value),
+          release_date: entry.release_date || bill.value.release_date,
         })
         if (onSaved) onSaved(data)
         saved++
@@ -193,6 +199,9 @@ export function useBillForm(speciesList: Ref<any[]>) {
           ? (b.weight * b.unit_price * (b.fee_value / 100)).toFixed(2)
           : Number(b.fee_value ?? 0).toFixed(2),
       status: b.status,
+      release_date: b.release_date
+        ? new Date(b.release_date).toISOString().slice(0, 10)
+        : "",
     }
     showForm.value = true
     window.scrollTo({ top: 0, behavior: "smooth" })

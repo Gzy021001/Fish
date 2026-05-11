@@ -132,6 +132,16 @@
                         class="w-full bg-dunhuang-bg border border-dunhuang-yellow/50 rounded-lg py-2.5 px-4 focus:ring-2 focus:ring-dunhuang-blue outline-none text-sm transition-shadow resize-none custom-scrollbar"
                       ></textarea>
                     </div>
+                    <div>
+                      <span class="block text-xs text-dunhuang-text/50 mb-1.5"
+                        >放生日期</span
+                      >
+                      <DateInput
+                        v-model="editForm.release_date"
+                        placeholder="选择放生日期"
+                        size="sm"
+                      />
+                    </div>
                   </div>
                 </div>
               </div>
@@ -179,6 +189,14 @@
                     >
                     <p class="text-base font-mono text-dunhuang-red">
                       {{ formatMoney(species.default_price) }}
+                    </p>
+                  </div>
+                  <div v-if="species.release_date">
+                    <span class="block text-xs text-dunhuang-text/50 mb-1"
+                      >放生日期</span
+                    >
+                    <p class="text-base text-dunhuang-blue">
+                      {{ dateStr(species.release_date) }}
                     </p>
                   </div>
                   <div v-if="species.supplier_name">
@@ -337,8 +355,9 @@ import { computed, onMounted, reactive, ref, watch } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import api from "../api";
 import { apiErrorMessage, isAuthError } from "../lib/error";
-import { dateTimeStr, diffFields, formatMoney } from "../lib/utils";
+import { dateStr, dateTimeStr, diffFields, formatMoney } from "../lib/utils";
 import SpeciesImageUpload from "../components/SpeciesImageUpload.vue";
+import DateInput from "../components/DateInput.vue";
 
 interface SpeciesItem {
   id: number;
@@ -348,6 +367,7 @@ interface SpeciesItem {
   image_url?: string | null;
   supplier_name?: string;
   supplier_note?: string;
+  release_date?: string;
 }
 
 const route = useRoute();
@@ -377,6 +397,7 @@ const editForm = reactive({
   default_unit: "",
   supplier_name: "",
   supplier_note: "",
+  release_date: "",
 });
 const saving = ref(false);
 const saveSuccess = ref(false);
@@ -397,6 +418,9 @@ const initEditForm = () => {
     editForm.default_unit = species.value.default_unit ?? "公斤";
     editForm.supplier_name = species.value.supplier_name ?? "";
     editForm.supplier_note = species.value.supplier_note ?? "";
+    editForm.release_date = species.value.release_date
+      ? new Date(species.value.release_date).toISOString().slice(0, 10)
+      : "";
   }
   imageUploadRef.value?.reset();
   selectedFile.value = null;
@@ -409,6 +433,11 @@ const cancelEdit = () => {
 };
 
 const saveEdit = async () => {
+  if (!editForm.release_date) {
+    errorMsg.value = "请选择放生日期"
+    saving.value = false
+    return
+  }
   saving.value = true;
   errorMsg.value = "";
   saveSuccess.value = false;
@@ -420,6 +449,7 @@ const saveEdit = async () => {
       image_url: species.value?.image_url ?? null,
       supplier_name: editForm.supplier_name.trim(),
       supplier_note: editForm.supplier_note.trim(),
+      release_date: editForm.release_date,
     });
     if (species.value) {
       species.value.name_zh = res.data.name_zh ?? species.value.name_zh;
@@ -431,6 +461,8 @@ const saveEdit = async () => {
         res.data.supplier_name ?? species.value.supplier_name;
       species.value.supplier_note =
         res.data.supplier_note ?? species.value.supplier_note;
+      species.value.release_date =
+        res.data.release_date ?? species.value.release_date;
     }
 
     if (selectedFile.value) {

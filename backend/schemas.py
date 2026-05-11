@@ -20,6 +20,8 @@ class SpeciesBase(BaseModel):
     default_unit: str
     default_price: float = 0.0
     image_url: Optional[str] = None
+    release_date: Optional[datetime] = None
+    created_at: Optional[datetime] = None
 
 class SpeciesCreate(SpeciesBase):
     pass
@@ -41,6 +43,7 @@ class BillBase(BaseModel):
     fee_type: str = "FIXED"
     fee_value: float
     status: str = "DRAFT"
+    release_date: Optional[datetime] = None
 
 class BillCreate(BillBase):
     pass

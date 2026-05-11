@@ -1,22 +1,66 @@
 <template>
-  <div class="h-full flex flex-col space-y-6 overflow-y-auto">
+  <div class="h-full flex flex-col space-y-6">
     <div class="flex items-center gap-4 flex-none">
-      <div class="flex items-center gap-2 bg-white rounded-xl shadow-sm border border-dunhuang-yellow/30 px-4 py-2.5">
-        <span class="text-sm text-dunhuang-text/50 font-medium">年份</span>
-        <select
-          v-model="selectedYear"
-          class="bg-transparent text-dunhuang-blue font-bold text-sm outline-none cursor-pointer pr-2 appearance-none"
-          @change="onYearChange"
+      <div class="relative">
+        <button
+          class="flex items-center gap-2 bg-white rounded-xl shadow-sm border border-dunhuang-yellow/30 px-4 py-2.5 hover:border-dunhuang-yellow/60 transition-colors cursor-pointer"
+          @click.stop="toggleYearDropdown"
+          @blur="closeYearDropdown"
         >
-          <option
-            v-for="y in availableYears"
-            :key="y"
-            :value="y"
+          <svg
+            class="w-4 h-4 text-dunhuang-blue/60 shrink-0"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
           >
-            {{ y }} 年
-          </option>
-        </select>
-        <svg class="w-3.5 h-3.5 text-dunhuang-blue/50 pointer-events-none -ml-1" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M6 9l6 6 6-6"/></svg>
+            <rect
+              x="3"
+              y="4"
+              width="18"
+              height="18"
+              rx="2"
+              ry="2"
+              stroke-linejoin="round"
+            />
+            <path d="M16 2v4M8 2v4M3 10h18" />
+          </svg>
+          <span
+            class="text-sm font-bold text-dunhuang-blue tabular-nums tracking-wide"
+            >{{ selectedYear }} 年</span
+          >
+          <svg
+            class="w-3 h-3 text-dunhuang-blue/40 transition-transform duration-200"
+            :class="{ 'rotate-180': yearDropdownOpen }"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="3"
+          >
+            <path d="M6 9l6 6 6-6" />
+          </svg>
+        </button>
+        <Transition name="dropdown">
+          <ul
+            v-if="yearDropdownOpen"
+            class="absolute top-full mt-1.5 left-0 w-full bg-white rounded-xl shadow-lg border border-dunhuang-yellow/25 py-1 z-50 overflow-hidden"
+            @mousedown.prevent
+          >
+            <li
+              v-for="y in availableYears"
+              :key="y"
+              class="px-4 py-2 text-sm cursor-pointer transition-colors"
+              :class="
+                y === selectedYear
+                  ? 'bg-dunhuang-blue/8 text-dunhuang-blue font-bold'
+                  : 'text-dunhuang-text hover:bg-dunhuang-bg'
+              "
+              @click="selectYear(y)"
+            >
+              {{ y }} 年
+            </li>
+          </ul>
+        </Transition>
       </div>
     </div>
 
@@ -77,25 +121,46 @@
         </h3>
       </div>
 
-      <div
-        v-if="hasBillData"
-        class="grid grid-cols-2 gap-5 mb-4 flex-none"
-      >
-        <div class="relative overflow-hidden rounded-2xl bg-gradient-to-br from-dunhuang-bg to-dunhuang-card border border-dunhuang-yellow/25 px-5 py-3.5 shadow-sm">
-          <div class="absolute top-0 right-0 w-14 h-14 rounded-bl-full bg-dunhuang-blue/5 -mr-3 -mt-3"></div>
-          <div class="relative z-10 flex items-baseline gap-2 whitespace-nowrap">
-            <div class="w-1.5 h-1.5 rounded-full bg-dunhuang-blue shrink-0"></div>
-            <span class="text-xs text-dunhuang-text/40 tracking-wider uppercase">总重量</span>
-            <span class="text-xl font-bold text-dunhuang-blue tabular-nums">{{ formatPrice(grandTotalWeight) }}</span>
+      <div v-if="hasBillData" class="grid grid-cols-2 gap-5 mb-4 flex-none">
+        <div
+          class="relative overflow-hidden rounded-2xl bg-gradient-to-br from-dunhuang-bg to-dunhuang-card border border-dunhuang-yellow/25 px-5 py-3.5 shadow-sm"
+        >
+          <div
+            class="absolute top-0 right-0 w-14 h-14 rounded-bl-full bg-dunhuang-blue/5 -mr-3 -mt-3"
+          ></div>
+          <div
+            class="relative z-10 flex items-baseline gap-2 whitespace-nowrap"
+          >
+            <div
+              class="w-1.5 h-1.5 rounded-full bg-dunhuang-blue shrink-0"
+            ></div>
+            <span class="text-xs text-dunhuang-text/40 tracking-wider uppercase"
+              >总重量</span
+            >
+            <span class="text-xl font-bold text-dunhuang-blue tabular-nums">{{
+              formatPrice(grandTotalWeight)
+            }}</span>
             <span class="text-xs text-dunhuang-text/40">公斤</span>
           </div>
         </div>
-        <div class="relative overflow-hidden rounded-2xl bg-gradient-to-br from-dunhuang-bg to-dunhuang-card border border-dunhuang-yellow/25 px-5 py-3.5 shadow-sm">
-          <div class="absolute top-0 right-0 w-14 h-14 rounded-bl-full bg-dunhuang-red/5 -mr-3 -mt-3"></div>
-          <div class="relative z-10 flex items-baseline gap-2 whitespace-nowrap">
-            <div class="w-1.5 h-1.5 rounded-full bg-dunhuang-red shrink-0"></div>
-            <span class="text-xs text-dunhuang-text/40 tracking-wider uppercase">总金额</span>
-            <span class="text-xl font-bold text-dunhuang-red tabular-nums">{{ fmtYuan(grandTotalAmount) }}</span>
+        <div
+          class="relative overflow-hidden rounded-2xl bg-gradient-to-br from-dunhuang-bg to-dunhuang-card border border-dunhuang-yellow/25 px-5 py-3.5 shadow-sm"
+        >
+          <div
+            class="absolute top-0 right-0 w-14 h-14 rounded-bl-full bg-dunhuang-red/5 -mr-3 -mt-3"
+          ></div>
+          <div
+            class="relative z-10 flex items-baseline gap-2 whitespace-nowrap"
+          >
+            <div
+              class="w-1.5 h-1.5 rounded-full bg-dunhuang-red shrink-0"
+            ></div>
+            <span class="text-xs text-dunhuang-text/40 tracking-wider uppercase"
+              >总金额</span
+            >
+            <span class="text-xl font-bold text-dunhuang-red tabular-nums">{{
+              fmtYuan(grandTotalAmount)
+            }}</span>
             <span class="text-xs text-dunhuang-text/40">元</span>
           </div>
         </div>
@@ -151,11 +216,17 @@
         v-if="hasSpeciesWeightData"
         class="relative overflow-hidden rounded-2xl bg-gradient-to-br from-dunhuang-bg to-dunhuang-card border border-dunhuang-yellow/25 px-5 py-3.5 shadow-sm mb-4 flex-none self-start"
       >
-        <div class="absolute top-0 right-0 w-14 h-14 rounded-bl-full bg-dunhuang-blue/5 -mr-3 -mt-3"></div>
+        <div
+          class="absolute top-0 right-0 w-14 h-14 rounded-bl-full bg-dunhuang-blue/5 -mr-3 -mt-3"
+        ></div>
         <div class="relative z-10 flex items-baseline gap-2 whitespace-nowrap">
           <div class="w-1.5 h-1.5 rounded-full bg-dunhuang-blue shrink-0"></div>
-          <span class="text-xs text-dunhuang-text/40 tracking-wider uppercase">总重量</span>
-          <span class="text-xl font-bold text-dunhuang-blue tabular-nums">{{ formatPrice(grandTotalWeight) }}</span>
+          <span class="text-xs text-dunhuang-text/40 tracking-wider uppercase"
+            >总重量</span
+          >
+          <span class="text-xl font-bold text-dunhuang-blue tabular-nums">{{
+            formatPrice(grandTotalWeight)
+          }}</span>
           <span class="text-xs text-dunhuang-text/40">公斤</span>
         </div>
       </div>
@@ -218,6 +289,15 @@ const billsErrorMsg = ref("");
 
 const currentYear = new Date().getFullYear();
 const selectedYear = ref(currentYear);
+const yearDropdownOpen = ref(false);
+
+const toggleYearDropdown = () => {
+  yearDropdownOpen.value = !yearDropdownOpen.value;
+};
+
+const closeYearDropdown = () => {
+  yearDropdownOpen.value = false;
+};
 
 const availableYears = computed(() => {
   const years: number[] = [];
@@ -312,7 +392,9 @@ const fetchAllTrends = async () => {
   try {
     const promises = speciesList.value.map((sp) =>
       api
-        .get(`/stats/price-trend?species_id=${sp.id}&year=${selectedYear.value}`)
+        .get(
+          `/stats/price-trend?species_id=${sp.id}&year=${selectedYear.value}`,
+        )
         .then((res) => ({ id: sp.id, data: res.data }))
         .catch((err) => {
           console.error(`Failed to fetch trend for species ${sp.id}`, err);
@@ -368,6 +450,13 @@ const fetchBills = async () => {
 };
 
 // ---- 年份切换 ----
+
+const selectYear = async (y: number) => {
+  yearDropdownOpen.value = false;
+  if (selectedYear.value === y) return;
+  selectedYear.value = y;
+  await onYearChange();
+};
 
 const onYearChange = async () => {
   if (speciesList.value.length === 0) return;
@@ -470,7 +559,8 @@ const renderPriceChart = () => {
         borderColor: "#c4a35a",
         textStyle: { color: "#3d3226", fontSize: 12 },
         formatter: (params: any) => {
-          if (!params || params.value === null || params.value === undefined) return "";
+          if (!params || params.value === null || params.value === undefined)
+            return "";
           const unit = option.series?.[params.seriesIndex]?.unit ?? "";
           const unitSuffix = unit ? ` /${unit}` : "";
           return `${params.marker} ${params.seriesName}:${formatPrice(params.value)}${unitSuffix}`;
@@ -552,7 +642,8 @@ const renderBillsChart = () => {
         borderColor: "#c4a35a",
         textStyle: { color: "#3d3226", fontSize: 12 },
         formatter: (params: any) => {
-          if (!params || params.value === null || params.value === undefined) return "";
+          if (!params || params.value === null || params.value === undefined)
+            return "";
           if (params.seriesIndex === 0) {
             return `${params.marker} 总重量：${formatPrice(params.value)} 公斤`;
           }
@@ -621,7 +712,11 @@ const renderBillsChart = () => {
           smooth: true,
           symbol: "circle",
           symbolSize: 8,
-          itemStyle: { color: "#b87333", borderColor: "#b87333", borderWidth: 1.5 },
+          itemStyle: {
+            color: "#b87333",
+            borderColor: "#b87333",
+            borderWidth: 1.5,
+          },
           lineStyle: { width: 2.5, color: "#b87333" },
           data: amountData,
         },
@@ -710,7 +805,10 @@ const renderSpeciesWeightChart = () => {
         color: "#3d3226",
         fontSize: 11,
         fontWeight: "bold",
-        formatter: (p: any) => totalPerDay[p.dataIndex] > 0 ? formatPrice(totalPerDay[p.dataIndex]) + " 公斤" : "",
+        formatter: (p: any) =>
+          totalPerDay[p.dataIndex] > 0
+            ? formatPrice(totalPerDay[p.dataIndex]) + " 公斤"
+            : "",
       },
       data: totalPerDay.map(() => 0),
     });
@@ -728,7 +826,8 @@ const renderSpeciesWeightChart = () => {
         borderColor: "#c4a35a",
         textStyle: { color: "#3d3226", fontSize: 12 },
         formatter: (params: any) => {
-          if (!params || params.value === null || params.value === undefined) return "";
+          if (!params || params.value === null || params.value === undefined)
+            return "";
           return `${params.marker} ${params.seriesName}：${formatPrice(params.value)} 公斤`;
         },
       },
@@ -795,3 +894,24 @@ onUnmounted(() => {
   }
 });
 </script>
+
+<style scoped>
+.dropdown-enter-active {
+  transition:
+    opacity 0.2s ease,
+    transform 0.2s ease;
+}
+.dropdown-leave-active {
+  transition:
+    opacity 0.15s ease,
+    transform 0.15s ease;
+}
+.dropdown-enter-from {
+  opacity: 0;
+  transform: translateY(-6px) scale(0.96);
+}
+.dropdown-leave-to {
+  opacity: 0;
+  transform: translateY(-4px) scale(0.97);
+}
+</style>

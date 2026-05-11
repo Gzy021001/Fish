@@ -2,7 +2,7 @@ import { ref, computed, watch, type Ref } from "vue"
 import * as XLSX from "xlsx"
 import api from "../api"
 import { apiErrorMessage, isAuthError } from "../lib/error"
-import { dateTimeStr, formatMoney } from "../lib/utils"
+import { dateStr, dateTimeStr, formatMoney } from "../lib/utils"
 
 export function useBillTable(speciesList: Ref<any[]>) {
   const activeTab = ref("current")
@@ -203,6 +203,7 @@ export function useBillTable(speciesList: Ref<any[]>) {
       "小计（元）": formatNum(b.subtotal),
       "服务费（元）": formatNum(actualFee(b)),
       "总金额（元）": formatNum(b.total_amount),
+      放生日期: dateStr(b.release_date || b.created_at),
       添加时间: dateTimeStr(b.created_at),
     }))
 

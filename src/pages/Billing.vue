@@ -122,6 +122,15 @@
                   class="w-full bg-dunhuang-bg border border-dunhuang-yellow/50 rounded-lg p-3 focus:ring-2 focus:ring-dunhuang-red outline-none font-mono"
                 />
               </div>
+              <div>
+                <label class="block text-sm font-medium text-dunhuang-text mb-2"
+                  >放生日期</label
+                >
+                <DateInput
+                  v-model="bill.release_date"
+                  placeholder="选择放生日期"
+                />
+              </div>
             </div>
           </template>
 
@@ -443,7 +452,7 @@
             <!-- 日期筛选 -->
             <div class="relative">
               <button
-                @click="showDatePicker = !showDatePicker"
+                @click="toggleShowDatePicker"
                 :class="[
                   'flex items-center gap-1.5 rounded-lg px-3 h-8 text-sm font-medium transition-all duration-200',
                   dateRangeLabel
@@ -494,57 +503,63 @@
                 ✕
               </button>
 
-              <Transition name="fade">
+              <Transition name="dropdown">
                 <div
                   v-if="showDatePicker"
-                  class="absolute top-full mt-1.5 right-0 bg-white rounded-xl shadow-xl border border-dunhuang-yellow/20 p-4 z-30 min-w-[260px]"
+                  class="absolute top-full mt-1.5 right-0 z-30"
                   @click.stop
                 >
-                  <div class="space-y-3">
-                    <div class="flex items-center gap-2">
-                      <span class="text-xs text-dunhuang-text/50 w-6 shrink-0"
-                        >从</span
+                  <div class="bg-white rounded-2xl shadow-xl border border-dunhuang-yellow/20 p-4 w-[312px]">
+                    <div class="flex flex-wrap gap-1.5 mb-3">
+                      <button
+                        v-for="preset in datePresets"
+                        :key="preset.label"
+                        @click="applyDatePreset(preset)"
+                        :class="[
+                          'px-2.5 py-1 text-xs rounded-full border transition-colors',
+                          isPresetActive(preset)
+                            ? 'bg-dunhuang-blue/10 text-dunhuang-blue border-dunhuang-blue/30'
+                            : 'bg-dunhuang-bg/50 text-dunhuang-text/60 border-dunhuang-yellow/15 hover:border-dunhuang-blue/30 hover:text-dunhuang-blue',
+                        ]"
                       >
-                      <input
-                        type="date"
-                        :value="filterDateFrom"
-                        @input="
-                          filterDateFrom = ($event.target as HTMLInputElement)
-                            .value
-                        "
-                        class="flex-1 bg-dunhuang-bg border border-dunhuang-yellow/30 rounded-lg px-3 py-1.5 text-sm text-dunhuang-blue focus:ring-2 focus:ring-dunhuang-blue/20 focus:border-dunhuang-blue outline-none [&::-webkit-calendar-picker-indicator]:cursor-pointer"
-                      />
+                        {{ preset.label }}
+                      </button>
                     </div>
+
                     <div class="flex items-center gap-2">
-                      <span class="text-xs text-dunhuang-text/50 w-6 shrink-0"
-                        >至</span
-                      >
-                      <input
-                        type="date"
-                        :value="filterDateTo"
-                        @input="
-                          filterDateTo = ($event.target as HTMLInputElement)
-                            .value
-                        "
-                        class="flex-1 bg-dunhuang-bg border border-dunhuang-yellow/30 rounded-lg px-3 py-1.5 text-sm text-dunhuang-blue focus:ring-2 focus:ring-dunhuang-blue/20 focus:border-dunhuang-blue outline-none [&::-webkit-calendar-picker-indicator]:cursor-pointer"
-                      />
+                      <div class="flex-1">
+                        <label class="block text-xs text-dunhuang-text/40 mb-1">开始月份</label>
+                        <input
+                          type="month"
+                          v-model="pickerFromMonth"
+                          class="w-full bg-dunhuang-bg border border-dunhuang-yellow/25 rounded-lg px-3 py-2 text-sm text-dunhuang-blue focus:ring-2 focus:ring-dunhuang-blue/20 focus:border-dunhuang-blue/50 outline-none transition-all"
+                        />
+                      </div>
+                      <span class="text-dunhuang-text/30 mt-5">—</span>
+                      <div class="flex-1">
+                        <label class="block text-xs text-dunhuang-text/40 mb-1">结束月份</label>
+                        <input
+                          type="month"
+                          v-model="pickerToMonth"
+                          class="w-full bg-dunhuang-bg border border-dunhuang-yellow/25 rounded-lg px-3 py-2 text-sm text-dunhuang-blue focus:ring-2 focus:ring-dunhuang-blue/20 focus:border-dunhuang-blue/50 outline-none transition-all"
+                        />
+                      </div>
                     </div>
-                  </div>
-                  <div
-                    class="flex justify-end gap-2 mt-4 pt-3 border-t border-dunhuang-yellow/10"
-                  >
-                    <button
-                      @click="showDatePicker = false"
-                      class="px-3 py-1.5 rounded-lg text-xs text-dunhuang-text/60 hover:bg-dunhuang-yellow/10 transition-colors"
-                    >
-                      取消
-                    </button>
-                    <button
-                      @click="dateApply"
-                      class="px-4 py-1.5 rounded-lg text-xs font-medium bg-dunhuang-blue text-white hover:bg-dunhuang-blue/90 transition-colors shadow-sm"
-                    >
-                      确认
-                    </button>
+
+                    <div class="flex justify-end gap-2 mt-3 pt-3 border-t border-dunhuang-yellow/10">
+                      <button
+                        @click="cancelDatePicker"
+                        class="px-3 py-1.5 rounded-lg text-xs text-dunhuang-text/50 hover:text-dunhuang-text/70 hover:bg-dunhuang-yellow/5 transition-colors"
+                      >
+                        取消
+                      </button>
+                      <button
+                        @click="dateApply"
+                        class="px-4 py-1.5 rounded-lg text-xs font-medium bg-dunhuang-blue text-white hover:bg-dunhuang-blue/90 transition-colors shadow-sm"
+                      >
+                        确认
+                      </button>
+                    </div>
                   </div>
                 </div>
               </Transition>
@@ -554,30 +569,36 @@
             <div
               class="flex items-center bg-dunhuang-bg/50 border border-dunhuang-blue/15 rounded-lg px-2.5 transition-all duration-200 hover:border-dunhuang-blue/35 focus-within:border-dunhuang-blue focus-within:ring-2 focus-within:ring-dunhuang-blue/15 focus-within:bg-white h-8"
             >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                width="15"
-                height="15"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="2"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                class="text-dunhuang-blue/50 shrink-0"
+              <button
+                type="button"
+                @click="performSearch"
+                class="text-dunhuang-blue/50 hover:text-dunhuang-blue transition-colors shrink-0"
               >
-                <circle cx="11" cy="11" r="8"></circle>
-                <line x1="21" x2="16.65" y1="21" y2="16.65"></line>
-              </svg>
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="15"
+                  height="15"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                >
+                  <circle cx="11" cy="11" r="8"></circle>
+                  <line x1="21" x2="16.65" y1="21" y2="16.65"></line>
+                </svg>
+              </button>
               <input
                 type="text"
-                v-model="billingSearch"
+                v-model="searchText"
                 placeholder="搜索品种..."
+                @keydown.enter="performSearch"
                 class="bg-transparent border-none text-sm text-dunhuang-blue font-medium focus:outline-none focus:ring-0 p-0 w-28 ml-1.5 placeholder:text-dunhuang-text/30"
               />
               <button
-                v-if="billingSearch"
-                @click="billingSearch = ''"
+                v-if="searchText"
+                @click="clearSearchText"
                 class="text-dunhuang-text/30 hover:text-dunhuang-red text-xs leading-none px-1 transition-colors"
               >
                 ✕
@@ -662,6 +683,9 @@
                   <div class="col-th flex-[0.6] flex items-center">
                     总金额（元）
                   </div>
+                  <div class="col-th flex-[0.7] flex items-center">
+                    放生日期
+                  </div>
                   <div class="col-th flex-[0.9] flex items-center">
                     添加时间
                   </div>
@@ -710,6 +734,9 @@
                   </div>
                   <div class="col-td-mono-red flex-[0.6] flex items-center">
                     {{ formatMoney(b.total_amount) }}
+                  </div>
+                  <div class="col-td flex-[0.7] flex items-center">
+                    {{ dateStr(b.release_date || b.created_at) }}
                   </div>
                   <div class="col-td-time flex-[0.9] flex items-center">
                     {{ dateTimeStr(b.created_at) }}
@@ -771,6 +798,7 @@
                     <div
                       class="col-td-mono-red flex-[0.6] flex items-center"
                     ></div>
+                    <div class="col-td flex-[0.7] flex items-center"></div>
                     <div class="col-td-time flex-[0.9] flex items-center"></div>
                     <div
                       v-if="activeTab === 'current'"
@@ -1016,6 +1044,15 @@
               </div>
 
               <div class="flex justify-between items-center pt-4 mt-auto">
+                <span class="text-dunhuang-text/40 text-xs">放生日期</span>
+                <span class="text-xs text-dunhuang-blue font-medium">{{
+                  dateStr(
+                    viewingBill?.release_date || viewingBill?.created_at,
+                  ) || "-"
+                }}</span>
+              </div>
+
+              <div class="flex justify-between items-center pt-4 mt-auto">
                 <span class="text-dunhuang-text/40 text-xs">记录添加时间</span>
                 <span class="text-xs text-dunhuang-text/50">{{
                   dateTimeStr(viewingBill?.created_at)
@@ -1155,8 +1192,9 @@
 import { onMounted, ref } from "vue";
 import { useI18n } from "vue-i18n";
 import { useRouter } from "vue-router";
-import { dateTimeStr, formatMoney } from "../lib/utils";
+import { dateStr, dateTimeStr, formatMoney } from "../lib/utils";
 import ConfirmDialog from "../components/ConfirmDialog.vue";
+import DateInput from "../components/DateInput.vue";
 import { useSpecies } from "../composables/useSpecies";
 import { useBillForm } from "../composables/useBillForm";
 import { useBillTable } from "../composables/useBillTable";
@@ -1165,11 +1203,71 @@ import { useBillAudit } from "../composables/useBillAudit";
 const { t } = useI18n();
 const router = useRouter();
 
-const showDatePicker = ref(false);
+const showDatePicker = ref(false)
+
+const now = new Date()
+const currentYearMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`
+const pickerFromMonth = ref(currentYearMonth)
+const pickerToMonth = ref(currentYearMonth)
+
+const lastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1)
+const lastMonthStr = `${lastMonth.getFullYear()}-${String(lastMonth.getMonth() + 1).padStart(2, "0")}`
+
+const threeMonthsAgo = new Date(now.getFullYear(), now.getMonth() - 2, 1)
+const threeMonthsAgoStr = `${threeMonthsAgo.getFullYear()}-${String(threeMonthsAgo.getMonth() + 1).padStart(2, "0")}`
+
+const datePresets = [
+  { label: "本月", from: currentYearMonth, to: currentYearMonth },
+  { label: "上月", from: lastMonthStr, to: lastMonthStr },
+  { label: "近三个月", from: threeMonthsAgoStr, to: currentYearMonth },
+  { label: "本年", from: `${now.getFullYear()}-01`, to: `${now.getFullYear()}-12` },
+]
+
+const isPresetActive = (preset: { from: string; to: string }) => {
+  return pickerFromMonth.value === preset.from && pickerToMonth.value === preset.to
+}
+
+const applyDatePreset = (preset: { from: string; to: string }) => {
+  pickerFromMonth.value = preset.from
+  pickerToMonth.value = preset.to
+}
+
+const openDatePicker = () => {
+  if (filterDateFrom.value) {
+    const parts = filterDateFrom.value.split("-")
+    if (parts.length >= 2) pickerFromMonth.value = `${parts[0]}-${parts[1]}`
+  }
+  if (filterDateTo.value) {
+    const parts = filterDateTo.value.split("-")
+    if (parts.length >= 2) pickerToMonth.value = `${parts[0]}-${parts[1]}`
+  }
+}
+
 const dateApply = () => {
-  showDatePicker.value = false;
-  fetchBills();
-};
+  showDatePicker.value = false
+  if (pickerFromMonth.value) {
+    filterDateFrom.value = `${pickerFromMonth.value}-01`
+  }
+  if (pickerToMonth.value) {
+    const [y, m] = pickerToMonth.value.split("-").map(Number)
+    const lastDay = new Date(y, m, 0).getDate()
+    filterDateTo.value = `${pickerToMonth.value}-${String(lastDay).padStart(2, "0")}`
+  }
+  fetchBills()
+}
+
+const cancelDatePicker = () => {
+  showDatePicker.value = false
+}
+
+const toggleShowDatePicker = () => {
+  if (showDatePicker.value) {
+    showDatePicker.value = false
+  } else {
+    openDatePicker()
+    showDatePicker.value = true
+  }
+}
 
 const tabs = [
   { key: "current", label: "最新单据" },
@@ -1235,6 +1333,17 @@ const {
   upsertBill,
 } = useBillTable(speciesList);
 
+const searchText = ref("");
+
+const performSearch = () => {
+  billingSearch.value = searchText.value;
+};
+
+const clearSearchText = () => {
+  searchText.value = "";
+  billingSearch.value = "";
+};
+
 const {
   showViewModal,
   viewingBill,
@@ -1264,6 +1373,24 @@ onMounted(() => {
 </script>
 
 <style scoped>
+.dropdown-enter-active {
+  transition:
+    opacity 0.2s ease,
+    transform 0.2s ease;
+}
+.dropdown-leave-active {
+  transition:
+    opacity 0.15s ease,
+    transform 0.15s ease;
+}
+.dropdown-enter-from {
+  opacity: 0;
+  transform: translateY(-6px) scale(0.96);
+}
+.dropdown-leave-to {
+  opacity: 0;
+  transform: translateY(-4px) scale(0.97);
+}
 .col-th {
   @apply px-4 py-2 border-b border-dunhuang-yellow/40 whitespace-nowrap;
 }

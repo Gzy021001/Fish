@@ -3,6 +3,7 @@ import api from "../api"
 export interface ImportRow {
   name_zh: string
   unit_price: number
+  release_date?: string
 }
 
 export interface BillEntryInput {
@@ -10,6 +11,7 @@ export interface BillEntryInput {
   weight: number
   unit_price: number
   fee_value: number
+  release_date?: string
 }
 
 export async function ensureSpecies(
@@ -39,6 +41,7 @@ export function buildBillPayload(entry: BillEntryInput) {
     fee_value: entry.fee_value,
     currency: "CNY",
     status: "COMPLETED",
+    release_date: entry.release_date || null,
   }
 }
 
@@ -60,6 +63,7 @@ export async function saveImportedRows(
       weight: 0,
       unit_price: row.unit_price,
       fee_value: 0,
+      release_date: row.release_date,
     }
     await saveEntry(payload)
     saved++

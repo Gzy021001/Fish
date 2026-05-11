@@ -17,6 +17,8 @@ class Species(Base):
     default_unit = Column(String(20), default="kg")
     default_price = Column(Float, default=0.0)
     image_url = Column(String(255), nullable=True)
+    release_date = Column(DateTime, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
 
 class Bill(Base):
     __tablename__ = "bills"
@@ -30,7 +32,8 @@ class Bill(Base):
     fee_type = Column(String(20), default="FIXED")
     fee_value = Column(Float)
     total_amount = Column(Float)
-    status = Column(String(20), default="DRAFT") # "DRAFT" (开单中), "COMPLETED" (已结算历史)
+    status = Column(String(20), default="DRAFT")
+    release_date = Column(DateTime, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
 
     user = relationship("User")

@@ -16,21 +16,26 @@
         <div
           class="flex items-center bg-white border border-dunhuang-blue/30 rounded-lg px-3 py-1.5 shadow-sm transition-colors hover:border-dunhuang-blue/50 focus-within:border-dunhuang-blue focus-within:ring-2 focus-within:ring-dunhuang-blue/20"
         >
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            width="16"
-            height="16"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="2"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            class="text-dunhuang-blue shrink-0"
+          <button
+            type="button"
+            @click="handleSearch"
+            class="text-dunhuang-blue hover:text-dunhuang-blue/70 transition-colors shrink-0"
           >
-            <circle cx="11" cy="11" r="8"></circle>
-            <line x1="21" x2="16.65" y1="21" y2="16.65"></line>
-          </svg>
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <circle cx="11" cy="11" r="8"></circle>
+              <line x1="21" x2="16.65" y1="21" y2="16.65"></line>
+            </svg>
+          </button>
           <input
             type="text"
             v-model="speciesSearch"
@@ -44,15 +49,6 @@
             class="text-dunhuang-text/40 hover:text-dunhuang-red text-sm leading-none px-1"
           >
             ✕
-          </button>
-          <button
-            @click="handleSearch"
-            class="ml-1 text-dunhuang-blue hover:text-dunhuang-blue/70 transition-colors shrink-0"
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <circle cx="11" cy="11" r="8"></circle>
-              <line x1="21" x2="16.65" y1="21" y2="16.65"></line>
-            </svg>
           </button>
         </div>
       </div>
@@ -115,6 +111,11 @@
             <th
               class="px-4 py-2 border-b border-dunhuang-yellow/40 flex-1 flex items-center"
             >
+              放生日期
+            </th>
+            <th
+              class="px-4 py-2 border-b border-dunhuang-yellow/40 flex-1 flex items-center"
+            >
               默认单位
             </th>
             <th
@@ -158,6 +159,9 @@
             >
               {{ formatMoney(sp.default_price) }}
             </td>
+            <td class="px-4 py-1.5 flex-1 flex items-center text-sm">
+               {{ dateStr(sp.release_date || sp.created_at) || '-' }}
+             </td>
             <td class="px-4 py-1.5 flex-1 flex items-center">
               {{ sp.default_unit }}
             </td>
@@ -393,6 +397,16 @@
 
               <div>
                 <label class="block text-sm font-medium text-dunhuang-text mb-2"
+                  >放生日期</label
+                >
+                <DateInput
+                  v-model="newSp.release_date"
+                  placeholder="选择放生日期"
+                />
+              </div>
+
+              <div>
+                <label class="block text-sm font-medium text-dunhuang-text mb-2"
                   >品种图片</label
                 >
                 <div class="flex items-start gap-5">
@@ -598,7 +612,7 @@
                 </div>
               </div>
               <div class="text-center text-dunhuang-text/50 text-sm space-y-1">
-                <p>模板包含字段：品种、单价（元）</p>
+                <p>模板包含字段：品种、单价（元）、放生日期</p>
                 <p>支持 .xlsx / .xls 格式</p>
               </div>
             </div>
@@ -645,6 +659,9 @@
                         单价（元）
                       </th>
                       <th class="px-4 py-2 border-b border-dunhuang-yellow/40">
+                        放生日期
+                      </th>
+                      <th class="px-4 py-2 border-b border-dunhuang-yellow/40">
                         状态
                       </th>
                     </tr>
@@ -658,6 +675,9 @@
                       <td class="px-4 py-2">{{ row.name_zh }}</td>
                       <td class="px-4 py-2 tabular-nums">
                         {{ formatMoney(row.default_price) }}
+                      </td>
+                      <td class="px-4 py-2 text-sm">
+                        {{ row.release_date || "-" }}
                       </td>
                       <td class="px-4 py-2">
                         <button
@@ -716,8 +736,9 @@ import { useRouter } from "vue-router";
 import * as XLSX from "xlsx";
 import api from "../api";
 import { apiErrorMessage, isAuthError } from "../lib/error";
-import { formatMoney } from "../lib/utils";
+import { formatMoney, dateStr } from "../lib/utils";
 import ConfirmDialog from "../components/ConfirmDialog.vue";
+import DateInput from "../components/DateInput.vue";
 
 // ============================================================
 //  品种管理：列表 + 新增 + 批量删除 + 分页
@@ -738,17 +759,6 @@ const selectedIds = ref<number[]>([]);
 const showAddModal = ref(false);
 const errorMsg = ref("");
 const speciesSearch = ref("");
-
-const handleSearch = () => {
-  currentPage.value = 1;
-  fetchSpecies();
-};
-
-const handleClearSearch = () => {
-  speciesSearch.value = "";
-  currentPage.value = 1;
-  fetchSpecies();
-};
 
 const currentPage = ref(1);
 const pageSize = 10;
@@ -821,6 +831,7 @@ const newSp = ref({
   default_unit: "公斤",
   default_price: "0.00",
   image_url: null as string | null,
+  release_date: "",
 });
 
 const selectedFile = ref<File | null>(null);
@@ -863,6 +874,7 @@ const closeAddModal = () => {
     default_unit: "公斤",
     default_price: "0.00",
     image_url: null,
+    release_date: "",
   };
   selectedFile.value = null;
   if (previewUrl.value) {
@@ -890,6 +902,17 @@ const fetchSpecies = async () => {
   }
 };
 
+const handleSearch = () => {
+  currentPage.value = 1;
+  fetchSpecies();
+};
+
+const handleClearSearch = () => {
+  speciesSearch.value = "";
+  currentPage.value = 1;
+  fetchSpecies();
+};
+
 const addSpecies = async () => {
   const name = newSp.value.name_zh.trim()
   if (!name) {
@@ -898,6 +921,10 @@ const addSpecies = async () => {
   }
   if (+newSp.value.default_price <= 0) {
     errorMsg.value = "单价必须大于0"
+    return
+  }
+  if (!newSp.value.release_date) {
+    errorMsg.value = "请选择放生日期"
     return
   }
   if (species.value.some((s) => s.name_zh === name)) {
@@ -926,7 +953,7 @@ const addSpecies = async () => {
     await fetchSpecies();
   } catch (error: any) {
     if (isAuthError(error)) return;
-    alert(apiErrorMessage(error, "保存品种"));
+    errorMsg.value = apiErrorMessage(error, "保存品种");
   } finally {
     saving.value = false;
   }
@@ -960,7 +987,7 @@ const executeDeleteSpecies = async () => {
       await fetchSpecies();
     } catch (error: any) {
       if (isAuthError(error)) return;
-      alert(apiErrorMessage(error, "批量删除"));
+      errorMsg.value = apiErrorMessage(error, "批量删除");
       deleteConfirm.value.show = false;
       await fetchSpecies();
     }
@@ -976,7 +1003,7 @@ const executeDeleteSpecies = async () => {
       await fetchSpecies();
     } catch (error: any) {
       if (isAuthError(error)) return;
-      alert(apiErrorMessage(error, "删除品种"));
+      errorMsg.value = apiErrorMessage(error, "删除品种");
       deleteConfirm.value.show = false;
     }
   }
@@ -1013,11 +1040,11 @@ const triggerSpeciesFileInput = () => {
 
 const downloadSpeciesTemplate = () => {
   const templateData = [
-    { 品种: "草鱼", "单价（元）": 12.5 },
-    { 品种: "鲈鱼", "单价（元）": 25.0 },
+    { 品种: "草鱼", "单价（元）": 12.5, "放生日期": "2025-01-15" },
+    { 品种: "鲈鱼", "单价（元）": 25.0, "放生日期": "2025-01-15" },
   ];
   const worksheet = XLSX.utils.json_to_sheet(templateData);
-  worksheet["!cols"] = [{ wch: 15 }, { wch: 12 }];
+  worksheet["!cols"] = [{ wch: 15 }, { wch: 12 }, { wch: 14 }];
   const workbook = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(workbook, worksheet, "品种导入模板");
   XLSX.writeFile(workbook, "品种导入模板.xlsx");
@@ -1052,6 +1079,8 @@ const handleSpeciesFileUpload = (event: Event) => {
           const price =
             parseFloat(String(rawPrice).replace(/[^\d.]/g, "")) || 0;
 
+          const release_date = row["放生日期"] || row["日期"] || "";
+
           const existsInDb = species.value.some((s) => s.name_zh === nameZh);
           const existsInFile = seen.has(nameZh);
           seen.add(nameZh);
@@ -1067,6 +1096,7 @@ const handleSpeciesFileUpload = (event: Event) => {
             exists: existsInDb || existsInFile,
             species_id: existing ? existing.id : null,
             overwrite: false,
+            release_date: release_date ? String(release_date).trim() : "",
           };
         })
         .filter((r) => r.name_zh && r.default_price > 0);
@@ -1100,6 +1130,7 @@ const confirmImportSpecies = async () => {
           name_zh: row.name_zh,
           default_price: row.default_price,
           default_unit: row.default_unit,
+          release_date: row.release_date || null,
         });
         updated++;
       } else if (row.exists) {
@@ -1109,6 +1140,7 @@ const confirmImportSpecies = async () => {
           name_zh: row.name_zh,
           default_price: row.default_price,
           default_unit: row.default_unit,
+          release_date: row.release_date || null,
         });
         created++;
       }
@@ -1125,7 +1157,7 @@ const confirmImportSpecies = async () => {
     await fetchSpecies();
   } catch (error: any) {
     if (isAuthError(error)) return;
-    alert(apiErrorMessage(error, "导入品种"));
+    errorMsg.value = apiErrorMessage(error, "导入品种");
   } finally {
     importing.value = false;
   }

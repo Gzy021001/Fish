@@ -30,6 +30,7 @@ def create_bill(data: schemas.BillCreate, user: models.User, db: Session):
         fee_value=data.fee_value,
         total_amount=total_amount,
         status="DRAFT",
+        release_date=data.release_date,
     )
     db.add(bill)
     db.flush()
@@ -107,6 +108,8 @@ def update_bill(bill_id: int, data: schemas.BillCreate, user: models.User, db: S
     bill.status = data.status
     bill.subtotal = subtotal
     bill.total_amount = total_amount
+    if data.release_date is not None:
+        bill.release_date = data.release_date
 
     db.flush()
 

@@ -39,6 +39,7 @@ export function useBillAudit(speciesList: Ref<any[]>) {
         },
         { key: "weight", label: "重量", format: (v) => v },
         { key: "unit_price", label: "单价", format: (v) => v },
+        { key: "release_date", label: "放生日期", format: (v) => v ? String(v).slice(0, 10) : "-" },
       ])
 
       if (oldD.fee_type !== newD.fee_type || oldD.fee_value !== newD.fee_value) {

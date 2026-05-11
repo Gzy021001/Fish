@@ -24,11 +24,13 @@ def get_species(species_id: int, db: Session):
 
 
 def create_species(data: schemas.SpeciesCreate, user: models.User, db: Session):
+    if not data.release_date:
+        raise HTTPException(status_code=400, detail="请选择放生日期")
     if data.default_price <= 0:
         raise HTTPException(status_code=400, detail="单价必须大于0")
 
     if db.query(models.Species).filter(models.Species.name_zh == data.name_zh).first():
-        raise HTTPException(status_code=400, detail="Species already registered")
+        raise HTTPException(status_code=400, detail="品种名称已存在，请勿重复添加")
 
     species = models.Species(**data.model_dump())
     db.add(species)
@@ -52,6 +54,8 @@ def create_species(data: schemas.SpeciesCreate, user: models.User, db: Session):
 
 
 def update_species(species_id: int, data: schemas.SpeciesUpdate, user: models.User, db: Session):
+    if not data.release_date:
+        raise HTTPException(status_code=400, detail="请选择放生日期")
     if data.default_price <= 0:
         raise HTTPException(status_code=400, detail="单价必须大于0")
 
@@ -61,7 +65,7 @@ def update_species(species_id: int, data: schemas.SpeciesUpdate, user: models.Us
         models.Species.name_zh == data.name_zh,
         models.Species.id != species_id,
     ).first():
-        raise HTTPException(status_code=400, detail="Species name already exists")
+        raise HTTPException(status_code=400, detail="品种名称已存在，请勿重复添加")
 
     old_data = {
         "name_zh": species.name_zh,
@@ -93,7 +97,7 @@ def upload_image(species_id: int, image: UploadFile, db: Session):
     species = get_species(species_id, db)
 
     if not image.content_type or not image.content_type.startswith("image/"):
-        raise HTTPException(status_code=400, detail="Please upload an image file")
+        raise HTTPException(status_code=400, detail="请上传图片文件")
 
     extension = Path(image.filename or "").suffix.lower() or ".jpg"
     file_name = f"{species_id}_{uuid.uuid4().hex}{extension}"
@@ -115,7 +119,7 @@ def delete_species(species_id: int, user: models.User, db: Session):
     if db.query(models.Bill).filter(models.Bill.species_id == species_id).first():
         raise HTTPException(
             status_code=400,
-            detail="This species is already used in bills and cannot be deleted",
+            detail="该品种已被单据使用，无法删除",
         )
 
     old_data = {
