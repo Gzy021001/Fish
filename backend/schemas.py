@@ -20,6 +20,8 @@ class SpeciesBase(BaseModel):
     default_unit: str
     default_price: float = 0.0
     image_url: Optional[str] = None
+    supplier_name: Optional[str] = None
+    supplier_note: Optional[str] = None
     release_date: Optional[datetime] = None
     created_at: Optional[datetime] = None
 

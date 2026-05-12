@@ -45,6 +45,9 @@ def create_species(data: schemas.SpeciesCreate, user: models.User, db: Session):
             "name_zh": species.name_zh,
             "default_unit": species.default_unit,
             "default_price": species.default_price,
+            "supplier_name": species.supplier_name,
+            "supplier_note": species.supplier_note,
+            "release_date": species.release_date,
         },
     )
 
@@ -71,14 +74,17 @@ def update_species(species_id: int, data: schemas.SpeciesUpdate, user: models.Us
         "name_zh": species.name_zh,
         "default_unit": species.default_unit,
         "default_price": species.default_price,
+        "supplier_name": species.supplier_name,
+        "supplier_note": species.supplier_note,
+        "release_date": species.release_date,
     }
 
-    for field, value in data.model_dump().items():
+    for field, value in data.model_dump(exclude={"created_at"}).items():
         setattr(species, field, value)
 
     db.flush()
 
-    new_data = data.model_dump()
+    new_data = data.model_dump(exclude={"created_at"})
     record_update(
         db,
         entity_type="SPECIES",
@@ -126,6 +132,9 @@ def delete_species(species_id: int, user: models.User, db: Session):
         "name_zh": species.name_zh,
         "default_unit": species.default_unit,
         "default_price": species.default_price,
+        "supplier_name": species.supplier_name,
+        "supplier_note": species.supplier_note,
+        "release_date": species.release_date,
     }
 
     delete_species_image_file(species.image_url)

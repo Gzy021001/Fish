@@ -19,10 +19,10 @@
 
       <div
         v-else-if="species"
-        class="bg-white rounded-2xl shadow-lg ring-1 ring-dunhuang-yellow/10 p-8 flex-1 min-h-0 flex flex-col"
+        class="bg-white rounded-2xl shadow-lg ring-1 ring-dunhuang-yellow/10 px-4 py-3 flex-1 min-h-0 flex flex-col relative"
       >
         <div
-          class="flex items-center justify-between mb-8 border-b border-dunhuang-yellow/20 pb-4 shrink-0"
+          class="flex items-center justify-between mb-4 border-b border-dunhuang-yellow/20 pb-2 shrink-0"
         >
           <div class="flex items-center gap-4">
             <button
@@ -52,22 +52,24 @@
           </div>
         </div>
 
-        <div class="relative z-10 flex-1 min-h-0 overflow-hidden flex flex-col">
-          <Transition name="fade">
-            <div
-              v-if="saveSuccess"
-              class="absolute top-3 left-1/2 -translate-x-1/2 z-50 px-5 py-2.5 bg-dunhuang-green/95 text-white rounded-lg text-sm shadow-lg backdrop-blur"
-            >
-              品种信息已保存
-            </div>
-          </Transition>
-          <div class="flex-1 flex gap-6 min-h-0">
+        <!-- toast 提示 -->
+        <Transition name="fade">
+          <div
+            v-if="saveSuccess"
+            class="absolute top-16 left-1/2 -translate-x-1/2 z-[100] px-5 py-2.5 bg-dunhuang-green/95 text-white rounded-lg text-sm shadow-lg backdrop-blur pointer-events-none"
+          >
+            品种信息已保存
+          </div>
+        </Transition>
+
+        <div class="relative z-10 flex-1 min-h-0 flex flex-col">
+          <div class="flex-1 flex gap-4 min-h-0">
             <template v-if="isEditing">
               <div
-                class="flex-1 grid grid-cols-1 md:grid-cols-[7fr_3fr] gap-10 min-h-0"
+                class="flex-1 grid grid-cols-1 md:grid-cols-[7fr_3fr] gap-6 min-h-0"
               >
-                <div class="w-full flex items-start justify-center">
-                  <div class="w-full">
+                <div class="w-full h-full">
+                  <div class="w-full h-full">
                     <SpeciesImageUpload
                       ref="imageUploadRef"
                       :image-url="species.image_url"
@@ -78,23 +80,23 @@
                 </div>
 
                 <div
-                  class="flex flex-col justify-center min-h-0 overflow-y-auto custom-scrollbar pr-1"
+                  class="flex flex-col min-h-0 overflow-y-auto custom-scrollbar pr-1 h-full"
                 >
-                  <div class="flex flex-col space-y-5 w-full">
-                    <div class="flex gap-3">
+                  <div class="flex flex-col w-full flex-1">
+                    <div class="flex gap-2 shrink-0">
                       <div class="flex-1">
-                        <span class="block text-xs text-dunhuang-text/50 mb-1.5"
+                        <span class="block text-xs text-dunhuang-text/50 mb-1"
                           >品种名称</span
                         >
                         <input
                           v-model="editForm.name_zh"
                           required
                           placeholder="例如：草鱼、鲤鱼、鲈鱼"
-                          class="w-full bg-dunhuang-bg border border-dunhuang-yellow/50 rounded-lg py-2.5 px-4 focus:ring-2 focus:ring-dunhuang-blue outline-none text-sm transition-shadow"
+                          class="w-full bg-dunhuang-bg border border-dunhuang-yellow/50 rounded-lg py-2 px-3 focus:ring-0 outline-none text-sm transition-shadow"
                         />
                       </div>
                       <div class="w-24 shrink-0">
-                        <span class="block text-xs text-dunhuang-text/50 mb-1.5"
+                        <span class="block text-xs text-dunhuang-text/50 mb-1"
                           >单价（元/公斤）</span
                         >
                         <input
@@ -107,33 +109,33 @@
                             ).toFixed(2)
                           "
                           placeholder="0.00"
-                          class="w-full bg-dunhuang-bg border border-dunhuang-yellow/50 rounded-lg py-2.5 px-2 text-center font-mono text-sm focus:ring-2 focus:ring-dunhuang-blue outline-none transition-shadow"
+                          class="w-full bg-dunhuang-bg border border-dunhuang-yellow/50 rounded-lg py-2 px-2 text-center font-mono text-sm focus:ring-0 outline-none transition-shadow"
                         />
                       </div>
                     </div>
-                    <div>
-                      <span class="block text-xs text-dunhuang-text/50 mb-1.5"
+                    <div class="shrink-0 mt-3">
+                      <span class="block text-xs text-dunhuang-text/50 mb-1"
                         >商家名称</span
                       >
                       <input
                         v-model="editForm.supplier_name"
                         placeholder="水产品供应商或商家名称"
-                        class="w-full bg-dunhuang-bg border border-dunhuang-yellow/50 rounded-lg py-2.5 px-4 focus:ring-2 focus:ring-dunhuang-blue outline-none text-sm transition-shadow"
+                        class="w-full bg-dunhuang-bg border border-dunhuang-yellow/50 rounded-lg py-2 px-3 focus:ring-0 outline-none text-sm transition-shadow"
                       />
                     </div>
-                    <div>
-                      <span class="block text-xs text-dunhuang-text/50 mb-1.5"
+                    <div class="flex-1 flex flex-col min-h-0 mt-3">
+                      <span
+                        class="block text-xs text-dunhuang-text/50 mb-1 shrink-0"
                         >商家介绍</span
                       >
                       <textarea
                         v-model="editForm.supplier_note"
-                        rows="4"
                         placeholder="商家简介、产地、特色等信息"
-                        class="w-full bg-dunhuang-bg border border-dunhuang-yellow/50 rounded-lg py-2.5 px-4 focus:ring-2 focus:ring-dunhuang-blue outline-none text-sm transition-shadow resize-none custom-scrollbar"
+                        class="w-full flex-1 bg-dunhuang-bg border border-dunhuang-yellow/50 rounded-lg py-2 px-3 focus:ring-0 outline-none text-sm transition-shadow resize-none custom-scrollbar"
                       ></textarea>
                     </div>
-                    <div>
-                      <span class="block text-xs text-dunhuang-text/50 mb-1.5"
+                    <div class="shrink-0 mt-3">
+                      <span class="block text-xs text-dunhuang-text/50 mb-1"
                         >放生日期</span
                       >
                       <DateInput
@@ -148,151 +150,230 @@
             </template>
 
             <template v-else>
-              <!-- 左侧：品种信息 -->
-              <div class="flex-1 min-w-0 space-y-5">
+              <div class="flex-1 flex flex-col min-h-0 gap-6">
                 <div
-                  class="w-full max-w-lg sm:max-w-xl lg:max-w-2xl aspect-[16/11] rounded-xl overflow-hidden border-2 border-dunhuang-yellow/30 bg-white flex items-center justify-center shadow-sm relative group"
-                  :class="{
-                    'cursor-pointer hover:border-dunhuang-orange':
-                      species.image_url,
-                  }"
-                  @click="openImagePreview"
+                  class="grid grid-cols-1 md:grid-cols-[6fr_4fr] gap-6 min-h-0 shrink-0"
                 >
-                  <img
-                    v-if="species.image_url"
-                    :src="species.image_url"
-                    :alt="species.name_zh"
-                    class="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
-                  />
-                  <div
-                    v-else
-                    class="w-full h-full bg-dunhuang-yellow/5 border border-dunhuang-yellow/30 text-dunhuang-blue flex items-center justify-center"
-                  >
-                    <span class="text-4xl font-bold opacity-30">{{
-                      species.name_zh ? species.name_zh.charAt(0) : "?"
-                    }}</span>
-                  </div>
-                </div>
-
-                <div class="space-y-4">
-                  <div>
-                    <span class="block text-xs text-dunhuang-text/50 mb-1"
-                      >品种</span
-                    >
-                    <p class="text-base font-medium text-dunhuang-blue">
-                      {{ species.name_zh }}
-                    </p>
-                  </div>
-                  <div>
-                    <span class="block text-xs text-dunhuang-text/50 mb-1"
-                      >单价（元/{{ species.default_unit || "公斤" }}）</span
-                    >
-                    <p class="text-base font-mono text-dunhuang-red">
-                      {{ formatMoney(species.default_price) }}
-                    </p>
-                  </div>
-                  <div v-if="species.release_date">
-                    <span class="block text-xs text-dunhuang-text/50 mb-1"
-                      >放生日期</span
-                    >
-                    <p class="text-base text-dunhuang-blue">
-                      {{ dateStr(species.release_date) }}
-                    </p>
-                  </div>
-                  <div v-if="species.supplier_name">
-                    <span class="block text-xs text-dunhuang-text/50 mb-1"
-                      >商家名称</span
-                    >
-                    <p class="text-base text-dunhuang-text">
-                      {{ species.supplier_name }}
-                    </p>
-                  </div>
-                  <div v-if="species.supplier_note">
-                    <span class="block text-xs text-dunhuang-text/50 mb-1"
-                      >商家介绍</span
-                    >
-                    <p
-                      class="text-sm text-dunhuang-text/70 whitespace-pre-line"
-                    >
-                      {{ species.supplier_note }}
-                    </p>
-                  </div>
-                </div>
-              </div>
-
-              <!-- 右侧：操作记录 -->
-              <div
-                v-if="filteredLogs.length > 0"
-                class="flex-1 min-h-0 flex flex-col min-w-0 pl-3"
-              >
-                <h4
-                  class="text-base font-serif text-dunhuang-blue font-bold mb-3 border-b border-dunhuang-yellow/10 pb-2 shrink-0"
-                >
-                  操作记录
-                </h4>
-                <div
-                  class="flex-1 min-h-0 overflow-y-auto custom-scrollbar pr-1 space-y-3"
-                >
-                  <div
-                    v-for="log in filteredLogs"
-                    :key="log.id"
-                    class="border-b border-dunhuang-yellow/15 pb-3 last:border-0 last:pb-0"
-                  >
-                    <div class="flex justify-between items-center mb-2">
-                      <span
-                        :class="[
-                          'px-2 py-0.5 rounded text-xs font-medium',
-                          log.action === 'CREATE'
-                            ? 'bg-dunhuang-green/10 text-dunhuang-green'
-                            : log.action === 'UPDATE'
-                              ? 'bg-dunhuang-blue/10 text-dunhuang-blue'
-                              : 'bg-dunhuang-red/10 text-dunhuang-red',
-                        ]"
-                        >{{ formatAction(log.action) }}</span
-                      >
-                      <span class="text-dunhuang-text/40 text-xs">{{
-                        dateTimeStr(log.created_at)
-                      }}</span>
-                    </div>
+                  <div class="w-full h-full flex items-start justify-center">
                     <div
-                      v-if="log.action === 'UPDATE'"
-                      class="text-dunhuang-text/70 text-xs space-y-1.5"
+                      class="w-full max-w-md rounded-xl overflow-hidden border-2 border-dunhuang-yellow/30 bg-white shadow-sm relative group"
+                      :class="{
+                        'cursor-pointer hover:border-dunhuang-orange':
+                          species.image_url,
+                        'aspect-[16/11] flex items-center justify-center':
+                          !species.image_url,
+                      }"
+                      @click="openImagePreview"
                     >
+                      <img
+                        v-if="species.image_url"
+                        :src="species.image_url"
+                        :alt="species.name_zh"
+                        class="w-full h-auto max-h-[360px] object-cover block transition-transform duration-300 group-hover:scale-105"
+                      />
                       <div
-                        v-for="item in formatUpdateDiff(
-                          log.old_data,
-                          log.new_data,
-                        )"
-                        :key="item.label"
-                        class="flex items-center gap-2 px-2.5 py-1.5 rounded-md bg-dunhuang-red/[0.06] border-l-[3px] border-dunhuang-red/40"
+                        v-else
+                        class="w-full h-full bg-dunhuang-yellow/5 border border-dunhuang-yellow/30 text-dunhuang-blue flex items-center justify-center"
                       >
-                        <span
-                          class="shrink-0 text-dunhuang-red font-semibold text-[11px] min-w-[3.5rem]"
-                          >{{ item.label }}</span
-                        >
-                        <span class="text-dunhuang-red/40 line-through">{{
-                          item.old
-                        }}</span>
-                        <span class="text-dunhuang-blue mx-0.5">→</span>
-                        <span class="text-dunhuang-green font-semibold">{{
-                          item.new
+                        <span class="text-4xl font-bold opacity-30">{{
+                          species.name_zh ? species.name_zh.charAt(0) : "?"
                         }}</span>
                       </div>
                     </div>
-                    <div
-                      v-else-if="log.action === 'CREATE'"
-                      class="text-dunhuang-text/50 text-xs"
-                    >
-                      创建了该品种
+                  </div>
+
+                  <div
+                    class="flex flex-col min-h-0 overflow-y-auto custom-scrollbar pr-1 h-full"
+                  >
+                    <div class="flex flex-col w-full flex-1">
+                      <div class="flex gap-2 shrink-0">
+                        <div class="flex-1">
+                          <span class="block text-xs text-dunhuang-text/50 mb-1"
+                            >品种名称</span
+                          >
+                          <p class="text-base font-medium text-dunhuang-blue">
+                            {{ species.name_zh }}
+                          </p>
+                        </div>
+                        <div class="w-24 shrink-0">
+                          <span class="block text-xs text-dunhuang-text/50 mb-1"
+                            >单价（元/{{
+                              species.default_unit || "公斤"
+                            }}）</span
+                          >
+                          <p class="text-base font-mono text-dunhuang-red">
+                            {{ formatMoney(species.default_price) }}
+                          </p>
+                        </div>
+                      </div>
+                      <div class="shrink-0 mt-3">
+                        <span class="block text-xs text-dunhuang-text/50 mb-1"
+                          >商家名称</span
+                        >
+                        <p
+                          v-if="species.supplier_name"
+                          class="text-base text-dunhuang-text"
+                        >
+                          {{ species.supplier_name }}
+                        </p>
+                        <p v-else class="text-base text-dunhuang-text/30">
+                          未填写
+                        </p>
+                      </div>
+                      <div class="flex-1 flex flex-col min-h-0 mt-3">
+                        <span
+                          class="block text-xs text-dunhuang-text/50 mb-1 shrink-0"
+                          >商家介绍</span
+                        >
+                        <p
+                          v-if="species.supplier_note"
+                          class="text-sm text-dunhuang-text/70 whitespace-pre-line flex-1 min-h-0 overflow-y-auto custom-scrollbar"
+                        >
+                          {{ species.supplier_note }}
+                        </p>
+                        <p v-else class="text-sm text-dunhuang-text/30 flex-1">
+                          未填写
+                        </p>
+                      </div>
+                      <div class="shrink-0 mt-3">
+                        <span class="block text-xs text-dunhuang-text/50 mb-1"
+                          >放生日期</span
+                        >
+                        <p
+                          v-if="species.release_date"
+                          class="text-base text-dunhuang-blue"
+                        >
+                          {{ dateStr(species.release_date) }}
+                        </p>
+                        <p v-else class="text-base text-dunhuang-text/30">
+                          未填写
+                        </p>
+                      </div>
                     </div>
                   </div>
                 </div>
-              </div>
-              <div
-                v-else
-                class="flex-1 flex items-center justify-center text-dunhuang-text/30 text-sm"
-              >
-                暂无操作记录
+
+                <div
+                  class="flex-1 min-h-0 flex flex-col border-t border-dunhuang-yellow/10 pt-5"
+                >
+                  <div class="flex items-center gap-2 mb-4">
+                    <svg
+                      class="w-4 h-4 text-dunhuang-yellow"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="2"
+                        d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
+                      />
+                    </svg>
+                    <h4 class="text-sm font-serif text-dunhuang-blue font-bold">
+                      操作记录
+                    </h4>
+                    <span class="text-xs text-dunhuang-text/30 ml-auto">{{
+                      filteredLogs.length > 0
+                        ? filteredLogs.length + " 条记录"
+                        : ""
+                    }}</span>
+                  </div>
+                  <div
+                    v-if="filteredLogs.length > 0"
+                    class="flex-1 min-h-0 overflow-y-auto custom-scrollbar bg-dunhuang-yellow/[0.03] rounded-xl p-4"
+                  >
+                    <div class="space-y-0">
+                      <div
+                        v-for="(log, idx) in filteredLogs"
+                        :key="log.id"
+                        class="relative pl-5"
+                        :class="idx < filteredLogs.length - 1 ? 'pb-4' : ''"
+                      >
+                        <div
+                          :class="[
+                            'absolute left-0 top-0 w-px',
+                            idx < filteredLogs.length - 1 ? 'h-full' : 'h-3',
+                            log.action === 'CREATE'
+                              ? 'bg-dunhuang-green/30'
+                              : log.action === 'UPDATE'
+                                ? 'bg-dunhuang-blue/30'
+                                : 'bg-dunhuang-red/30',
+                          ]"
+                        ></div>
+                        <span
+                          :class="[
+                            'absolute left-[-3px] top-1 w-[7px] h-[7px] rounded-full ring-2 ring-white',
+                            log.action === 'CREATE'
+                              ? 'bg-dunhuang-green'
+                              : log.action === 'UPDATE'
+                                ? 'bg-dunhuang-blue'
+                                : 'bg-dunhuang-red',
+                          ]"
+                        ></span>
+                        <div class="flex items-center gap-2 mb-1">
+                          <span
+                            :class="[
+                              'text-xs font-medium',
+                              log.action === 'CREATE'
+                                ? 'text-dunhuang-green'
+                                : log.action === 'UPDATE'
+                                  ? 'text-dunhuang-blue'
+                                  : 'text-dunhuang-red',
+                            ]"
+                            >{{ formatAction(log.action) }}</span
+                          >
+                          <span class="text-dunhuang-text/30 text-[11px]">{{
+                            dateTimeStr(log.created_at)
+                          }}</span>
+                        </div>
+                        <div
+                          v-if="log.action === 'UPDATE'"
+                          class="text-dunhuang-text/60 text-xs space-y-1.5 mt-1.5"
+                        >
+                          <div
+                            v-for="item in formatUpdateDiff(
+                              log.old_data,
+                              log.new_data,
+                            )"
+                            :key="item.label"
+                            class="flex items-center gap-2 px-2.5 py-1.5 rounded-md bg-dunhuang-red/[0.06] border-l-[3px] border-dunhuang-red/40"
+                          >
+                            <span
+                              class="shrink-0 text-dunhuang-red font-semibold text-[11px] min-w-[3.5rem]"
+                              >{{ item.label }}</span
+                            >
+                            <span class="text-dunhuang-red/40 line-through">{{
+                              item.old
+                            }}</span>
+                            <span class="text-dunhuang-blue mx-0.5">→</span>
+                            <span class="text-dunhuang-green font-semibold">{{
+                              item.new
+                            }}</span>
+                          </div>
+                        </div>
+                        <div
+                          v-else-if="log.action === 'CREATE'"
+                          class="text-dunhuang-text/40 text-xs mt-1"
+                        >
+                          创建了该品种
+                        </div>
+                        <div
+                          v-else-if="log.action === 'DELETE'"
+                          class="text-dunhuang-text/40 text-xs mt-1"
+                        >
+                          删除了该品种
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  <div
+                    v-else
+                    class="py-6 text-center text-dunhuang-text/30 text-sm"
+                  >
+                    暂无操作记录
+                  </div>
+                </div>
               </div>
             </template>
           </div>
@@ -434,9 +515,9 @@ const cancelEdit = () => {
 
 const saveEdit = async () => {
   if (!editForm.release_date) {
-    errorMsg.value = "请选择放生日期"
-    saving.value = false
-    return
+    errorMsg.value = "请选择放生日期";
+    saving.value = false;
+    return;
   }
   saving.value = true;
   errorMsg.value = "";
@@ -502,10 +583,17 @@ const formatUpdateDiff = (
     { key: "name_zh", label: "品种" },
     {
       key: "default_price",
-      label: "默认单价",
+      label: "单价",
       format: (v) => Number(v).toFixed(2),
     },
-    { key: "default_unit", label: "默认单位" },
+    { key: "default_unit", label: "单位" },
+    { key: "supplier_name", label: "商家" },
+    { key: "supplier_note", label: "商家介绍" },
+    {
+      key: "release_date",
+      label: "放生日期",
+      format: (v) => dateStr(String(v ?? "")),
+    },
   ]);
 };
 

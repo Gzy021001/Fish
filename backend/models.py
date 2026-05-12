@@ -17,6 +17,8 @@ class Species(Base):
     default_unit = Column(String(20), default="kg")
     default_price = Column(Float, default=0.0)
     image_url = Column(String(255), nullable=True)
+    supplier_name = Column(String(200), nullable=True)
+    supplier_note = Column(String(500), nullable=True)
     release_date = Column(DateTime, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
 

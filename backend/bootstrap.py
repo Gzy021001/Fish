@@ -13,6 +13,10 @@ def ensure_db_schema_updates():
             connection.execute(text("ALTER TABLE species ADD COLUMN image_url VARCHAR(255)"))
         if "default_price" not in column_names:
             connection.execute(text("ALTER TABLE species ADD COLUMN default_price FLOAT DEFAULT 0.0"))
+        if "supplier_name" not in column_names:
+            connection.execute(text("ALTER TABLE species ADD COLUMN supplier_name VARCHAR(200)"))
+        if "supplier_note" not in column_names:
+            connection.execute(text("ALTER TABLE species ADD COLUMN supplier_note VARCHAR(500)"))
 
         columns = connection.execute(text("PRAGMA table_info(audit_logs)")).fetchall()
         column_names = {column[1] for column in columns}
