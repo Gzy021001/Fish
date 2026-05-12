@@ -281,7 +281,6 @@ export function useBillTable(speciesList: Ref<any[]>) {
     currentPage,
     totalPages,
     totalItems,
-    filteredBills,
     paginatedBills,
     tableSumWeight,
     tableSumSubtotal,

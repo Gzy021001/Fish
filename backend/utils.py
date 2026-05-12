@@ -8,18 +8,6 @@ UPLOAD_DIR = BASE_DIR / "uploads"
 SPECIES_UPLOAD_DIR = UPLOAD_DIR / "species"
 
 
-# ============================================================
-#  通用查询辅助函数
-# ============================================================
-
-def get_species_or_404(species_id: int, db: Session):
-    """按 ID 查找品种，不存在则返回 404"""
-    species = db.query(models.Species).filter(models.Species.id == species_id).first()
-    if not species:
-        raise HTTPException(status_code=404, detail="未找到该品种")
-    return species
-
-
 def get_bill_or_404(bill_id: int, db: Session):
     """按 ID 查找单据，不存在则返回 404"""
     bill = db.query(models.Bill).filter(models.Bill.id == bill_id).first()

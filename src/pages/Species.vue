@@ -90,7 +90,7 @@
                 type="checkbox"
                 :checked="isAllSelected"
                 @change="toggleAll"
-                class="w-4 h-4 rounded border-2 border-dunhuang-yellow/40 text-dunhuang-red focus:ring-2 focus:ring-dunhuang-red/30 focus:ring-offset-0 cursor-pointer transition-all duration-200"
+                class="w-4 h-4 rounded border-2 border-dunhuang-yellow/40 text-dunhuang-red focus:ring-0 focus:ring-offset-0 cursor-pointer transition-all duration-200"
               />
             </th>
             <th
@@ -143,7 +143,7 @@
                 type="checkbox"
                 v-model="selectedIds"
                 :value="sp.id"
-                class="w-4 h-4 rounded border-2 border-dunhuang-yellow/40 text-dunhuang-red focus:ring-2 focus:ring-dunhuang-red/30 focus:ring-offset-0 cursor-pointer transition-all duration-200"
+                class="w-4 h-4 rounded border-2 border-dunhuang-yellow/40 text-dunhuang-red focus:ring-0 focus:ring-offset-0 cursor-pointer transition-all duration-200"
               />
             </td>
             <td
@@ -344,7 +344,7 @@
                       v-model="newSp.name_zh"
                       required
                       placeholder="例如：草鱼、鲤鱼、鲈鱼"
-                      class="w-full bg-dunhuang-bg border border-dunhuang-yellow/50 rounded-lg py-3 pl-10 pr-4 focus:ring-2 focus:ring-dunhuang-blue outline-none text-sm transition-shadow"
+                      class="w-full bg-dunhuang-bg border border-dunhuang-yellow/50 rounded-lg py-3 pl-10 pr-4 focus:ring-0 outline-none text-sm transition-shadow"
                     />
                   </div>
                 </div>
@@ -366,7 +366,7 @@
                           +newSp.default_price || 0
                         ).toFixed(2)
                       "
-                      class="w-full bg-dunhuang-bg border border-dunhuang-yellow/50 rounded-lg py-3 px-4 text-center focus:ring-2 focus:ring-dunhuang-blue outline-none font-mono text-sm transition-shadow"
+                      class="w-full bg-dunhuang-bg border border-dunhuang-yellow/50 rounded-lg py-3 px-4 text-center focus:ring-0 outline-none font-mono text-sm transition-shadow"
                     />
                   </div>
                 </div>
@@ -763,17 +763,13 @@ const speciesSearch = ref("");
 const currentPage = ref(1);
 const pageSize = 10;
 
-const filteredSpecies = computed(() => {
-  return species.value;
-});
-
-const totalItems = computed(() => filteredSpecies.value.length);
+const totalItems = computed(() => species.value.length);
 const totalPages = computed(() => Math.ceil(totalItems.value / pageSize));
 
 const paginatedSpecies = computed(() => {
   const start = (currentPage.value - 1) * pageSize;
   const end = start + pageSize;
-  return filteredSpecies.value.slice(start, end);
+  return species.value.slice(start, end);
 });
 
 const displayedPages = computed(() => {

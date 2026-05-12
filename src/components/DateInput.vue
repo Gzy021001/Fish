@@ -5,7 +5,7 @@
       @click="toggle"
       :class="[
         'w-full flex items-center gap-2.5 rounded-lg border transition-all duration-200 focus:outline-none group',
-        size === 'sm' ? 'py-2.5 px-4' : 'py-3 px-4',
+        size === 'sm' ? 'py-2 px-4 text-sm' : 'py-3 px-4 text-sm',
         hasValue
           ? 'bg-white border-dunhuang-blue/30 text-dunhuang-blue shadow-sm shadow-dunhuang-blue/5 hover:border-dunhuang-blue/50'
           : 'bg-dunhuang-bg border-dunhuang-yellow/50 text-dunhuang-text/40 hover:border-dunhuang-blue/40 hover:text-dunhuang-text/60 hover:bg-white',
@@ -308,12 +308,9 @@ const isSelected = (day: { dateStr: string }) => {
   return day.dateStr === props.modelValue
 }
 
-const isWeekend = (day: { currentMonth: boolean }, idx?: number) => {
-  const row: (typeof calendarDays.value)[0][] = []
-  calendarDays.value.forEach((d, i) => row.push(d))
+const isWeekend = (day: { currentMonth: boolean }) => {
   const pos = calendarDays.value.indexOf(day)
-  if (pos < 0) return false
-  return pos % 7 === 5 || pos % 7 === 6
+  return pos >= 0 && (pos % 7 === 5 || pos % 7 === 6)
 }
 
 const toggle = () => {

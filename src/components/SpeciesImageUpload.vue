@@ -1,14 +1,14 @@
 <template>
   <div
-    class="w-full relative group cursor-pointer rounded-xl overflow-hidden transition-all duration-300 bg-dunhuang-bg hover:ring-2 hover:ring-dunhuang-blue/30"
-    :class="displaySrc ? '' : 'flex items-center justify-center min-h-[200px]'"
+    class="w-full h-full relative group cursor-pointer overflow-hidden transition-all duration-300 hover:ring-2 hover:ring-dunhuang-blue/30 min-h-[200px]"
+    :class="displaySrc ? '' : 'flex items-center justify-center bg-dunhuang-bg'"
     @click="trigger"
   >
     <img
       v-if="displaySrc"
       :src="displaySrc"
       :alt="nameZh"
-      class="w-full h-auto max-h-[600px] block"
+      class="w-full h-full object-cover block"
     />
     <div
       v-else-if="nameZh"
@@ -31,7 +31,7 @@
       />
     </svg>
     <div
-      class="absolute inset-0 rounded-xl bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+      class="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
     >
       <span class="text-white text-sm font-medium">{{
         displaySrc ? "更换图片" : "选择图片"

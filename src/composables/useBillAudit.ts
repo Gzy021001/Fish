@@ -76,11 +76,9 @@ export function useBillAudit(speciesList: Ref<any[]>) {
   return {
     showViewModal,
     viewingBill,
-    viewingBillLogs,
     filteredViewingBillLogs,
     viewBill,
     formatAction,
     formatUpdateDiff,
-    getSpeciesName,
   }
 }

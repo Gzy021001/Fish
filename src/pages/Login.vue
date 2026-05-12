@@ -87,17 +87,11 @@
 
 <script setup lang="ts">
 import { ref } from 'vue'
-import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '../stores/auth'
 import axios from 'axios'
 import { apiErrorMessage } from '../lib/error'
 
-// ============================================================
-//  登录页
-// ============================================================
-
-const { t } = useI18n()
 const router = useRouter()
 const authStore = useAuthStore()
 

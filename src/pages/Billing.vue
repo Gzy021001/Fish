@@ -88,7 +88,7 @@
                   type="text"
                   :value="(+bill.unit_price || 0).toFixed(2)"
                   disabled
-                  class="w-full bg-dunhuang-bg border border-dunhuang-yellow/50 rounded-lg p-3 focus:ring-2 focus:ring-dunhuang-red outline-none font-mono text-dunhuang-red disabled:opacity-50 disabled:cursor-not-allowed"
+                  class="w-full bg-dunhuang-bg border border-dunhuang-yellow/50 rounded-lg py-3 px-4 text-sm focus:ring-0 outline-none font-mono text-dunhuang-red disabled:opacity-50 disabled:cursor-not-allowed"
                 />
               </div>
               <div>
@@ -101,7 +101,7 @@
                   v-model="bill.weight"
                   @blur="bill.weight = (+bill.weight || 0).toFixed(2)"
                   required
-                  class="w-full bg-dunhuang-bg border border-dunhuang-yellow/50 rounded-lg p-3 focus:ring-2 focus:ring-dunhuang-red outline-none font-mono"
+                  class="w-full bg-dunhuang-bg border border-dunhuang-yellow/50 rounded-lg py-3 px-4 text-sm focus:ring-0 outline-none font-mono"
                 />
               </div>
               <div class="hidden">
@@ -119,7 +119,7 @@
                   v-model="bill.fee_value"
                   @blur="bill.fee_value = (+bill.fee_value || 0).toFixed(2)"
                   required
-                  class="w-full bg-dunhuang-bg border border-dunhuang-yellow/50 rounded-lg p-3 focus:ring-2 focus:ring-dunhuang-red outline-none font-mono"
+                  class="w-full bg-dunhuang-bg border border-dunhuang-yellow/50 rounded-lg py-3 px-4 text-sm focus:ring-0 outline-none font-mono"
                 />
               </div>
               <div>
@@ -289,19 +289,21 @@
                             ).toFixed(2)
                           "
                           disabled
-                          class="w-full bg-dunhuang-bg border border-dunhuang-yellow/40 rounded-lg px-2.5 py-1.5 text-sm focus:ring-2 focus:ring-dunhuang-red outline-none font-mono text-dunhuang-red disabled:opacity-50 disabled:cursor-not-allowed"
+                          class="w-full bg-dunhuang-bg border border-dunhuang-yellow/40 rounded-lg px-2.5 py-1.5 text-sm focus:ring-0 outline-none font-mono text-dunhuang-red disabled:opacity-50 disabled:cursor-not-allowed"
                         />
                       </div>
                       <div>
                         <label class="block text-xs text-dunhuang-text/50 mb-1"
-                          >重量 ({{ getEntryUnit(entry.species_id) }})</label
+                          >总重 ({{
+                            editingSpecies?.default_unit ?? "公斤"
+                          }})</label
                         >
                         <input
                           type="text"
                           inputmode="decimal"
                           v-model="entry.weight"
                           @blur="entry.weight = (+entry.weight || 0).toFixed(2)"
-                          class="w-full bg-dunhuang-bg border border-dunhuang-yellow/40 rounded-lg px-2.5 py-1.5 text-sm focus:ring-2 focus:ring-dunhuang-red outline-none font-mono"
+                          class="w-full bg-dunhuang-bg border border-dunhuang-yellow/40 rounded-lg px-2.5 py-1.5 text-sm focus:ring-0 outline-none font-mono"
                         />
                       </div>
                       <div>
@@ -315,7 +317,7 @@
                           @blur="
                             entry.fee_value = (+entry.fee_value || 0).toFixed(2)
                           "
-                          class="w-full bg-dunhuang-bg border border-dunhuang-yellow/40 rounded-lg px-2.5 py-1.5 text-sm focus:ring-2 focus:ring-dunhuang-red outline-none font-mono"
+                          class="w-full bg-dunhuang-bg border border-dunhuang-yellow/40 rounded-lg px-2.5 py-1.5 text-sm focus:ring-0 outline-none font-mono"
                         />
                       </div>
                     </div>
@@ -509,7 +511,9 @@
                   class="absolute top-full mt-1.5 right-0 z-30"
                   @click.stop
                 >
-                  <div class="bg-white rounded-2xl shadow-xl border border-dunhuang-yellow/20 p-4 w-[312px]">
+                  <div
+                    class="bg-white rounded-2xl shadow-xl border border-dunhuang-yellow/20 p-4 w-[312px]"
+                  >
                     <div class="flex flex-wrap gap-1.5 mb-3">
                       <button
                         v-for="preset in datePresets"
@@ -528,25 +532,31 @@
 
                     <div class="flex items-center gap-2">
                       <div class="flex-1">
-                        <label class="block text-xs text-dunhuang-text/40 mb-1">开始月份</label>
+                        <label class="block text-xs text-dunhuang-text/40 mb-1"
+                          >开始月份</label
+                        >
                         <input
                           type="month"
                           v-model="pickerFromMonth"
-                          class="w-full bg-dunhuang-bg border border-dunhuang-yellow/25 rounded-lg px-3 py-2 text-sm text-dunhuang-blue focus:ring-2 focus:ring-dunhuang-blue/20 focus:border-dunhuang-blue/50 outline-none transition-all"
+                          class="w-full bg-dunhuang-bg border border-dunhuang-yellow/25 rounded-lg px-3 py-2 text-sm text-dunhuang-blue focus:ring-0 focus:border-dunhuang-blue/50 outline-none transition-all"
                         />
                       </div>
                       <span class="text-dunhuang-text/30 mt-5">—</span>
                       <div class="flex-1">
-                        <label class="block text-xs text-dunhuang-text/40 mb-1">结束月份</label>
+                        <label class="block text-xs text-dunhuang-text/40 mb-1"
+                          >结束月份</label
+                        >
                         <input
                           type="month"
                           v-model="pickerToMonth"
-                          class="w-full bg-dunhuang-bg border border-dunhuang-yellow/25 rounded-lg px-3 py-2 text-sm text-dunhuang-blue focus:ring-2 focus:ring-dunhuang-blue/20 focus:border-dunhuang-blue/50 outline-none transition-all"
+                          class="w-full bg-dunhuang-bg border border-dunhuang-yellow/25 rounded-lg px-3 py-2 text-sm text-dunhuang-blue focus:ring-0 focus:border-dunhuang-blue/50 outline-none transition-all"
                         />
                       </div>
                     </div>
 
-                    <div class="flex justify-end gap-2 mt-3 pt-3 border-t border-dunhuang-yellow/10">
+                    <div
+                      class="flex justify-end gap-2 mt-3 pt-3 border-t border-dunhuang-yellow/10"
+                    >
                       <button
                         @click="cancelDatePicker"
                         class="px-3 py-1.5 rounded-lg text-xs text-dunhuang-text/50 hover:text-dunhuang-text/70 hover:bg-dunhuang-yellow/5 transition-colors"
@@ -661,7 +671,7 @@
                   >
                     <input
                       type="checkbox"
-                      class="w-4 h-4 rounded border-2 border-dunhuang-yellow/40 text-dunhuang-blue focus:ring-2 focus:ring-dunhuang-blue/30 focus:ring-offset-0 cursor-pointer transition-all duration-200"
+                      class="w-4 h-4 rounded border-2 border-dunhuang-yellow/40 text-dunhuang-blue focus:ring-0 focus:ring-offset-0 cursor-pointer transition-all duration-200"
                       :checked="isAllSelected"
                       @change="toggleSelectAll"
                     />
@@ -709,7 +719,7 @@
                   >
                     <input
                       type="checkbox"
-                      class="w-4 h-4 rounded border-2 border-dunhuang-yellow/40 text-dunhuang-blue focus:ring-2 focus:ring-dunhuang-blue/30 focus:ring-offset-0 cursor-pointer transition-all duration-200"
+                      class="w-4 h-4 rounded border-2 border-dunhuang-yellow/40 text-dunhuang-blue focus:ring-0 focus:ring-offset-0 cursor-pointer transition-all duration-200"
                       :value="b.id"
                       v-model="selectedBillIds"
                     />
@@ -1203,71 +1213,77 @@ import { useBillAudit } from "../composables/useBillAudit";
 const { t } = useI18n();
 const router = useRouter();
 
-const showDatePicker = ref(false)
+const showDatePicker = ref(false);
 
-const now = new Date()
-const currentYearMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`
-const pickerFromMonth = ref(currentYearMonth)
-const pickerToMonth = ref(currentYearMonth)
+const now = new Date();
+const currentYearMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+const pickerFromMonth = ref(currentYearMonth);
+const pickerToMonth = ref(currentYearMonth);
 
-const lastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1)
-const lastMonthStr = `${lastMonth.getFullYear()}-${String(lastMonth.getMonth() + 1).padStart(2, "0")}`
+const lastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+const lastMonthStr = `${lastMonth.getFullYear()}-${String(lastMonth.getMonth() + 1).padStart(2, "0")}`;
 
-const threeMonthsAgo = new Date(now.getFullYear(), now.getMonth() - 2, 1)
-const threeMonthsAgoStr = `${threeMonthsAgo.getFullYear()}-${String(threeMonthsAgo.getMonth() + 1).padStart(2, "0")}`
+const threeMonthsAgo = new Date(now.getFullYear(), now.getMonth() - 2, 1);
+const threeMonthsAgoStr = `${threeMonthsAgo.getFullYear()}-${String(threeMonthsAgo.getMonth() + 1).padStart(2, "0")}`;
 
 const datePresets = [
   { label: "本月", from: currentYearMonth, to: currentYearMonth },
   { label: "上月", from: lastMonthStr, to: lastMonthStr },
   { label: "近三个月", from: threeMonthsAgoStr, to: currentYearMonth },
-  { label: "本年", from: `${now.getFullYear()}-01`, to: `${now.getFullYear()}-12` },
-]
+  {
+    label: "本年",
+    from: `${now.getFullYear()}-01`,
+    to: `${now.getFullYear()}-12`,
+  },
+];
 
 const isPresetActive = (preset: { from: string; to: string }) => {
-  return pickerFromMonth.value === preset.from && pickerToMonth.value === preset.to
-}
+  return (
+    pickerFromMonth.value === preset.from && pickerToMonth.value === preset.to
+  );
+};
 
 const applyDatePreset = (preset: { from: string; to: string }) => {
-  pickerFromMonth.value = preset.from
-  pickerToMonth.value = preset.to
-}
+  pickerFromMonth.value = preset.from;
+  pickerToMonth.value = preset.to;
+};
 
 const openDatePicker = () => {
   if (filterDateFrom.value) {
-    const parts = filterDateFrom.value.split("-")
-    if (parts.length >= 2) pickerFromMonth.value = `${parts[0]}-${parts[1]}`
+    const parts = filterDateFrom.value.split("-");
+    if (parts.length >= 2) pickerFromMonth.value = `${parts[0]}-${parts[1]}`;
   }
   if (filterDateTo.value) {
-    const parts = filterDateTo.value.split("-")
-    if (parts.length >= 2) pickerToMonth.value = `${parts[0]}-${parts[1]}`
+    const parts = filterDateTo.value.split("-");
+    if (parts.length >= 2) pickerToMonth.value = `${parts[0]}-${parts[1]}`;
   }
-}
+};
 
 const dateApply = () => {
-  showDatePicker.value = false
+  showDatePicker.value = false;
   if (pickerFromMonth.value) {
-    filterDateFrom.value = `${pickerFromMonth.value}-01`
+    filterDateFrom.value = `${pickerFromMonth.value}-01`;
   }
   if (pickerToMonth.value) {
-    const [y, m] = pickerToMonth.value.split("-").map(Number)
-    const lastDay = new Date(y, m, 0).getDate()
-    filterDateTo.value = `${pickerToMonth.value}-${String(lastDay).padStart(2, "0")}`
+    const [y, m] = pickerToMonth.value.split("-").map(Number);
+    const lastDay = new Date(y, m, 0).getDate();
+    filterDateTo.value = `${pickerToMonth.value}-${String(lastDay).padStart(2, "0")}`;
   }
-  fetchBills()
-}
+  fetchBills();
+};
 
 const cancelDatePicker = () => {
-  showDatePicker.value = false
-}
+  showDatePicker.value = false;
+};
 
 const toggleShowDatePicker = () => {
   if (showDatePicker.value) {
-    showDatePicker.value = false
+    showDatePicker.value = false;
   } else {
-    openDatePicker()
-    showDatePicker.value = true
+    openDatePicker();
+    showDatePicker.value = true;
   }
-}
+};
 
 const tabs = [
   { key: "current", label: "最新单据" },
