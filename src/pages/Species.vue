@@ -737,6 +737,7 @@ import * as XLSX from "xlsx";
 import api from "../api";
 import { apiErrorMessage, isAuthError } from "../lib/error";
 import { formatMoney, dateStr } from "../lib/utils";
+import { useToast } from "../composables/useToast";
 import ConfirmDialog from "../components/ConfirmDialog.vue";
 import DateInput from "../components/DateInput.vue";
 
@@ -753,6 +754,7 @@ interface SpeciesItem {
 }
 
 const router = useRouter();
+const toast = useToast();
 
 const species = ref<SpeciesItem[]>([]);
 const selectedIds = ref<number[]>([]);
@@ -1098,11 +1100,11 @@ const handleSpeciesFileUpload = (event: Event) => {
         .filter((r) => r.name_zh && r.default_price > 0);
 
       if (importPreview.value.length === 0) {
-        alert("未能解析到有效数据，请确认文件格式与模板一致。");
+        toast.warning("未能解析到有效数据，请确认文件格式与模板一致。");
       }
     } catch (err) {
       console.error("Parse species Excel failed", err);
-      alert("解析 Excel 失败，请检查文件格式是否正确。");
+      toast.error("解析 Excel 失败，请检查文件格式是否正确。");
     }
   };
   reader.readAsArrayBuffer(file);
@@ -1146,7 +1148,7 @@ const confirmImportSpecies = async () => {
     if (created > 0) parts.push(`新建 ${created} 个`);
     if (updated > 0) parts.push(`覆盖 ${updated} 个`);
     if (skipped > 0) parts.push(`跳过 ${skipped} 个`);
-    alert(parts.join("，"));
+    toast.success(parts.join("，"));
 
     importPreview.value = [];
     showImportModal.value = false;

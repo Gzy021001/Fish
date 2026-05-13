@@ -3,8 +3,10 @@ import * as XLSX from "xlsx"
 import api from "../api"
 import { apiErrorMessage, isAuthError } from "../lib/error"
 import { dateStr, dateTimeStr, formatMoney } from "../lib/utils"
+import { useToast } from "./useToast"
 
 export function useBillTable(speciesList: Ref<any[]>) {
+  const toast = useToast()
   const activeTab = ref("current")
   const filterDateFrom = ref("")
   const filterDateTo = ref("")
@@ -184,7 +186,7 @@ export function useBillTable(speciesList: Ref<any[]>) {
   const exportBills = () => {
     const source = filteredBills.value
     if (source.length === 0) {
-      alert("没有可导出的单据数据")
+      toast.info("没有可导出的单据数据")
       return
     }
 
@@ -212,9 +214,9 @@ export function useBillTable(speciesList: Ref<any[]>) {
     const sheetName = activeTab.value === "current" ? "最新单据" : "历史单据"
     XLSX.utils.book_append_sheet(workbook, worksheet, sheetName)
 
-    const dateStr = new Date().toISOString().slice(0, 10).replace(/-/g, "")
+    const fileDate = new Date().toISOString().slice(0, 10).replace(/-/g, "")
     const prefix = activeTab.value === "current" ? "最新单据" : "历史单据"
-    XLSX.writeFile(workbook, `${prefix}_${dateStr}.xlsx`)
+    XLSX.writeFile(workbook, `${prefix}_${fileDate}.xlsx`)
   }
 
   const confirmDeleteBill = (id: number) => {
@@ -237,10 +239,10 @@ export function useBillTable(speciesList: Ref<any[]>) {
         )
         selectedBillIds.value = []
         deleteConfirm.value.show = false
-        alert("批量删除成功！")
+        toast.success("批量删除成功！")
       } catch (error: any) {
         if (isAuthError(error)) return
-        alert(apiErrorMessage(error, "批量删除"))
+        toast.error(apiErrorMessage(error, "批量删除"))
         deleteConfirm.value.show = false
       }
     } else {
@@ -253,7 +255,7 @@ export function useBillTable(speciesList: Ref<any[]>) {
         bills.value = bills.value.filter((b) => b.id !== id)
       } catch (error: any) {
         if (isAuthError(error)) return
-        alert(apiErrorMessage(error, "删除单据"))
+        toast.error(apiErrorMessage(error, "删除单据"))
       }
     }
   }

@@ -2,6 +2,7 @@ import { ref, computed, type Ref } from "vue"
 import api from "../api"
 import { apiErrorMessage, isAuthError } from "../lib/error"
 import { saveEntry } from "../services/billingEntryService"
+import { useToast } from "./useToast"
 
 export interface BillEntry {
   species_id: number
@@ -24,6 +25,7 @@ export interface BillFormState {
 }
 
 export function useBillForm(speciesList: Ref<any[]>) {
+  const toast = useToast()
   const showForm = ref(false)
   const saving = ref(false)
 
@@ -83,6 +85,7 @@ export function useBillForm(speciesList: Ref<any[]>) {
 
   const initNewBill = () => {
     billEntries.value = []
+    bill.value.release_date = ""
   }
 
   const batchSubtotal = computed(() =>
@@ -122,11 +125,11 @@ export function useBillForm(speciesList: Ref<any[]>) {
   const saveBill = async (onSaved?: (data: any) => void) => {
     if (bill.value.id) {
       if (!Number.isFinite(+bill.value.weight) || +bill.value.weight <= 0) {
-        alert("重量必须大于0")
+        toast.warning("重量必须大于0")
         return
       }
       if (!Number.isFinite(+bill.value.unit_price) || +bill.value.unit_price <= 0) {
-        alert("单价必须大于0")
+        toast.warning("单价必须大于0")
         return
       }
       saving.value = true
@@ -142,12 +145,12 @@ export function useBillForm(speciesList: Ref<any[]>) {
         }
         const response = await api.put(`/bills/${bill.value.id}`, payload)
         if (onSaved) onSaved(response.data)
-        alert("单据更新成功")
+        toast.success("单据更新成功")
         bill.value.id = null
         showForm.value = false
       } catch (error: any) {
         if (isAuthError(error)) return
-        alert(apiErrorMessage(error, "保存单据"))
+        toast.error(apiErrorMessage(error, "保存单据"))
       } finally {
         saving.value = false
       }
@@ -158,7 +161,7 @@ export function useBillForm(speciesList: Ref<any[]>) {
       (e) => +e.weight > 0 && e.unit_price > 0,
     )
     if (validEntries.length === 0) {
-      alert("请选择品种并填写重量和单价")
+      toast.warning("请选择品种并填写重量和单价")
       return
     }
 
@@ -176,11 +179,12 @@ export function useBillForm(speciesList: Ref<any[]>) {
         saved++
       }
       billEntries.value = []
+      bill.value.release_date = ""
       showForm.value = false
-      alert(`成功保存 ${saved} 条记录`)
+      toast.success(`成功保存 ${saved} 条记录`)
     } catch (error: any) {
       if (isAuthError(error)) return
-      alert(apiErrorMessage(error, "保存单据"))
+      toast.error(apiErrorMessage(error, "保存单据"))
     } finally {
       saving.value = false
     }

@@ -42,10 +42,12 @@ def list_bills_route(
     limit: int = 100,
     status: str = None,
     date: str = None,
+    date_from: str = None,
+    date_to: str = None,
     db: Session = Depends(get_db),
     current_user: models.User = Depends(auth.get_current_user),
 ):
-    return list_bills(db, limit=limit, status=status, date=date)
+    return list_bills(db, limit=limit, status=status, date=date, date_from=date_from, date_to=date_to)
 
 
 @router.put("/bills/{bill_id}", response_model=schemas.Bill)

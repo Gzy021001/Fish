@@ -19,8 +19,8 @@ export default {
         }
       },
       fontFamily: {
-        sans: ['"Noto Sans SC"', '"PingFang SC"', '"Microsoft YaHei"', 'sans-serif'],
-        serif: ['"Noto Serif SC"', '"Songti SC"', 'serif'],
+        sans: ['"Microsoft YaHei"', '"PingFang SC"', '"Noto Sans SC"', 'sans-serif'],
+        serif: ['"Microsoft YaHei"', '"Noto Serif SC"', '"Songti SC"', 'serif'],
       },
     },
   },

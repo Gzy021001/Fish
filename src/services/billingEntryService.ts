@@ -18,6 +18,7 @@ export async function ensureSpecies(
   nameZh: string,
   defaultPrice: number,
   existingList: any[],
+  releaseDate?: string,
 ): Promise<any> {
   const found = existingList.find((s) => s.name_zh === nameZh)
   if (found) return found
@@ -26,6 +27,7 @@ export async function ensureSpecies(
     name_zh: nameZh,
     default_price: defaultPrice,
     default_unit: "公斤",
+    release_date: releaseDate || new Date().toISOString().slice(0, 10),
   })
   const species = spRes.data
   existingList.push(species)
@@ -57,7 +59,7 @@ export async function saveImportedRows(
 ): Promise<number> {
   let saved = 0
   for (const row of rows) {
-    const species = await ensureSpecies(row.name_zh, row.unit_price, speciesList)
+    const species = await ensureSpecies(row.name_zh, row.unit_price, speciesList, row.release_date)
     const payload: BillEntryInput = {
       species_id: species.id,
       weight: 0,

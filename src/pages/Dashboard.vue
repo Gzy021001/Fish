@@ -426,8 +426,8 @@ const fetchBills = async () => {
     >();
     const spWeightMap = new Map<string, Map<number, number>>();
     for (const b of bills) {
-      if (!b.created_at) continue;
-      const d = new Date(b.created_at);
+      if (!b.release_date) continue;
+      const d = new Date(b.release_date);
       if (d.getFullYear() !== selectedYear.value) continue;
       const key = d.toISOString().slice(0, 10);
       const cur = map.get(key) || { total_amount: 0, total_weight: 0 };

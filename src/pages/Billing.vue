@@ -1,12 +1,12 @@
 <template>
-  <div class="h-full flex flex-col space-y-6">
+  <div class="h-full flex flex-col space-y-6 overflow-hidden">
     <Transition name="switch-fade" mode="out-in">
       <div
         v-if="showForm"
-        class="bg-white rounded-2xl shadow-md border border-dunhuang-yellow/30 p-8 flex-1"
+        class="bg-white rounded-2xl shadow-md border border-dunhuang-yellow/30 flex-1 min-h-0 flex flex-col"
       >
         <div
-          class="flex items-center justify-between mb-8 border-b-2 border-dunhuang-yellow/30 pb-4"
+          class="shrink-0 flex items-center justify-between mb-4 border-b-2 border-dunhuang-yellow/30 pb-3 px-6 pt-6"
         >
           <div class="flex items-center gap-4">
             <button
@@ -36,345 +36,376 @@
           </div>
         </div>
 
-        <form @submit.prevent="handleSaveBill" class="space-y-6 relative z-10">
-          <!-- 编辑模式 -->
-          <template v-if="bill.id">
-            <div
-              v-if="editingSpecies"
-              class="rounded-2xl bg-gradient-to-br from-dunhuang-red/[0.06] to-dunhuang-bg p-6 flex items-stretch gap-6 shadow-md ring-1 ring-dunhuang-red/10"
-            >
+        <form
+          @submit.prevent="handleSaveBill"
+          class="flex-1 min-h-0 flex flex-col"
+        >
+          <div class="flex-1 min-h-0 overflow-auto px-6 pt-6 pb-4 space-y-4">
+            <!-- 编辑模式 -->
+            <template v-if="bill.id">
               <div
-                class="shrink-0 w-32 h-32 rounded-2xl overflow-hidden shadow-md ring-1 ring-dunhuang-yellow/20"
+                v-if="editingSpecies"
+                class="rounded-2xl bg-gradient-to-br from-dunhuang-red/[0.06] to-dunhuang-bg p-4 flex items-stretch gap-4 shadow-md ring-1 ring-dunhuang-red/10"
               >
-                <img
-                  v-if="editingSpecies.image_url"
-                  :src="editingSpecies.image_url"
-                  :alt="editingSpecies.name_zh"
-                  class="w-full h-full object-cover"
-                />
                 <div
-                  v-else
-                  class="w-full h-full bg-dunhuang-yellow/[0.08] flex items-center justify-center text-dunhuang-blue"
+                  class="shrink-0 w-24 h-24 rounded-2xl overflow-hidden shadow-md ring-1 ring-dunhuang-yellow/20"
                 >
-                  <span class="text-4xl font-bold font-serif opacity-40">{{
-                    editingSpecies.name_zh
-                      ? editingSpecies.name_zh.charAt(0)
-                      : "?"
-                  }}</span>
-                </div>
-              </div>
-              <div class="flex flex-col justify-center min-w-0">
-                <h4 class="font-bold text-dunhuang-blue text-xl mb-2">
-                  {{ editingSpecies.name_zh }}
-                </h4>
-                <div class="text-sm text-dunhuang-text/60 tabular-nums">
-                  参考价
-                  <span
-                    class="text-dunhuang-red font-mono font-bold text-base"
-                    >{{ formatMoney(editingSpecies.default_price) }}</span
-                  >
-                  元/{{ editingSpecies.default_unit }}
-                </div>
-              </div>
-            </div>
-            <div v-else class="text-sm text-dunhuang-text/50">未找到品种</div>
-
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div>
-                <label class="block text-sm font-medium text-dunhuang-text mb-2"
-                  >{{ t("billing.unit_price") }}（元）</label
-                >
-                <input
-                  type="text"
-                  :value="(+bill.unit_price || 0).toFixed(2)"
-                  disabled
-                  class="w-full bg-dunhuang-bg border border-dunhuang-yellow/50 rounded-lg py-3 px-4 text-sm focus:ring-0 outline-none font-mono text-dunhuang-red disabled:opacity-50 disabled:cursor-not-allowed"
-                />
-              </div>
-              <div>
-                <label class="block text-sm font-medium text-dunhuang-text mb-2"
-                  >重量 ({{ editingSpecies?.default_unit ?? "公斤" }})</label
-                >
-                <input
-                  type="text"
-                  inputmode="decimal"
-                  v-model="bill.weight"
-                  @blur="bill.weight = (+bill.weight || 0).toFixed(2)"
-                  required
-                  class="w-full bg-dunhuang-bg border border-dunhuang-yellow/50 rounded-lg py-3 px-4 text-sm focus:ring-0 outline-none font-mono"
-                />
-              </div>
-              <div class="hidden">
-                <select v-model="bill.fee_type" class="hidden">
-                  <option value="FIXED">固定金额</option>
-                </select>
-              </div>
-              <div>
-                <label class="block text-sm font-medium text-dunhuang-text mb-2"
-                  >服务费（元）</label
-                >
-                <input
-                  type="text"
-                  inputmode="decimal"
-                  v-model="bill.fee_value"
-                  @blur="bill.fee_value = (+bill.fee_value || 0).toFixed(2)"
-                  required
-                  class="w-full bg-dunhuang-bg border border-dunhuang-yellow/50 rounded-lg py-3 px-4 text-sm focus:ring-0 outline-none font-mono"
-                />
-              </div>
-              <div>
-                <label class="block text-sm font-medium text-dunhuang-text mb-2"
-                  >放生日期</label
-                >
-                <DateInput
-                  v-model="bill.release_date"
-                  placeholder="选择放生日期"
-                />
-              </div>
-            </div>
-          </template>
-
-          <!-- 新增模式 -->
-          <template v-else>
-            <div class="space-y-6">
-              <!-- 品种选择 -->
-              <div>
-                <label
-                  class="block text-sm font-medium text-dunhuang-text mb-3"
-                  >{{ t("billing.species_name") }}</label
-                >
-                <div
-                  class="relative rounded-xl bg-dunhuang-bg/30 border border-dunhuang-yellow/20"
-                >
+                  <img
+                    v-if="editingSpecies.image_url"
+                    :src="editingSpecies.image_url"
+                    :alt="editingSpecies.name_zh"
+                    class="w-full h-full object-cover"
+                  />
                   <div
-                    class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 overflow-y-auto custom-scrollbar max-h-[200px] p-3"
+                    v-else
+                    class="w-full h-full bg-dunhuang-yellow/[0.08] flex items-center justify-center text-dunhuang-blue"
+                  >
+                    <span class="text-4xl font-bold font-serif opacity-40">{{
+                      editingSpecies.name_zh
+                        ? editingSpecies.name_zh.charAt(0)
+                        : "?"
+                    }}</span>
+                  </div>
+                </div>
+                <div class="flex flex-col justify-center min-w-0">
+                  <h4 class="font-bold text-dunhuang-blue text-xl mb-2">
+                    {{ editingSpecies.name_zh }}
+                  </h4>
+                  <div class="text-sm text-dunhuang-text/60 tabular-nums">
+                    参考价
+                    <span
+                      class="text-dunhuang-red font-mono font-bold text-base"
+                      >{{ formatMoney(editingSpecies.default_price) }}</span
+                    >
+                    元/{{ editingSpecies.default_unit }}
+                  </div>
+                </div>
+              </div>
+              <div v-else class="text-sm text-dunhuang-text/50">未找到品种</div>
+
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-x-5 gap-y-5 mt-4">
+                <div>
+                  <label
+                    class="block text-sm font-medium text-dunhuang-text mb-2"
+                    >{{ t("billing.unit_price") }}（元）</label
+                  >
+                  <input
+                    type="text"
+                    :value="(+bill.unit_price || 0).toFixed(2)"
+                    disabled
+                    class="w-full bg-dunhuang-bg border border-dunhuang-yellow/50 rounded-lg py-4 px-4 text-sm focus:ring-0 outline-none font-mono text-dunhuang-red disabled:opacity-50 disabled:cursor-not-allowed"
+                  />
+                </div>
+                <div>
+                  <label
+                    class="block text-sm font-medium text-dunhuang-text mb-2"
+                    >重量 ({{ editingSpecies?.default_unit ?? "公斤" }})</label
+                  >
+                  <input
+                    type="text"
+                    inputmode="decimal"
+                    v-model="bill.weight"
+                    @blur="bill.weight = (+bill.weight || 0).toFixed(2)"
+                    required
+                    class="w-full bg-dunhuang-bg border border-dunhuang-yellow/50 rounded-lg py-4 px-4 text-sm focus:ring-0 outline-none font-mono"
+                  />
+                </div>
+                <div class="hidden">
+                  <select v-model="bill.fee_type" class="hidden">
+                    <option value="FIXED">固定金额</option>
+                  </select>
+                </div>
+                <div>
+                  <label
+                    class="block text-sm font-medium text-dunhuang-text mb-2"
+                    >服务费（元）</label
+                  >
+                  <input
+                    type="text"
+                    inputmode="decimal"
+                    v-model="bill.fee_value"
+                    @blur="bill.fee_value = (+bill.fee_value || 0).toFixed(2)"
+                    required
+                    class="w-full bg-dunhuang-bg border border-dunhuang-yellow/50 rounded-lg py-4 px-4 text-sm focus:ring-0 outline-none font-mono"
+                  />
+                </div>
+                <div>
+                  <label
+                    class="block text-sm font-medium text-dunhuang-text mb-2"
+                    >放生日期</label
+                  >
+                  <DateInput
+                    v-model="bill.release_date"
+                    placeholder="选择放生日期"
+                  />
+                </div>
+              </div>
+            </template>
+
+            <!-- 新增模式 -->
+            <template v-else>
+              <div class="space-y-4">
+                <!-- 放生日期 -->
+                <div>
+                  <label
+                    class="block text-sm font-medium text-dunhuang-text mb-2"
+                    >放生日期</label
+                  >
+                  <div class="w-[220px]">
+                    <DateInput
+                      v-model="bill.release_date"
+                      placeholder="选择放生日期"
+                    />
+                  </div>
+                </div>
+
+                <!-- 品种选择 -->
+                <div>
+                  <label
+                    class="block text-sm font-medium text-dunhuang-text mb-3"
+                    >{{ t("billing.species_name") }}</label
+                  >
+                  <div
+                    class="relative rounded-xl bg-dunhuang-bg/30 border border-dunhuang-yellow/20"
                   >
                     <div
-                      v-for="sp in speciesList"
-                      :key="sp.id"
-                      @click="toggleEntry(sp)"
-                      :class="[
-                        'cursor-pointer relative overflow-hidden rounded-xl border-2 p-3 transition-all duration-200 flex flex-col items-center justify-center gap-1.5 group',
-                        isEntrySelected(sp.id)
-                          ? 'border-dunhuang-red bg-dunhuang-red/5 shadow-[0_2px_12px_rgb(187,49,52,0.12)]'
-                          : 'border-dunhuang-yellow/40 bg-white hover:border-dunhuang-orange hover:shadow-md',
-                      ]"
+                      class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 overflow-y-auto custom-scrollbar max-h-[200px] p-3"
                     >
                       <div
-                        v-if="isEntrySelected(sp.id)"
-                        class="absolute top-0 right-0 w-7 h-7 bg-dunhuang-red flex items-start justify-end p-0.5 rounded-bl-xl"
+                        v-for="sp in speciesList"
+                        :key="sp.id"
+                        @click="toggleEntry(sp)"
+                        :class="[
+                          'cursor-pointer relative overflow-hidden rounded-xl border-2 p-3 transition-all duration-200 flex flex-col items-center justify-center gap-1.5 group',
+                          isEntrySelected(sp.id)
+                            ? 'border-dunhuang-red bg-dunhuang-red/5 shadow-[0_2px_12px_rgb(187,49,52,0.12)]'
+                            : 'border-dunhuang-yellow/40 bg-white hover:border-dunhuang-orange hover:shadow-md',
+                        ]"
                       >
-                        <svg
-                          class="w-3.5 h-3.5 text-white"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
+                        <div
+                          v-if="isEntrySelected(sp.id)"
+                          class="absolute top-0 right-0 w-7 h-7 bg-dunhuang-red flex items-start justify-end p-0.5 rounded-bl-xl"
                         >
-                          <path
-                            stroke-linecap="round"
-                            stroke-linejoin="round"
-                            stroke-width="3"
-                            d="M5 13l4 4L19 7"
-                          />
-                        </svg>
+                          <svg
+                            class="w-3.5 h-3.5 text-white"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                          >
+                            <path
+                              stroke-linecap="round"
+                              stroke-linejoin="round"
+                              stroke-width="3"
+                              d="M5 13l4 4L19 7"
+                            />
+                          </svg>
+                        </div>
+                        <img
+                          v-if="sp.image_url"
+                          :src="sp.image_url"
+                          :alt="sp.name_zh"
+                          class="w-12 h-12 rounded-full object-cover border-2 border-dunhuang-yellow/30 shadow-sm"
+                        />
+                        <div
+                          v-else
+                          class="w-12 h-12 rounded-full bg-dunhuang-yellow/10 border-2 border-dunhuang-yellow/30 flex items-center justify-center text-dunhuang-blue shadow-sm"
+                        >
+                          <span class="text-lg font-bold">{{
+                            sp.name_zh ? sp.name_zh.charAt(0) : "?"
+                          }}</span>
+                        </div>
+                        <div class="text-center">
+                          <h4 class="font-medium text-dunhuang-blue text-sm">
+                            {{ sp.name_zh }}
+                          </h4>
+                          <div class="text-xs text-dunhuang-text/50 mt-0.5">
+                            {{ formatMoney(sp.default_price) }}
+                          </div>
+                        </div>
                       </div>
-                      <img
-                        v-if="sp.image_url"
-                        :src="sp.image_url"
-                        :alt="sp.name_zh"
-                        class="w-12 h-12 rounded-full object-cover border-2 border-dunhuang-yellow/30 shadow-sm"
-                      />
+                    </div>
+                    <div
+                      class="pointer-events-none absolute left-0 right-0 bottom-0 h-6 bg-gradient-to-t from-dunhuang-bg/30 to-transparent rounded-b-xl"
+                    ></div>
+                  </div>
+                </div>
+
+                <!-- 已选品种编辑区 -->
+                <div v-if="billEntries.length > 0" class="space-y-3">
+                  <div class="flex items-center justify-between">
+                    <span class="text-sm font-medium text-dunhuang-text"
+                      >已选
+                      <span class="text-dunhuang-blue font-bold">{{
+                        billEntries.length
+                      }}</span>
+                      个品种</span
+                    >
+                  </div>
+                  <div
+                    class="grid grid-cols-1 md:grid-cols-2 gap-3 overflow-y-auto custom-scrollbar max-h-[316px] pr-2"
+                  >
+                    <div
+                      v-for="(entry, idx) in billEntries"
+                      :key="entry.species_id"
+                      class="rounded-xl border border-dunhuang-yellow/20 bg-white p-4 transition-shadow hover:shadow-sm"
+                    >
                       <div
-                        v-else
-                        class="w-12 h-12 rounded-full bg-dunhuang-yellow/10 border-2 border-dunhuang-yellow/30 flex items-center justify-center text-dunhuang-blue shadow-sm"
+                        class="flex items-center gap-3 mb-3 pb-2 border-b border-dunhuang-yellow/15"
                       >
-                        <span class="text-lg font-bold">{{
-                          sp.name_zh ? sp.name_zh.charAt(0) : "?"
-                        }}</span>
+                        <img
+                          v-if="getEntrySpecies(entry.species_id)?.image_url"
+                          :src="getEntrySpecies(entry.species_id)!.image_url!"
+                          :alt="getEntryName(entry.species_id)"
+                          class="w-10 h-10 rounded-full object-cover border border-dunhuang-yellow/30"
+                        />
+                        <div
+                          v-else
+                          class="w-10 h-10 rounded-full bg-dunhuang-yellow/10 border border-dunhuang-yellow/30 flex items-center justify-center text-dunhuang-blue"
+                        >
+                          <span class="text-sm font-bold">{{
+                            getEntryName(entry.species_id).charAt(0)
+                          }}</span>
+                        </div>
+                        <div class="flex-1">
+                          <span
+                            class="font-medium text-dunhuang-blue text-sm"
+                            >{{ getEntryName(entry.species_id) }}</span
+                          >
+                          <span class="text-xs text-dunhuang-text/40 ml-2">{{
+                            getEntryUnit(entry.species_id)
+                          }}</span>
+                        </div>
+                        <button
+                          type="button"
+                          @click="removeEntry(idx)"
+                          class="text-dunhuang-text/30 hover:text-dunhuang-red transition-colors w-6 h-6 flex items-center justify-center rounded-full hover:bg-dunhuang-red/8"
+                          title="移除此品种"
+                        >
+                          <svg
+                            class="w-3.5 h-3.5"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                          >
+                            <path
+                              stroke-linecap="round"
+                              stroke-linejoin="round"
+                              stroke-width="2"
+                              d="M6 18L18 6M6 6l12 12"
+                            />
+                          </svg>
+                        </button>
                       </div>
-                      <div class="text-center">
-                        <h4 class="font-medium text-dunhuang-blue text-sm">
-                          {{ sp.name_zh }}
-                        </h4>
-                        <div class="text-xs text-dunhuang-text/50 mt-0.5">
-                          {{ formatMoney(sp.default_price) }}
+                      <div class="grid grid-cols-3 gap-2">
+                        <div>
+                          <label
+                            class="block text-xs text-dunhuang-text/50 mb-1"
+                            >单价（元）</label
+                          >
+                          <input
+                            type="text"
+                            :value="
+                              (
+                                getEntrySpecies(entry.species_id)
+                                  ?.default_price ??
+                                entry.unit_price ??
+                                0
+                              ).toFixed(2)
+                            "
+                            disabled
+                            class="w-full bg-dunhuang-bg border border-dunhuang-yellow/40 rounded-lg px-2.5 py-1.5 text-sm focus:ring-0 outline-none font-mono text-dunhuang-red disabled:opacity-50 disabled:cursor-not-allowed"
+                          />
+                        </div>
+                        <div>
+                          <label
+                            class="block text-xs text-dunhuang-text/50 mb-1"
+                            >总重 ({{
+                              editingSpecies?.default_unit ?? "公斤"
+                            }})</label
+                          >
+                          <input
+                            type="text"
+                            inputmode="decimal"
+                            v-model="entry.weight"
+                            @blur="
+                              entry.weight = (+entry.weight || 0).toFixed(2)
+                            "
+                            class="w-full bg-dunhuang-bg border border-dunhuang-yellow/40 rounded-lg px-2.5 py-1.5 text-sm focus:ring-0 outline-none font-mono"
+                          />
+                        </div>
+                        <div>
+                          <label
+                            class="block text-xs text-dunhuang-text/50 mb-1"
+                            >服务费（元）</label
+                          >
+                          <input
+                            type="text"
+                            inputmode="decimal"
+                            v-model="entry.fee_value"
+                            @blur="
+                              entry.fee_value = (+entry.fee_value || 0).toFixed(
+                                2,
+                              )
+                            "
+                            class="w-full bg-dunhuang-bg border border-dunhuang-yellow/40 rounded-lg px-2.5 py-1.5 text-sm focus:ring-0 outline-none font-mono"
+                          />
                         </div>
                       </div>
                     </div>
                   </div>
-                  <div
-                    class="pointer-events-none absolute left-0 right-0 bottom-0 h-6 bg-gradient-to-t from-dunhuang-bg/30 to-transparent rounded-b-xl"
-                  ></div>
-                </div>
-              </div>
-
-              <!-- 已选品种编辑区 -->
-              <div v-if="billEntries.length > 0" class="space-y-3">
-                <div class="flex items-center justify-between">
-                  <span class="text-sm font-medium text-dunhuang-text"
-                    >已选
-                    <span class="text-dunhuang-blue font-bold">{{
-                      billEntries.length
-                    }}</span>
-                    个品种</span
-                  >
                 </div>
                 <div
-                  class="grid grid-cols-1 md:grid-cols-2 gap-3 overflow-y-auto custom-scrollbar max-h-[316px] pr-2"
+                  v-else
+                  class="text-center text-sm text-dunhuang-text/40 py-6"
                 >
-                  <div
-                    v-for="(entry, idx) in billEntries"
-                    :key="entry.species_id"
-                    class="rounded-xl border border-dunhuang-yellow/20 bg-white p-4 transition-shadow hover:shadow-sm"
-                  >
-                    <div
-                      class="flex items-center gap-3 mb-3 pb-2 border-b border-dunhuang-yellow/15"
-                    >
-                      <img
-                        v-if="getEntrySpecies(entry.species_id)?.image_url"
-                        :src="getEntrySpecies(entry.species_id)!.image_url!"
-                        :alt="getEntryName(entry.species_id)"
-                        class="w-10 h-10 rounded-full object-cover border border-dunhuang-yellow/30"
-                      />
-                      <div
-                        v-else
-                        class="w-10 h-10 rounded-full bg-dunhuang-yellow/10 border border-dunhuang-yellow/30 flex items-center justify-center text-dunhuang-blue"
-                      >
-                        <span class="text-sm font-bold">{{
-                          getEntryName(entry.species_id).charAt(0)
-                        }}</span>
-                      </div>
-                      <div class="flex-1">
-                        <span class="font-medium text-dunhuang-blue text-sm">{{
-                          getEntryName(entry.species_id)
-                        }}</span>
-                        <span class="text-xs text-dunhuang-text/40 ml-2">{{
-                          getEntryUnit(entry.species_id)
-                        }}</span>
-                      </div>
-                      <button
-                        type="button"
-                        @click="removeEntry(idx)"
-                        class="text-dunhuang-text/30 hover:text-dunhuang-red transition-colors w-6 h-6 flex items-center justify-center rounded-full hover:bg-dunhuang-red/8"
-                        title="移除此品种"
-                      >
-                        <svg
-                          class="w-3.5 h-3.5"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path
-                            stroke-linecap="round"
-                            stroke-linejoin="round"
-                            stroke-width="2"
-                            d="M6 18L18 6M6 6l12 12"
-                          />
-                        </svg>
-                      </button>
-                    </div>
-                    <div class="grid grid-cols-3 gap-2">
-                      <div>
-                        <label class="block text-xs text-dunhuang-text/50 mb-1"
-                          >单价（元）</label
-                        >
-                        <input
-                          type="text"
-                          :value="
-                            (
-                              getEntrySpecies(entry.species_id)
-                                ?.default_price ??
-                              entry.unit_price ??
-                              0
-                            ).toFixed(2)
-                          "
-                          disabled
-                          class="w-full bg-dunhuang-bg border border-dunhuang-yellow/40 rounded-lg px-2.5 py-1.5 text-sm focus:ring-0 outline-none font-mono text-dunhuang-red disabled:opacity-50 disabled:cursor-not-allowed"
-                        />
-                      </div>
-                      <div>
-                        <label class="block text-xs text-dunhuang-text/50 mb-1"
-                          >总重 ({{
-                            editingSpecies?.default_unit ?? "公斤"
-                          }})</label
-                        >
-                        <input
-                          type="text"
-                          inputmode="decimal"
-                          v-model="entry.weight"
-                          @blur="entry.weight = (+entry.weight || 0).toFixed(2)"
-                          class="w-full bg-dunhuang-bg border border-dunhuang-yellow/40 rounded-lg px-2.5 py-1.5 text-sm focus:ring-0 outline-none font-mono"
-                        />
-                      </div>
-                      <div>
-                        <label class="block text-xs text-dunhuang-text/50 mb-1"
-                          >服务费（元）</label
-                        >
-                        <input
-                          type="text"
-                          inputmode="decimal"
-                          v-model="entry.fee_value"
-                          @blur="
-                            entry.fee_value = (+entry.fee_value || 0).toFixed(2)
-                          "
-                          class="w-full bg-dunhuang-bg border border-dunhuang-yellow/40 rounded-lg px-2.5 py-1.5 text-sm focus:ring-0 outline-none font-mono"
-                        />
-                      </div>
-                    </div>
-                  </div>
+                  点击上方品种卡片开始添加
                 </div>
               </div>
-              <div
-                v-else
-                class="text-center text-sm text-dunhuang-text/40 py-6"
-              >
-                点击上方品种卡片开始添加
-              </div>
-            </div>
-          </template>
+            </template>
+          </div>
 
-          <!-- 编辑模式汇总 -->
-          <template v-if="bill.id">
-            <div
-              class="space-y-0 rounded-xl border border-dunhuang-yellow/30 bg-dunhuang-bg/50 overflow-hidden w-48"
-            >
-              <div
-                class="flex justify-between items-center px-4 py-2.5 text-sm"
-              >
-                <span class="text-dunhuang-text/60"
-                  >{{ t("billing.subtotal") }}（元）</span
-                >
-                <span class="tabular-nums text-dunhuang-blue font-medium">{{
-                  formatMoney(editSubtotal)
-                }}</span>
-              </div>
-              <div
-                class="flex justify-between items-center px-4 py-2.5 text-sm border-t border-dunhuang-yellow/20"
-              >
-                <span class="text-dunhuang-text/60"
-                  >{{ t("billing.fee_value") }}（元）</span
-                >
-                <span class="tabular-nums text-dunhuang-text/60">{{
-                  formatMoney(editFee)
-                }}</span>
-              </div>
-              <div
-                class="flex justify-between items-center px-4 py-2.5 text-sm bg-dunhuang-red/5 border-t border-dunhuang-red/10"
-              >
-                <span class="text-dunhuang-text/80 font-medium"
-                  >{{ t("billing.total") }}（元）</span
-                >
-                <span class="tabular-nums font-bold text-dunhuang-red">{{
-                  formatMoney(editTotal)
-                }}</span>
-              </div>
-            </div>
-          </template>
-
-          <!-- 汇总区域 -->
+          <!-- 底部汇总 + 保存 -->
           <div
-            class="mt-8 flex flex-col md:flex-row items-end justify-between gap-6"
+            class="shrink-0 mt-4 flex flex-col md:flex-row items-end justify-between gap-4 px-6 pb-6 pt-3 border-t border-dunhuang-yellow/10"
           >
+            <!-- 编辑模式汇总 -->
+            <template v-if="bill.id">
+              <div
+                class="space-y-0 rounded-xl border border-dunhuang-yellow/30 bg-dunhuang-bg/50 overflow-hidden w-48"
+              >
+                <div
+                  class="flex justify-between items-center px-4 py-2.5 text-sm"
+                >
+                  <span class="text-dunhuang-text/60"
+                    >{{ t("billing.subtotal") }}（元）</span
+                  >
+                  <span class="tabular-nums text-dunhuang-blue font-medium">{{
+                    formatMoney(editSubtotal)
+                  }}</span>
+                </div>
+                <div
+                  class="flex justify-between items-center px-4 py-2.5 text-sm border-t border-dunhuang-yellow/20"
+                >
+                  <span class="text-dunhuang-text/60"
+                    >{{ t("billing.fee_value") }}（元）</span
+                  >
+                  <span class="tabular-nums text-dunhuang-text/60">{{
+                    formatMoney(editFee)
+                  }}</span>
+                </div>
+                <div
+                  class="flex justify-between items-center px-4 py-2.5 text-sm bg-dunhuang-red/5 border-t border-dunhuang-red/10"
+                >
+                  <span class="text-dunhuang-text/80 font-medium"
+                    >{{ t("billing.total") }}（元）</span
+                  >
+                  <span class="tabular-nums font-bold text-dunhuang-red">{{
+                    formatMoney(editTotal)
+                  }}</span>
+                </div>
+              </div>
+            </template>
+
             <div
               v-if="!bill.id"
               class="space-y-0 rounded-xl border border-dunhuang-yellow/30 bg-dunhuang-bg/50 overflow-hidden w-48"
@@ -480,7 +511,15 @@
                   <line x1="3" x2="21" y1="10" y2="10" />
                 </svg>
                 <span>{{ dateRangeLabel || "选择筛选日期" }}</span>
+                <span
+                  v-if="filterDateFrom || filterDateTo"
+                  @click.stop="clearDateFilter"
+                  class="w-4 h-4 rounded-full inline-flex items-center justify-center text-[10px] leading-none bg-dunhuang-blue/15 hover:bg-dunhuang-red/20 hover:text-dunhuang-red transition-colors shrink-0 ml-0.5"
+                >
+                  ✕
+                </span>
                 <svg
+                  v-else
                   xmlns="http://www.w3.org/2000/svg"
                   width="12"
                   height="12"
@@ -496,23 +535,13 @@
                   <polyline points="6 9 12 15 18 9" />
                 </svg>
               </button>
-              <button
-                v-if="filterDateFrom || filterDateTo"
-                @click="clearDateFilter"
-                class="ml-0.5 text-dunhuang-text/30 hover:text-dunhuang-red text-xs leading-none transition-colors"
-                title="清除日期筛选"
-              >
-                ✕
-              </button>
-
               <Transition name="dropdown">
                 <div
                   v-if="showDatePicker"
                   class="absolute top-full mt-1.5 right-0 z-30"
-                  @click.stop
                 >
                   <div
-                    class="bg-white rounded-2xl shadow-xl border border-dunhuang-yellow/20 p-4 w-[312px]"
+                    class="bg-white rounded-2xl shadow-xl border border-dunhuang-yellow/20 p-4 w-auto min-w-[260px]"
                   >
                     <div class="flex flex-wrap gap-1.5 mb-3">
                       <button
@@ -533,23 +562,23 @@
                     <div class="flex items-center gap-2">
                       <div class="flex-1">
                         <label class="block text-xs text-dunhuang-text/40 mb-1"
-                          >开始月份</label
+                          >开始日期</label
                         >
-                        <input
-                          type="month"
-                          v-model="pickerFromMonth"
-                          class="w-full bg-dunhuang-bg border border-dunhuang-yellow/25 rounded-lg px-3 py-2 text-sm text-dunhuang-blue focus:ring-0 focus:border-dunhuang-blue/50 outline-none transition-all"
+                        <DateInput
+                          v-model="pickerFromDate"
+                          placeholder="开始日期"
+                          size="sm"
                         />
                       </div>
                       <span class="text-dunhuang-text/30 mt-5">—</span>
                       <div class="flex-1">
                         <label class="block text-xs text-dunhuang-text/40 mb-1"
-                          >结束月份</label
+                          >结束日期</label
                         >
-                        <input
-                          type="month"
-                          v-model="pickerToMonth"
-                          class="w-full bg-dunhuang-bg border border-dunhuang-yellow/25 rounded-lg px-3 py-2 text-sm text-dunhuang-blue focus:ring-0 focus:border-dunhuang-blue/50 outline-none transition-all"
+                        <DateInput
+                          v-model="pickerToDate"
+                          placeholder="结束日期"
+                          size="sm"
                         />
                       </div>
                     </div>
@@ -558,16 +587,16 @@
                       class="flex justify-end gap-2 mt-3 pt-3 border-t border-dunhuang-yellow/10"
                     >
                       <button
-                        @click="cancelDatePicker"
-                        class="px-3 py-1.5 rounded-lg text-xs text-dunhuang-text/50 hover:text-dunhuang-text/70 hover:bg-dunhuang-yellow/5 transition-colors"
-                      >
-                        取消
-                      </button>
-                      <button
                         @click="dateApply"
                         class="px-4 py-1.5 rounded-lg text-xs font-medium bg-dunhuang-blue text-white hover:bg-dunhuang-blue/90 transition-colors shadow-sm"
                       >
                         确认
+                      </button>
+                      <button
+                        @click="cancelDatePicker"
+                        class="px-3 py-1.5 rounded-lg text-xs text-dunhuang-text/50 hover:text-dunhuang-text/70 hover:bg-dunhuang-yellow/5 transition-colors"
+                      >
+                        取消
                       </button>
                     </div>
                   </div>
@@ -845,6 +874,7 @@
                       formatMoney(tableSumTotal)
                     }}</span>
                   </div>
+                  <div class="px-4 py-2 flex-[0.7] flex items-center"></div>
                   <div class="px-4 py-2 flex-[0.9] flex items-center"></div>
                   <div
                     v-if="activeTab === 'current'"
@@ -1216,60 +1246,55 @@ const router = useRouter();
 const showDatePicker = ref(false);
 
 const now = new Date();
-const currentYearMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
-const pickerFromMonth = ref(currentYearMonth);
-const pickerToMonth = ref(currentYearMonth);
+const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+const pickerFromDate = ref(todayStr);
+const pickerToDate = ref(todayStr);
 
-const lastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-const lastMonthStr = `${lastMonth.getFullYear()}-${String(lastMonth.getMonth() + 1).padStart(2, "0")}`;
+const firstDayOfMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-01`;
 
-const threeMonthsAgo = new Date(now.getFullYear(), now.getMonth() - 2, 1);
-const threeMonthsAgoStr = `${threeMonthsAgo.getFullYear()}-${String(threeMonthsAgo.getMonth() + 1).padStart(2, "0")}`;
+const lastMonthFirst = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+const lastMonthFirstStr = `${lastMonthFirst.getFullYear()}-${String(lastMonthFirst.getMonth() + 1).padStart(2, "0")}-01`;
+const lastMonthLastStr = `${lastMonthFirst.getFullYear()}-${String(lastMonthFirst.getMonth() + 1).padStart(2, "0")}-${String(new Date(now.getFullYear(), now.getMonth(), 0).getDate()).padStart(2, "0")}`;
+
+const threeMonthsAgoFirst = new Date(now.getFullYear(), now.getMonth() - 2, 1);
+const threeMonthsAgoFirstStr = `${threeMonthsAgoFirst.getFullYear()}-${String(threeMonthsAgoFirst.getMonth() + 1).padStart(2, "0")}-01`;
 
 const datePresets = [
-  { label: "本月", from: currentYearMonth, to: currentYearMonth },
-  { label: "上月", from: lastMonthStr, to: lastMonthStr },
-  { label: "近三个月", from: threeMonthsAgoStr, to: currentYearMonth },
+  { label: "本月", from: firstDayOfMonth, to: todayStr },
+  { label: "上月", from: lastMonthFirstStr, to: lastMonthLastStr },
+  { label: "近三个月", from: threeMonthsAgoFirstStr, to: todayStr },
   {
     label: "本年",
-    from: `${now.getFullYear()}-01`,
-    to: `${now.getFullYear()}-12`,
+    from: `${now.getFullYear()}-01-01`,
+    to: `${now.getFullYear()}-12-31`,
   },
 ];
 
 const isPresetActive = (preset: { from: string; to: string }) => {
   return (
-    pickerFromMonth.value === preset.from && pickerToMonth.value === preset.to
+    pickerFromDate.value === preset.from && pickerToDate.value === preset.to
   );
 };
 
 const applyDatePreset = (preset: { from: string; to: string }) => {
-  pickerFromMonth.value = preset.from;
-  pickerToMonth.value = preset.to;
+  pickerFromDate.value = preset.from;
+  pickerToDate.value = preset.to;
 };
 
 const openDatePicker = () => {
   if (filterDateFrom.value) {
-    const parts = filterDateFrom.value.split("-");
-    if (parts.length >= 2) pickerFromMonth.value = `${parts[0]}-${parts[1]}`;
+    pickerFromDate.value = filterDateFrom.value;
   }
   if (filterDateTo.value) {
-    const parts = filterDateTo.value.split("-");
-    if (parts.length >= 2) pickerToMonth.value = `${parts[0]}-${parts[1]}`;
+    pickerToDate.value = filterDateTo.value;
   }
 };
 
-const dateApply = () => {
+const dateApply = async () => {
   showDatePicker.value = false;
-  if (pickerFromMonth.value) {
-    filterDateFrom.value = `${pickerFromMonth.value}-01`;
-  }
-  if (pickerToMonth.value) {
-    const [y, m] = pickerToMonth.value.split("-").map(Number);
-    const lastDay = new Date(y, m, 0).getDate();
-    filterDateTo.value = `${pickerToMonth.value}-${String(lastDay).padStart(2, "0")}`;
-  }
-  fetchBills();
+  filterDateFrom.value = pickerFromDate.value || "";
+  filterDateTo.value = pickerToDate.value || "";
+  await fetchBills();
 };
 
 const cancelDatePicker = () => {

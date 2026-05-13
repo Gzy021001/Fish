@@ -167,9 +167,11 @@ import * as XLSX from "xlsx";
 import { apiErrorMessage, isAuthError } from "../lib/error";
 import { formatMoney } from "../lib/utils";
 import { useSpecies } from "../composables/useSpecies";
+import { useToast } from "../composables/useToast";
 import { saveImportedRows } from "../services/billingEntryService";
 
 const router = useRouter();
+const toast = useToast();
 const { speciesList, fetchSpecies } = useSpecies();
 
 const fileInput = ref<HTMLInputElement | null>(null);
@@ -249,7 +251,7 @@ const handleFileUpload = (event: Event) => {
       showPreview.value = true;
     } catch (error) {
       console.error("Failed to parse Excel", error);
-      alert("解析 Excel 失败，请检查文件格式是否正确。");
+      toast.error("解析 Excel 失败，请检查文件格式是否正确。");
     }
   };
   reader.readAsArrayBuffer(file);
@@ -259,12 +261,12 @@ const confirmImport = async () => {
   importing.value = true;
   try {
     const saved = await saveImportedRows(importRows.value, speciesList.value);
-    alert(`成功导入 ${saved} 条记录`);
+    toast.success(`成功导入 ${saved} 条记录`);
     router.push("/billing");
   } catch (error: any) {
     if (isAuthError(error)) return;
     console.error("Import failed", error);
-    alert(apiErrorMessage(error, "导入单据"));
+    toast.error(apiErrorMessage(error, "导入单据"));
   } finally {
     importing.value = false;
   }

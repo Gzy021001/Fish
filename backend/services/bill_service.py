@@ -69,12 +69,22 @@ def sync_bills(date: str, user: models.User, db: Session):
     return count
 
 
-def list_bills(db: Session, limit: int = 100, status: str = None, date: str = None):
+def list_bills(db: Session, limit: int = 100, status: str = None, date: str = None, date_from: str = None, date_to: str = None):
     query = db.query(models.Bill).order_by(models.Bill.created_at.desc())
     if status:
         query = query.filter(models.Bill.status == status)
+    if date_from:
+        date_from_dt = datetime.strptime(date_from, "%Y-%m-%d")
+        query = query.filter(
+            func.coalesce(models.Bill.release_date, models.Bill.created_at) >= date_from_dt
+        )
+    if date_to:
+        end = datetime.strptime(date_to, "%Y-%m-%d") + timedelta(days=1)
+        query = query.filter(
+            func.coalesce(models.Bill.release_date, models.Bill.created_at) < end
+        )
     if date:
-        query = query.filter(cast(models.Bill.created_at, String).startswith(date))
+        query = query.filter(cast(models.Bill.release_date, String).startswith(date))
     if limit > 0:
         query = query.limit(limit)
     return query.all()
@@ -160,21 +170,22 @@ def get_price_trend(species_id: int, db: Session, year: int = None):
 
     query = (
         db.query(
-            func.date(models.Bill.created_at).label("date"),
+            func.date(models.Bill.release_date).label("date"),
             func.avg(models.Bill.unit_price).label("avg_price"),
         )
         .filter(models.Bill.species_id == species.id)
+        .filter(models.Bill.release_date.isnot(None))
     )
 
     if year:
         query = query.filter(
-            models.Bill.created_at >= datetime(year, 1, 1),
-            models.Bill.created_at < datetime(year + 1, 1, 1),
+            models.Bill.release_date >= datetime(year, 1, 1),
+            models.Bill.release_date < datetime(year + 1, 1, 1),
         )
     else:
         thirty_days_ago = datetime.utcnow() - timedelta(days=30)
-        query = query.filter(models.Bill.created_at >= thirty_days_ago)
+        query = query.filter(models.Bill.release_date >= thirty_days_ago)
 
-    results = query.group_by(func.date(models.Bill.created_at)).all()
+    results = query.group_by(func.date(models.Bill.release_date)).all()
 
     return [{"date": str(r.date), "avg_price": float(r.avg_price)} for r in results]
