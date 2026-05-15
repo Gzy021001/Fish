@@ -171,12 +171,12 @@
                   v-if="sp.image_url"
                   :src="sp.image_url"
                   :alt="sp.name_zh"
-                  class="w-8 h-8 rounded-lg object-cover border border-dunhuang-yellow/30 cursor-pointer hover:opacity-80 transition-opacity"
+                  class="w-10 h-8 rounded-lg object-cover border border-dunhuang-yellow/30 cursor-pointer hover:opacity-80 transition-opacity"
                   @click.stop="openImagePreview(sp.image_url)"
                 />
                 <div
                   v-else
-                  class="flex items-center justify-center w-8 h-8 rounded-lg bg-dunhuang-yellow/10 border border-dunhuang-yellow/30 text-dunhuang-blue"
+                  class="flex items-center justify-center w-10 h-8 rounded-lg bg-dunhuang-yellow/10 border border-dunhuang-yellow/30 text-dunhuang-blue"
                   :title="sp.name_zh"
                 >
                   <span class="text-[10px] font-bold">{{
@@ -738,6 +738,7 @@ import api from "../api";
 import { apiErrorMessage, isAuthError } from "../lib/error";
 import { formatMoney, dateStr } from "../lib/utils";
 import { useToast } from "../composables/useToast";
+import { useSpecies } from "../composables/useSpecies";
 import ConfirmDialog from "../components/ConfirmDialog.vue";
 import DateInput from "../components/DateInput.vue";
 
@@ -755,6 +756,7 @@ interface SpeciesItem {
 
 const router = useRouter();
 const toast = useToast();
+const { invalidateCache } = useSpecies();
 
 const species = ref<SpeciesItem[]>([]);
 const selectedIds = ref<number[]>([]);
@@ -948,6 +950,7 @@ const addSpecies = async () => {
     }
 
     closeAddModal();
+    invalidateCache();
     await fetchSpecies();
   } catch (error: any) {
     if (isAuthError(error)) return;
@@ -982,11 +985,13 @@ const executeDeleteSpecies = async () => {
       }
       selectedIds.value = [];
       deleteConfirm.value.show = false;
+      invalidateCache();
       await fetchSpecies();
     } catch (error: any) {
       if (isAuthError(error)) return;
       errorMsg.value = apiErrorMessage(error, "批量删除");
       deleteConfirm.value.show = false;
+      invalidateCache();
       await fetchSpecies();
     }
   } else {
@@ -998,6 +1003,7 @@ const executeDeleteSpecies = async () => {
         (selectedId) => selectedId !== id,
       );
       deleteConfirm.value.show = false;
+      invalidateCache();
       await fetchSpecies();
     } catch (error: any) {
       if (isAuthError(error)) return;
@@ -1152,6 +1158,7 @@ const confirmImportSpecies = async () => {
 
     importPreview.value = [];
     showImportModal.value = false;
+    invalidateCache();
     await fetchSpecies();
   } catch (error: any) {
     if (isAuthError(error)) return;

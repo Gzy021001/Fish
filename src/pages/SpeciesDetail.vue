@@ -274,9 +274,7 @@
                       操作记录
                     </h4>
                     <span class="text-xs text-dunhuang-text/30 ml-auto">{{
-                      filteredLogs.length > 0
-                        ? filteredLogs.length + " 条记录"
-                        : ""
+                      filteredLogs.length > 0 ? filteredLogs.length + " 项" : ""
                     }}</span>
                   </div>
                   <div

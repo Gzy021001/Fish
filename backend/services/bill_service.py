@@ -70,19 +70,15 @@ def sync_bills(date: str, user: models.User, db: Session):
 
 
 def list_bills(db: Session, limit: int = 100, status: str = None, date: str = None, date_from: str = None, date_to: str = None):
-    query = db.query(models.Bill).order_by(models.Bill.created_at.desc())
+    query = db.query(models.Bill).order_by(models.Bill.release_date.desc())
     if status:
         query = query.filter(models.Bill.status == status)
     if date_from:
         date_from_dt = datetime.strptime(date_from, "%Y-%m-%d")
-        query = query.filter(
-            func.coalesce(models.Bill.release_date, models.Bill.created_at) >= date_from_dt
-        )
+        query = query.filter(func.coalesce(models.Bill.release_date, models.Bill.created_at) >= date_from_dt)
     if date_to:
         end = datetime.strptime(date_to, "%Y-%m-%d") + timedelta(days=1)
-        query = query.filter(
-            func.coalesce(models.Bill.release_date, models.Bill.created_at) < end
-        )
+        query = query.filter(func.coalesce(models.Bill.release_date, models.Bill.created_at) < end)
     if date:
         query = query.filter(cast(models.Bill.release_date, String).startswith(date))
     if limit > 0:

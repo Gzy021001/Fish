@@ -418,7 +418,11 @@ const fetchAllTrends = async () => {
 
 const fetchBills = async () => {
   try {
-    const res = await api.get("/bills?limit=0");
+    const dateFrom = `${selectedYear.value}-01-01`;
+    const dateTo = `${selectedYear.value}-12-31`;
+    const res = await api.get(
+      `/bills?limit=0&date_from=${dateFrom}&date_to=${dateTo}`,
+    );
     const bills = res.data || [];
     const map = new Map<
       string,
@@ -427,9 +431,7 @@ const fetchBills = async () => {
     const spWeightMap = new Map<string, Map<number, number>>();
     for (const b of bills) {
       if (!b.release_date) continue;
-      const d = new Date(b.release_date);
-      if (d.getFullYear() !== selectedYear.value) continue;
-      const key = d.toISOString().slice(0, 10);
+      const key = new Date(b.release_date).toISOString().slice(0, 10);
       const cur = map.get(key) || { total_amount: 0, total_weight: 0 };
       cur.total_amount += Number(b.total_amount || 0);
       cur.total_weight += Number(b.weight || 0);

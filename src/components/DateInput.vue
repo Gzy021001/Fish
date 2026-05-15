@@ -5,7 +5,7 @@
       @click="toggle"
       :class="[
         'w-full flex items-center gap-2.5 rounded-lg border transition-all duration-200 focus:outline-none group',
-        size === 'sm' ? 'py-2 px-4 text-sm' : 'py-3 px-4 text-sm',
+        size === 'sm' ? 'py-2 px-4 text-sm' : 'py-2.5 px-3 text-sm',
         hasValue
           ? 'bg-white border-dunhuang-blue/30 text-dunhuang-blue shadow-sm shadow-dunhuang-blue/5 hover:border-dunhuang-blue/50'
           : 'bg-dunhuang-bg border-dunhuang-yellow/50 text-dunhuang-text/40 hover:border-dunhuang-blue/40 hover:text-dunhuang-text/60 hover:bg-white',

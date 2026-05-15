@@ -34,7 +34,7 @@ def sync_bills_route(
     current_user: models.User = Depends(auth.get_current_user),
 ):
     count = sync_bills(payload.date, current_user, db)
-    return {"message": f"已归档 {count} 条记录至历史", "count": count}
+    return {"message": f"已归档 {count} 条至历史", "count": count}
 
 
 @router.get("/bills", response_model=List[schemas.Bill])

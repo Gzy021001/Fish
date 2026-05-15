@@ -16,7 +16,6 @@ const preloadImages = (list: any[]) => {
 
 export function useSpecies() {
   const fetchSpecies = async () => {
-    if (speciesList.value.length > 0) return
     if (fetchPromise) return fetchPromise
 
     fetchPromise = (async () => {
@@ -34,5 +33,9 @@ export function useSpecies() {
     return fetchPromise
   }
 
-  return { speciesList, fetchSpecies }
+  const invalidateCache = () => {
+    speciesList.value = []
+  }
+
+  return { speciesList, fetchSpecies, invalidateCache }
 }

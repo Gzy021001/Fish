@@ -38,13 +38,24 @@ export function useBillTable(speciesList: Ref<any[]>) {
   const currentPage = ref(1)
   const pageSize = 10
 
+  const tabBills = computed(() => {
+    if (activeTab.value === "current") {
+      return bills.value.filter((b: any) => b.status === "DRAFT")
+    }
+    if (activeTab.value === "history") {
+      return bills.value.filter((b: any) => b.status === "COMPLETED")
+    }
+    return bills.value
+  })
+
   const filteredBills = computed(() => {
     const q = billingSearch.value.trim().toLowerCase()
-    if (!q) return bills.value
-    return bills.value.filter((b: any) => {
-      const sp = speciesList.value.find((s: any) => s.id === b.species_id)
-      return sp && sp.name_zh.toLowerCase().includes(q)
-    })
+    return q
+      ? tabBills.value.filter((b: any) => {
+        const sp = speciesList.value.find((s: any) => s.id === b.species_id)
+        return sp && sp.name_zh.toLowerCase().includes(q)
+      })
+      : tabBills.value
   })
 
   const totalItems = computed(() => filteredBills.value.length)

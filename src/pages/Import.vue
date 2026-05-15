@@ -90,7 +90,7 @@
               <span class="font-bold text-dunhuang-blue">{{
                 importRows.length
               }}</span>
-              条记录
+              条
             </div>
           </div>
 
@@ -261,7 +261,7 @@ const confirmImport = async () => {
   importing.value = true;
   try {
     const saved = await saveImportedRows(importRows.value, speciesList.value);
-    toast.success(`成功导入 ${saved} 条记录`);
+    toast.success(`成功导入 ${saved} 条`);
     router.push("/billing");
   } catch (error: any) {
     if (isAuthError(error)) return;
