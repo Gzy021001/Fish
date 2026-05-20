@@ -443,6 +443,7 @@ const grandTotalAmount = computed(() => {
 });
 
 const priceFluctuationData = computed(() => {
+  if (!Array.isArray(speciesList.value)) return [];
   const result: {
     speciesId: number;
     name: string;
@@ -481,6 +482,7 @@ const priceFluctuationData = computed(() => {
 });
 
 const priceTrendGrouped = computed(() => {
+  if (!Array.isArray(speciesList.value)) return { up: [], down: [] };
   const up: {
     speciesId: number;
     name: string;
@@ -643,7 +645,7 @@ const fetchSpecies = async () => {
     trendErrorMsg.value = "";
     billsErrorMsg.value = "";
     const res = await api.get("/species");
-    speciesList.value = res.data || [];
+    speciesList.value = Array.isArray(res.data) ? res.data : [];
     if (speciesList.value.length > 0) {
       await Promise.all([fetchAllTrends(), fetchBills()]);
     }
@@ -658,6 +660,11 @@ const fetchSpecies = async () => {
 };
 
 const fetchAllTrends = async () => {
+  if (!Array.isArray(speciesList.value) || speciesList.value.length === 0) {
+    trendDataMap.value = {};
+    return;
+  }
+
   try {
     let failedCount = 0;
     const total = speciesList.value.length;
@@ -703,7 +710,7 @@ const fetchBills = async () => {
     const res = await api.get(
       `/bills?limit=0&date_from=${dateFrom}&date_to=${dateTo}`,
     );
-    const bills = res.data || [];
+    const bills = Array.isArray(res.data) ? res.data : [];
     const map = new Map<
       string,
       { total_amount: number; total_weight: number }
@@ -924,6 +931,8 @@ const renderSpeciesWeightChart = () => {
     speciesWeekWeightMap.value.forEach((spMap) => {
       spMap.forEach((_, spId) => activeSpeciesIds.add(spId));
     });
+
+    if (!Array.isArray(speciesList.value)) return;
 
     const activeSpecies = speciesList.value.filter((s) =>
       activeSpeciesIds.has(s.id),

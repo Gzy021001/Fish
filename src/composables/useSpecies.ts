@@ -21,7 +21,7 @@ export function useSpecies() {
     fetchPromise = (async () => {
       try {
         const res = await api.get("/species")
-        speciesList.value = res.data || []
+        speciesList.value = Array.isArray(res.data) ? res.data : []
         preloadImages(speciesList.value)
       } catch (error: any) {
         if (isAuthError(error)) return

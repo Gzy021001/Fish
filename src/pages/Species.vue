@@ -921,7 +921,7 @@ const fetchSpecies = async () => {
       ? `/species?${params.toString()}`
       : "/species";
     const res = await api.get(url);
-    species.value = res.data || [];
+    species.value = Array.isArray(res.data) ? res.data : [];
   } catch (error: any) {
     if (isAuthError(error)) return;
     console.error("Failed to fetch species", error);

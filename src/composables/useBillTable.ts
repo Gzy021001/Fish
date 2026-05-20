@@ -163,7 +163,7 @@ export function useBillTable(speciesList: Ref<any[]>) {
         params.set("date_to", filterDateTo.value)
       }
       const res = await api.get(`/bills?${params.toString()}`)
-      bills.value = res.data || []
+      bills.value = Array.isArray(res.data) ? res.data : []
       currentPage.value = 1
     } catch (error: any) {
       if (isAuthError(error)) return

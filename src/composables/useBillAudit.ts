@@ -66,7 +66,7 @@ export function useBillAudit(speciesList: Ref<any[]>) {
     showViewModal.value = true
     try {
       const res = await api.get(`/logs/bill/${b.id}`)
-      viewingBillLogs.value = res.data || []
+      viewingBillLogs.value = Array.isArray(res.data) ? res.data : []
     } catch (error: any) {
       if (isAuthError(error)) return
       console.error("Failed to fetch bill logs", error)

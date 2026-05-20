@@ -603,7 +603,7 @@ const fetchSpeciesDetail = async () => {
     species.value = res.data;
 
     const logsRes = await api.get(`/logs/species/${speciesId()}`);
-    logs.value = logsRes.data || [];
+    logs.value = Array.isArray(logsRes.data) ? logsRes.data : [];
   } catch (error: any) {
     if (isAuthError(error)) return;
     console.error("Failed to fetch species detail", error);
