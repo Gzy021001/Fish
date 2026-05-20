@@ -245,6 +245,7 @@ export function useBillTable(speciesList: Ref<any[]>) {
         if (isAuthError(error)) return
         toast.error(apiErrorMessage(error, "批量删除"))
         deleteConfirm.value.show = false
+        await fetchBills()
       }
     } else {
       const id = deleteConfirm.value.id

@@ -1,4 +1,5 @@
 from sqlalchemy import text
+import os
 
 import models
 import auth
@@ -35,9 +36,10 @@ def init_seed_data():
     db = next(get_db())
 
     if not db.query(models.User).first():
+        admin_password = os.getenv("ADMIN_PASSWORD", "admin123")
         admin = models.User(
             username="admin",
-            password_hash=auth.get_password_hash("admin123"),
+            password_hash=auth.get_password_hash(admin_password),
             role="admin",
         )
         db.add(admin)

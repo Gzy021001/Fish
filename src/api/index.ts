@@ -28,12 +28,8 @@ api.interceptors.response.use(
     if (error.response && error.response.status === 401) {
       const authStore = useAuthStore()
       authStore.logout()
-
-      // 路由跳转比 location.reload 更安全，适配预览环境
       router.replace('/login')
-
-      // 返回永不 resolve 的 Promise，中断业务层 catch 链
-      return new Promise(() => {})
+      return Promise.reject(error)
     }
     return Promise.reject(error)
   }

@@ -1,5 +1,5 @@
 import json
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 from fastapi import HTTPException
 from sqlalchemy import func, cast, String
@@ -179,7 +179,7 @@ def get_price_trend(species_id: int, db: Session, year: int = None):
             models.Bill.release_date < datetime(year + 1, 1, 1),
         )
     else:
-        thirty_days_ago = datetime.utcnow() - timedelta(days=30)
+        thirty_days_ago = datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(days=30)
         query = query.filter(models.Bill.release_date >= thirty_days_ago)
 
     results = query.group_by(func.date(models.Bill.release_date)).all()

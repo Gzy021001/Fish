@@ -13,16 +13,28 @@ router = APIRouter(prefix="/api", tags=["auth"])
 
 
 @router.post("/register", response_model=schemas.User)
-def register(user: schemas.UserCreate, db: Session = Depends(get_db)):
+def register(
+    user: schemas.UserCreate,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(auth.get_current_user),
+):
+    if current_user.role != "admin":
+        raise HTTPException(status_code=403, detail="仅管理员可创建用户")
+
     db_user = db.query(models.User).filter(models.User.username == user.username).first()
     if db_user:
-        raise HTTPException(status_code=400, detail="Username already registered")
+        raise HTTPException(status_code=400, detail="用户名已存在")
+
+    if not user.username or not user.username.strip():
+        raise HTTPException(status_code=400, detail="用户名不能为空")
+    if len(user.password) < 6:
+        raise HTTPException(status_code=400, detail="密码至少需要6个字符")
 
     hashed_password = auth.get_password_hash(user.password)
     new_user = models.User(
-        username=user.username,
+        username=user.username.strip(),
         password_hash=hashed_password,
-        role=user.role,
+        role=user.role if user.role in ("admin", "operator") else "operator",
     )
     db.add(new_user)
     db.commit()

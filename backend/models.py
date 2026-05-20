@@ -1,6 +1,6 @@
 from sqlalchemy import Column, ForeignKey, Integer, String, Float, DateTime
 from sqlalchemy.orm import relationship
-from datetime import datetime
+from datetime import datetime, timezone
 from database import Base
 
 class User(Base):
@@ -20,7 +20,7 @@ class Species(Base):
     supplier_name = Column(String(200), nullable=True)
     supplier_note = Column(String(500), nullable=True)
     release_date = Column(DateTime, nullable=True)
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
 
 class Bill(Base):
     __tablename__ = "bills"
@@ -36,7 +36,7 @@ class Bill(Base):
     total_amount = Column(Float)
     status = Column(String(20), default="DRAFT")
     release_date = Column(DateTime, nullable=True)
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
 
     user = relationship("User")
     species = relationship("Species")
@@ -51,4 +51,4 @@ class AuditLog(Base):
     action = Column(String(50)) # "CREATE", "UPDATE", "DELETE"
     old_data = Column(String, nullable=True) # JSON string
     new_data = Column(String, nullable=True) # JSON string
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None))

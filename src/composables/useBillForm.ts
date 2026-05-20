@@ -166,8 +166,8 @@ export function useBillForm(speciesList: Ref<any[]>) {
     }
 
     saving.value = true
+    let saved = 0
     try {
-      let saved = 0
       for (const entry of validEntries) {
         const data = await saveEntry({
           ...entry,
@@ -184,7 +184,14 @@ export function useBillForm(speciesList: Ref<any[]>) {
       toast.success(`成功保存 ${saved} 条`)
     } catch (error: any) {
       if (isAuthError(error)) return
-      toast.error(apiErrorMessage(error, "保存单据"))
+      billEntries.value = []
+      bill.value.release_date = ""
+      showForm.value = false
+      if (saved > 0) {
+        toast.warning(`已保存 ${saved} 条，其余保存失败`)
+      } else {
+        toast.error(apiErrorMessage(error, "保存单据"))
+      }
     } finally {
       saving.value = false
     }

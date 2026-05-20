@@ -114,8 +114,11 @@ def upload_image(species_id: int, image: UploadFile, db: Session):
     file_name = f"{species_id}_{uuid.uuid4().hex}{extension}"
     file_path = SPECIES_UPLOAD_DIR / file_name
 
-    with file_path.open("wb") as buffer:
-        shutil.copyfileobj(image.file, buffer)
+    try:
+        with file_path.open("wb") as buffer:
+            shutil.copyfileobj(image.file, buffer)
+    except (OSError, IOError):
+        raise HTTPException(status_code=500, detail="图片保存失败，请稍后重试")
 
     delete_species_image_file(species.image_url)
     species.image_url = f"/uploads/species/{file_name}"

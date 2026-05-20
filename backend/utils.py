@@ -35,6 +35,11 @@ def delete_species_image_file(image_url: str | None):
     """删除品种图片文件"""
     if not image_url:
         return
-    image_path = BASE_DIR / image_url.lstrip("/").replace("/", "\\")
+    filename = Path(image_url).name
+    if not filename:
+        return
+    image_path = (SPECIES_UPLOAD_DIR / filename).resolve()
+    if not str(image_path).startswith(str(SPECIES_UPLOAD_DIR.resolve())):
+        return
     if image_path.exists() and image_path.is_file():
         image_path.unlink()

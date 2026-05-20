@@ -180,7 +180,7 @@
                   :title="sp.name_zh"
                 >
                   <span class="text-[10px] font-bold">{{
-                    sp.name_zh.charAt(0)
+                    sp.name_zh ? sp.name_zh.charAt(0) : "?"
                   }}</span>
                 </div>
               </div>

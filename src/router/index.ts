@@ -22,6 +22,12 @@ const router = createRouter({
         { path: 'billing', name: 'Billing', component: () => import('../pages/Billing.vue') },
         { path: 'import', name: 'Import', component: () => import('../pages/Import.vue') },
       ]
+    },
+    {
+      path: '/:pathMatch(.*)*',
+      name: 'NotFound',
+      component: () => import('../pages/NotFound.vue'),
+      meta: { requiresAuth: false }
     }
   ]
 })

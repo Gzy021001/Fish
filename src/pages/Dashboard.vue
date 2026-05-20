@@ -659,6 +659,9 @@ const fetchSpecies = async () => {
 
 const fetchAllTrends = async () => {
   try {
+    let failedCount = 0;
+    const total = speciesList.value.length;
+
     const promises = speciesList.value.map((sp) =>
       api
         .get(
@@ -667,10 +670,18 @@ const fetchAllTrends = async () => {
         .then((res) => ({ id: sp.id, data: res.data }))
         .catch((err) => {
           console.error(`Failed to fetch trend for species ${sp.id}`, err);
+          failedCount++;
           return { id: sp.id, data: [] };
         }),
     );
     const results = await Promise.all(promises);
+
+    if (failedCount === total && total > 0) {
+      trendErrorMsg.value = "获取价格走势失败。";
+      trendDataMap.value = {};
+      return;
+    }
+
     const newTrendDataMap: Record<number, any[]> = {};
     results.forEach((res) => {
       if (res.data && res.data.length > 0) newTrendDataMap[res.id] = res.data;
