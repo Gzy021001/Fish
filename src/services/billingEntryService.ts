@@ -2,7 +2,9 @@ import api from "../api"
 
 export interface ImportRow {
   name_zh: string
+  weight: number
   unit_price: number
+  fee_value: number
   release_date?: string
 }
 
@@ -62,9 +64,9 @@ export async function saveImportedRows(
     const species = await ensureSpecies(row.name_zh, row.unit_price, speciesList, row.release_date)
     const payload: BillEntryInput = {
       species_id: species.id,
-      weight: 0,
+      weight: row.weight || 0,
       unit_price: row.unit_price,
-      fee_value: 0,
+      fee_value: row.fee_value || 0,
       release_date: row.release_date,
     }
     await saveEntry(payload)

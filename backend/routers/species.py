@@ -1,6 +1,6 @@
-from typing import List
+from typing import List, Optional
 
-from fastapi import APIRouter, Depends, File, UploadFile
+from fastapi import APIRouter, Depends, File, Query, UploadFile
 from sqlalchemy.orm import Session
 
 import models
@@ -21,10 +21,11 @@ router = APIRouter(prefix="/api", tags=["species"])
 
 @router.get("/species", response_model=List[schemas.Species])
 def list_species_route(
+    q: Optional[str] = Query(None, description="搜索品种名称"),
     db: Session = Depends(get_db),
     current_user: models.User = Depends(auth.get_current_user),
 ):
-    return list_species(db)
+    return list_species(db, q)
 
 
 @router.get("/species/{species_id}", response_model=schemas.Species)

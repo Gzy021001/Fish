@@ -3,6 +3,8 @@ from pathlib import Path
 import shutil
 import uuid
 
+from typing import Optional
+
 from fastapi import HTTPException, UploadFile
 from sqlalchemy.orm import Session
 
@@ -12,8 +14,11 @@ from utils import delete_species_image_file, SPECIES_UPLOAD_DIR
 from services.audit_service import record_create, record_update, record_delete
 
 
-def list_species(db: Session):
-    return db.query(models.Species).order_by(models.Species.id.asc()).all()
+def list_species(db: Session, q: Optional[str] = None):
+    query = db.query(models.Species)
+    if q:
+        query = query.filter(models.Species.name_zh.ilike(f"%{q}%"))
+    return query.order_by(models.Species.id.asc()).all()
 
 
 def get_species(species_id: int, db: Session):

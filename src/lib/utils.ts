@@ -3,7 +3,10 @@ function parseUTC(dateStr: string | undefined | null): Date | null {
   if (dateStr.endsWith("Z") || dateStr.includes("+") || dateStr.includes("[")) {
     return new Date(dateStr)
   }
-  return new Date(dateStr + "Z")
+  if (dateStr.includes("T")) {
+    return new Date(dateStr + "Z")
+  }
+  return new Date(dateStr + "T00:00:00Z")
 }
 
 export function dateTimeStr(dateStr: string | undefined | null): string {

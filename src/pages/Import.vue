@@ -105,7 +105,13 @@
                   </th>
                   <th class="p-3 border-b border-dunhuang-yellow/40">品种</th>
                   <th class="p-3 border-b border-dunhuang-yellow/40">
+                    重量（公斤）
+                  </th>
+                  <th class="p-3 border-b border-dunhuang-yellow/40">
                     单价（元）
+                  </th>
+                  <th class="p-3 border-b border-dunhuang-yellow/40">
+                    服务费（元）
                   </th>
                   <th class="p-3 border-b border-dunhuang-yellow/40">
                     放生日期
@@ -121,14 +127,20 @@
                   <td class="p-3 text-dunhuang-text/50">{{ index + 1 }}</td>
                   <td class="p-3">{{ row.name_zh }}</td>
                   <td class="p-3 tabular-nums">
+                    {{ formatMoney(row.weight) }}
+                  </td>
+                  <td class="p-3 tabular-nums">
                     {{ formatMoney(row.unit_price) }}
+                  </td>
+                  <td class="p-3 tabular-nums">
+                    {{ formatMoney(row.fee_value) }}
                   </td>
                   <td class="p-3 text-sm">
                     {{ row.release_date || "-" }}
                   </td>
                 </tr>
                 <tr v-if="importRows.length === 0">
-                  <td colspan="4" class="p-8 text-center text-dunhuang-text/50">
+                  <td colspan="6" class="p-8 text-center text-dunhuang-text/50">
                     未解析到有效数据
                   </td>
                 </tr>
@@ -193,22 +205,30 @@ const triggerFileInput = () => {
 const downloadTemplate = () => {
   const templateData = [
     {
-      序号: 1,
       品种: "东星斑",
+      "重量（公斤）": "10.00",
       "单价（元）": "120.00",
+      "服务费（元）": "20.00",
       "放生日期": "2025-01-15",
     },
     {
-      序号: 2,
       品种: "老虎斑",
+      "重量（公斤）": "15.00",
       "单价（元）": "85.00",
+      "服务费（元）": "15.00",
       "放生日期": "2025-01-15",
     },
   ];
 
   const worksheet = XLSX.utils.json_to_sheet(templateData);
 
-  worksheet["!cols"] = [{ wch: 8 }, { wch: 15 }, { wch: 12 }, { wch: 14 }];
+  worksheet["!cols"] = [
+    { wch: 15 },
+    { wch: 12 },
+    { wch: 12 },
+    { wch: 12 },
+    { wch: 14 },
+  ];
 
   const workbook = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(workbook, worksheet, "导入模板");
@@ -232,17 +252,22 @@ const handleFileUpload = (event: Event) => {
       const workbook = XLSX.read(data, { type: "array" });
       const firstSheetName = workbook.SheetNames[0];
       const worksheet = workbook.Sheets[firstSheetName];
+
       const jsonData = XLSX.utils.sheet_to_json(worksheet);
 
       importRows.value = jsonData
         .map((row: any) => {
           const name_zh = row["品种"] || row["名称"] || "";
+          const weight = parseFloat(row["重量（公斤）"] || row["重量"] || 0);
           const unit_price = parseFloat(row["单价（元）"] || row["单价"] || 0);
+          const fee_value = parseFloat(row["服务费（元）"] || row["服务费"] || 0);
           const release_date = row["放生日期"] || row["日期"] || "";
 
           return {
             name_zh,
+            weight,
             unit_price,
+            fee_value,
             release_date: release_date ? String(release_date).trim() : undefined,
           };
         })

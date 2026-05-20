@@ -1,5 +1,5 @@
-from pydantic import BaseModel
-from datetime import datetime
+from pydantic import BaseModel, field_serializer
+from datetime import datetime, date
 from typing import Optional
 
 class UserBase(BaseModel):
@@ -37,6 +37,12 @@ class Species(SpeciesBase):
     class Config:
         from_attributes = True
 
+    @field_serializer('release_date')
+    def serialize_release_date(self, v: Optional[datetime]) -> Optional[str]:
+        if v is None:
+            return None
+        return v.strftime('%Y-%m-%d')
+
 class BillBase(BaseModel):
     species_id: int
     weight: float
@@ -60,6 +66,12 @@ class Bill(BillBase):
 
     class Config:
         from_attributes = True
+
+    @field_serializer('release_date')
+    def serialize_release_date(self, v: Optional[datetime]) -> Optional[str]:
+        if v is None:
+            return None
+        return v.strftime('%Y-%m-%d')
 
 class AuditLogBase(BaseModel):
     bill_id: Optional[int] = None

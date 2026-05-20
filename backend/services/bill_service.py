@@ -29,7 +29,7 @@ def create_bill(data: schemas.BillCreate, user: models.User, db: Session):
         fee_type=data.fee_type,
         fee_value=data.fee_value,
         total_amount=total_amount,
-        status="DRAFT",
+        status=data.status or "DRAFT",
         release_date=data.release_date,
     )
     db.add(bill)

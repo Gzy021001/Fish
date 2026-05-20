@@ -1,5 +1,5 @@
 <template>
-  <div class="h-full flex flex-col space-y-6">
+  <div class="h-full flex flex-col space-y-6 overflow-y-auto no-page-scrollbar">
     <div class="flex items-center gap-4 flex-none">
       <div class="relative">
         <button
@@ -65,7 +65,7 @@
     </div>
 
     <div
-      class="bg-white rounded-2xl shadow-md border border-dunhuang-yellow/30 p-8 flex flex-col"
+      class="bg-white rounded-2xl shadow-md border border-dunhuang-yellow/30 p-8 flex flex-col card-no-scroll"
     >
       <div class="flex items-center justify-between mb-6 flex-none">
         <h3
@@ -75,7 +75,7 @@
         </h3>
       </div>
 
-      <div class="relative" style="height: 420px">
+      <div class="relative flex-1 overflow-hidden" style="min-height: 500px">
         <Transition name="fade">
           <div
             v-if="loading"
@@ -104,9 +104,139 @@
         </Transition>
         <div
           v-show="hasTrendData"
-          ref="priceChartRef"
-          class="absolute inset-0 w-full h-full"
-        ></div>
+          class="absolute inset-0 flex gap-4 trend-scroll-container"
+          @mousedown="onCardScrollMouseDown"
+        >
+          <div
+            class="flex-1 min-w-0 overflow-y-auto pr-1 trend-scroll-left"
+            ref="cardScrollEl"
+          >
+            <div v-if="priceTrendAll.length > 0" class="grid grid-cols-2 gap-3">
+              <div
+                v-for="item in priceTrendAll"
+                :key="item.speciesId"
+                class="bg-white rounded-xl border hover:border-dunhuang-yellow/40 transition-colors overflow-hidden"
+                :class="
+                  item.change > 0 ? 'border-red-200/50' : 'border-green-200/50'
+                "
+              >
+                <div class="px-4 pt-3 pb-2 border-b border-dunhuang-yellow/10">
+                  <div class="flex items-center justify-between">
+                    <span
+                      class="text-sm font-bold text-dunhuang-text truncate"
+                      >{{ item.name }}</span
+                    >
+                    <span
+                      class="text-xs font-bold shrink-0 ml-2"
+                      :class="
+                        item.change > 0 ? 'text-red-500' : 'text-green-600'
+                      "
+                    >
+                      {{ item.change > 0 ? "+" : ""
+                      }}{{ formatPrice(item.change) }}
+                    </span>
+                  </div>
+                  <div
+                    class="flex items-center justify-between mt-1 text-[10px] text-dunhuang-text/40"
+                  >
+                    <span
+                      >{{ dayLabel(item.dates[0]) }} ~
+                      {{ dayLabel(item.dates[item.dates.length - 1]) }}</span
+                    >
+                    <span class="tabular-nums"
+                      >{{ formatPrice(item.startPrice) }} →
+                      {{ formatPrice(item.currentPrice) }}</span
+                    >
+                  </div>
+                </div>
+                <div
+                  class="overflow-y-auto card-dates-scroll"
+                  :style="
+                    item.dates.length > 3 ? { maxHeight: '4.625rem' } : {}
+                  "
+                >
+                  <div
+                    v-for="(date, di) in item.dates"
+                    :key="di"
+                    class="flex items-center justify-between px-4 py-1 text-xs border-b border-dunhuang-yellow/3 last:border-b-0 hover:bg-dunhuang-bg/30 transition-colors"
+                  >
+                    <span
+                      class="text-dunhuang-text/50 tabular-nums w-16 shrink-0"
+                      >{{ dayLabel(date as string) }}</span
+                    >
+                    <span
+                      v-if="di > 0"
+                      class="tabular-nums shrink-0 mr-2"
+                      :class="
+                        item.directions[di] === 'up'
+                          ? 'text-red-500'
+                          : item.directions[di] === 'down'
+                            ? 'text-green-600'
+                            : 'text-dunhuang-text/40'
+                      "
+                      >{{ item.diffs[di] > 0 ? "+" : ""
+                      }}{{ formatPrice(item.diffs[di]) }}</span
+                    >
+                    <span
+                      v-else
+                      class="tabular-nums shrink-0 mr-2 text-dunhuang-text/40"
+                      >-</span
+                    >
+                    <span
+                      class="tabular-nums font-medium"
+                      :class="
+                        item.directions[di] === 'up'
+                          ? 'text-red-500'
+                          : item.directions[di] === 'down'
+                            ? 'text-green-600'
+                            : 'text-dunhuang-text/70'
+                      "
+                      >{{ formatPrice(item.prices[di]) }}</span
+                    >
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div
+            v-if="priceFluctuationData.length > 0"
+            class="w-48 shrink-0 flex flex-col bg-gradient-to-b from-dunhuang-bg/50 to-dunhuang-bg/20 rounded-xl border border-dunhuang-yellow/15 overflow-hidden"
+          >
+            <div
+              class="px-3 py-2 border-b border-dunhuang-yellow/10 text-xs font-bold text-dunhuang-blue flex-none"
+            >
+              单价浮动
+              <span class="text-dunhuang-text/40 font-normal">(元)</span>
+            </div>
+            <div class="flex-1 overflow-y-auto">
+              <div
+                v-for="item in priceFluctuationData"
+                :key="item.speciesId"
+                class="px-3 py-1.5 border-b border-dunhuang-yellow/5 last:border-b-0 hover:bg-dunhuang-yellow/5 transition-colors"
+              >
+                <div
+                  class="text-xs font-medium text-dunhuang-text truncate leading-tight"
+                >
+                  {{ item.name }}
+                </div>
+                <div class="flex items-center justify-between mt-0.5">
+                  <span class="text-[10px] text-dunhuang-text/40">最低</span>
+                  <span
+                    class="text-[10px] text-dunhuang-text/60 tabular-nums"
+                    >{{ formatPrice(item.minPrice) }}</span
+                  >
+                </div>
+                <div class="flex items-center justify-between">
+                  <span class="text-[10px] text-dunhuang-text/40">最高</span>
+                  <span
+                    class="text-[10px] text-dunhuang-text/60 tabular-nums"
+                    >{{ formatPrice(item.maxPrice) }}</span
+                  >
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
 
@@ -212,26 +342,7 @@
         </h3>
       </div>
 
-      <div
-        v-if="hasSpeciesWeightData"
-        class="relative overflow-hidden rounded-2xl bg-gradient-to-br from-dunhuang-bg to-dunhuang-card border border-dunhuang-yellow/25 px-5 py-3.5 shadow-sm mb-4 flex-none self-start"
-      >
-        <div
-          class="absolute top-0 right-0 w-14 h-14 rounded-bl-full bg-dunhuang-blue/5 -mr-3 -mt-3"
-        ></div>
-        <div class="relative z-10 flex items-baseline gap-2 whitespace-nowrap">
-          <div class="w-1.5 h-1.5 rounded-full bg-dunhuang-blue shrink-0"></div>
-          <span class="text-xs text-dunhuang-text/40 tracking-wider uppercase"
-            >总重量</span
-          >
-          <span class="text-xl font-bold text-dunhuang-blue tabular-nums">{{
-            formatPrice(grandTotalWeight)
-          }}</span>
-          <span class="text-xs text-dunhuang-text/40">公斤</span>
-        </div>
-      </div>
-
-      <div class="relative" style="height: 420px">
+      <div class="relative flex-1" style="min-height: 480px">
         <Transition name="fade">
           <div
             v-if="loading"
@@ -331,10 +442,155 @@ const grandTotalAmount = computed(() => {
   return Number(sum.toFixed(2));
 });
 
-const priceChartRef = ref<HTMLElement | null>(null);
+const priceFluctuationData = computed(() => {
+  const result: {
+    speciesId: number;
+    name: string;
+    minPrice: number;
+    maxPrice: number;
+    avgPrice: number;
+  }[] = [];
+
+  for (const [spIdStr, dataArray] of Object.entries(trendDataMap.value)) {
+    if (dataArray.length === 0) continue;
+    const spId = Number(spIdStr);
+    const sp = speciesList.value.find((s) => s.id === spId);
+    if (!sp) continue;
+    if (isPackagingItem(sp.name_zh)) continue;
+
+    const prices = dataArray
+      .map((item: any) => Number(item.avg_price))
+      .filter((p: number) => !isNaN(p));
+    if (prices.length === 0) continue;
+
+    const minPrice = Math.min(...prices);
+    const maxPrice = Math.max(...prices);
+    const avgPrice =
+      prices.reduce((a: number, b: number) => a + b, 0) / prices.length;
+
+    result.push({
+      speciesId: spId,
+      name: sp.name_zh,
+      minPrice: Number(minPrice.toFixed(2)),
+      maxPrice: Number(maxPrice.toFixed(2)),
+      avgPrice: Number(avgPrice.toFixed(2)),
+    });
+  }
+
+  return result;
+});
+
+const priceTrendGrouped = computed(() => {
+  const up: {
+    speciesId: number;
+    name: string;
+    currentPrice: number;
+    startPrice: number;
+    change: number;
+    changePercent: number;
+    dates: string[];
+    prices: number[];
+    directions: ("up" | "down" | "flat")[];
+    diffs: number[];
+  }[] = [];
+  const down: {
+    speciesId: number;
+    name: string;
+    currentPrice: number;
+    startPrice: number;
+    change: number;
+    changePercent: number;
+    dates: string[];
+    prices: number[];
+    directions: ("up" | "down" | "flat")[];
+    diffs: number[];
+  }[] = [];
+
+  for (const [spIdStr, dataArray] of Object.entries(trendDataMap.value)) {
+    if (dataArray.length < 2) continue;
+    const spId = Number(spIdStr);
+    const sp = speciesList.value.find((s) => s.id === spId);
+    if (!sp) continue;
+
+    const sorted = [...dataArray]
+      .filter((item: any) => item.date && item.avg_price != null)
+      .sort((a: any, b: any) => a.date.localeCompare(b.date));
+    if (sorted.length < 2) continue;
+
+    const half = Math.ceil(sorted.length / 2);
+    const firstHalf = sorted.slice(0, half);
+    const secondHalf = sorted.slice(half);
+
+    const firstAvg =
+      firstHalf.reduce((s: number, i: any) => s + Number(i.avg_price), 0) /
+      firstHalf.length;
+    const secondAvg =
+      secondHalf.reduce((s: number, i: any) => s + Number(i.avg_price), 0) /
+      secondHalf.length;
+
+    const startPrice = Number(
+      firstHalf[firstHalf.length - 1].avg_price,
+    ).toFixed(2);
+    const currentPrice = Number(
+      secondHalf[secondHalf.length - 1].avg_price,
+    ).toFixed(2);
+    const change = Number(
+      (Number(currentPrice) - Number(startPrice)).toFixed(2),
+    );
+    const changePercent = Number(
+      ((change / Number(startPrice)) * 100).toFixed(1),
+    );
+    const dates = sorted.map((i: any) => i.date);
+    const prices = sorted.map((i: any) => Number(i.avg_price));
+
+    const directions: ("up" | "down" | "flat")[] = [];
+    const diffs: number[] = [];
+    for (let i = 0; i < prices.length; i++) {
+      const diff = i === 0 ? 0 : Number((prices[i] - prices[i - 1]).toFixed(2));
+      diffs.push(diff);
+      if (i === 0) {
+        directions.push("flat");
+      } else if (diff > 0) {
+        directions.push("up");
+      } else if (diff < 0) {
+        directions.push("down");
+      } else {
+        directions.push("flat");
+      }
+    }
+
+    const item = {
+      speciesId: spId,
+      name: sp.name_zh,
+      currentPrice: Number(currentPrice),
+      startPrice: Number(startPrice),
+      change,
+      changePercent,
+      dates,
+      prices,
+      directions,
+      diffs,
+    };
+
+    if (change > 0) {
+      up.push(item);
+    } else {
+      down.push(item);
+    }
+  }
+
+  return { up, down };
+});
+
+const priceTrendAll = computed(() => {
+  const all = [...priceTrendGrouped.value.up, ...priceTrendGrouped.value.down];
+  const filtered = all.filter((item) => !isPackagingItem(item.name));
+  filtered.sort((a, b) => Math.abs(b.change) - Math.abs(a.change));
+  return filtered;
+});
+
 const billsChartRef = ref<HTMLElement | null>(null);
 const speciesWeightChartRef = ref<HTMLElement | null>(null);
-let priceChartInstance: echarts.ECharts | null = null;
 let billsChartInstance: echarts.ECharts | null = null;
 let speciesWeightChartInstance: echarts.ECharts | null = null;
 
@@ -351,9 +607,23 @@ const colorPalette = [
   "#4a5d6b",
 ];
 
+const isPackagingItem = (name: string) => {
+  const keywords = [
+    "袋",
+    "打包",
+    "包装",
+    "绳子",
+    "胶带",
+    "泡沫",
+    "保温",
+    "耗材",
+  ];
+  return keywords.some((kw) => name.includes(kw));
+};
+
 const dayLabel = (dateStr: string): string => {
-  const d = new Date(dateStr);
-  return `${d.getMonth() + 1}/${d.getDate()}`;
+  const [, m, d] = dateStr.split("-");
+  return `${parseInt(m)}/${parseInt(d)}`;
 };
 
 const formatPrice = (value: number): string => {
@@ -377,7 +647,6 @@ const fetchSpecies = async () => {
     if (speciesList.value.length > 0) {
       await Promise.all([fetchAllTrends(), fetchBills()]);
     }
-    if (hasTrendData.value) renderPriceChart();
     if (hasBillData.value) renderBillsChart();
     if (hasSpeciesWeightData.value) renderSpeciesWeightChart();
   } catch (error: any) {
@@ -431,7 +700,7 @@ const fetchBills = async () => {
     const spWeightMap = new Map<string, Map<number, number>>();
     for (const b of bills) {
       if (!b.release_date) continue;
-      const key = new Date(b.release_date).toISOString().slice(0, 10);
+      const key = b.release_date.slice(0, 10);
       const cur = map.get(key) || { total_amount: 0, total_weight: 0 };
       cur.total_amount += Number(b.total_amount || 0);
       cur.total_weight += Number(b.weight || 0);
@@ -470,138 +739,8 @@ const onYearChange = async () => {
   } finally {
     loading.value = false;
   }
-  if (hasTrendData.value) renderPriceChart();
   if (hasBillData.value) renderBillsChart();
   if (hasSpeciesWeightData.value) renderSpeciesWeightChart();
-};
-
-// ---- 日数据提取 ----
-
-const computeDayData = () => {
-  const allDaySet = new Set<string>();
-  Object.values(trendDataMap.value).forEach((dataArray) => {
-    dataArray.forEach((item) => {
-      if (item.date) {
-        allDaySet.add(item.date);
-      }
-    });
-  });
-  billWeekMap.value.forEach((_, k) => allDaySet.add(k));
-
-  const dayKeys = Array.from(allDaySet).sort();
-  const dayLabels = dayKeys.map((k) => dayLabel(k));
-
-  return { dayKeys, dayLabels };
-};
-
-// ---- 图表1: 价格走势 ----
-
-const renderPriceChart = () => {
-  setTimeout(() => {
-    if (!priceChartRef.value) return;
-    if (priceChartInstance) priceChartInstance.dispose();
-
-    priceChartInstance = echarts.init(priceChartRef.value);
-
-    const { dayKeys, dayLabels } = computeDayData();
-
-    if (dayKeys.length === 0) return;
-
-    const series: any[] = [];
-    const legendData: string[] = [];
-    let colorIndex = 0;
-
-    for (const [spIdStr, dataArray] of Object.entries(trendDataMap.value)) {
-      const spId = Number(spIdStr);
-      const sp = speciesList.value.find((s) => s.id === spId);
-      if (!sp) continue;
-
-      const spName = sp.name_zh;
-      legendData.push(spName);
-
-      const dayPriceMap = new Map<string, number>();
-      dataArray.forEach((item: any) => {
-        if (!item.date || item.avg_price == null) return;
-        dayPriceMap.set(item.date, Number(item.avg_price));
-      });
-
-      const prices = dayKeys.map((dk) => {
-        const price = dayPriceMap.get(dk);
-        return price != null ? Number(price.toFixed(2)) : null;
-      });
-
-      const color = colorPalette[colorIndex % colorPalette.length];
-      colorIndex++;
-
-      series.push({
-        name: spName,
-        type: "line",
-        smooth: true,
-        symbol: "circle",
-        symbolSize: 8,
-        itemStyle: { color, borderColor: color, borderWidth: 1.5 },
-        lineStyle: { width: 2.5, color },
-        data: prices,
-        unit: sp.default_unit ?? "",
-      });
-    }
-
-    if (series.length === 0) return;
-
-    const option: any = {
-      legend: {
-        data: legendData,
-        bottom: 8,
-        textStyle: { color: "#3d3226", fontSize: 11 },
-        icon: "circle",
-      },
-      tooltip: {
-        trigger: "item",
-        backgroundColor: "#fdfaf3",
-        borderColor: "#c4a35a",
-        textStyle: { color: "#3d3226", fontSize: 12 },
-        formatter: (params: any) => {
-          if (!params || params.value === null || params.value === undefined)
-            return "";
-          const unit = option.series?.[params.seriesIndex]?.unit ?? "";
-          const unitSuffix = unit ? ` /${unit}` : "";
-          return `${params.marker} ${params.seriesName}:${formatPrice(params.value)}${unitSuffix}`;
-        },
-      },
-      grid: {
-        left: "4%",
-        right: "6%",
-        bottom: "12%",
-        top: "10%",
-        containLabel: true,
-      },
-      xAxis: {
-        type: "category",
-        boundaryGap: true,
-        data: dayLabels,
-        axisLine: { lineStyle: { color: "#c4a35a" } },
-        axisLabel: { color: "#3d3226", fontSize: 10 },
-        axisTick: { show: false },
-      },
-      yAxis: {
-        type: "value",
-        name: "均价 (元)",
-        nameTextStyle: { color: "#3d322660", fontSize: 10 },
-        axisLine: { show: true, lineStyle: { color: "#c4a35a" } },
-        axisLabel: {
-          color: "#3d3226",
-          formatter: (v: number) => formatPrice(v),
-          fontSize: 10,
-        },
-        splitLine: {
-          lineStyle: { color: "#c4a35a", type: "dashed", opacity: 0.2 },
-        },
-      },
-      series,
-    };
-
-    priceChartInstance.setOption(option);
-  }, 100);
 };
 
 // ---- 图表2: 每周放生统计 ----
@@ -617,7 +756,9 @@ const renderBillsChart = () => {
     billWeekMap.value.forEach((_, k) => allDaySet.add(k));
 
     const dayKeys = Array.from(allDaySet).sort();
-    if (dayKeys.length === 0) return;
+    if (dayKeys.length === 0) {
+      return;
+    }
 
     const dayLabels = dayKeys.map((k) => dayLabel(k));
 
@@ -631,10 +772,12 @@ const renderBillsChart = () => {
       return b ? Number(b.total_amount.toFixed(2)) : 0;
     });
 
+    const labelOverflow2 = dayLabels.length > 20;
+    const xDataCount = dayLabels.length;
     const option: any = {
       legend: {
         data: ["总重量", "总金额"],
-        bottom: 8,
+        bottom: 0,
         textStyle: { color: "#3d3226", fontSize: 11 },
         icon: "circle",
       },
@@ -655,8 +798,8 @@ const renderBillsChart = () => {
       grid: {
         left: "4%",
         right: "6%",
-        bottom: "12%",
-        top: "10%",
+        bottom: labelOverflow2 ? "22%" : "15%",
+        top: "8%",
         containLabel: true,
       },
       xAxis: {
@@ -664,7 +807,14 @@ const renderBillsChart = () => {
         boundaryGap: true,
         data: dayLabels,
         axisLine: { lineStyle: { color: "#c4a35a" } },
-        axisLabel: { color: "#3d3226", fontSize: 10 },
+        axisLabel: {
+          color: "#3d3226",
+          fontSize: 10,
+          rotate: labelOverflow2 ? 35 : 0,
+          interval: labelOverflow2
+            ? Math.ceil(dayLabels.length / 20) - 1
+            : "auto",
+        },
         axisTick: { show: false },
       },
       yAxis: [
@@ -712,6 +862,7 @@ const renderBillsChart = () => {
           type: "line",
           yAxisIndex: 1,
           smooth: true,
+          connectNulls: true,
           symbol: "circle",
           symbolSize: 8,
           itemStyle: {
@@ -723,13 +874,25 @@ const renderBillsChart = () => {
           data: amountData,
         },
       ],
+      dataZoom:
+        xDataCount > 25
+          ? [
+              {
+                type: "slider",
+                bottom: 0,
+                height: 24,
+                borderColor: "#c4a35a40",
+                fillerColor: "#c4a35a20",
+                handleStyle: { color: "#c4a35a" },
+                textStyle: { color: "#3d3226", fontSize: 10 },
+              },
+            ]
+          : [],
     };
 
     billsChartInstance.setOption(option);
   }, 100);
 };
-
-// ---- 图表3: 每周物命总重量 ----
 
 const renderSpeciesWeightChart = () => {
   setTimeout(() => {
@@ -758,13 +921,9 @@ const renderSpeciesWeightChart = () => {
     if (activeSpecies.length === 0) return;
 
     const series: any[] = [];
-    const legendData: string[] = [];
     let colorIndex = 0;
 
     for (const sp of activeSpecies) {
-      const spName = sp.name_zh;
-      legendData.push(spName);
-
       const data = dayKeys.map((dk) => {
         const spMap = speciesWeekWeightMap.value.get(dk);
         if (!spMap) return 0;
@@ -775,10 +934,10 @@ const renderSpeciesWeightChart = () => {
       colorIndex++;
 
       series.push({
-        name: spName,
+        name: sp.name_zh,
         type: "bar",
         stack: "total",
-        barWidth: "8%",
+        barWidth: "5%",
         itemStyle: { color },
         emphasis: { focus: "series" },
         data,
@@ -797,7 +956,7 @@ const renderSpeciesWeightChart = () => {
       name: "合计",
       type: "bar",
       stack: "total",
-      barWidth: "8%",
+      barWidth: "5%",
       itemStyle: { color: "transparent" },
       tooltip: { show: false },
       emphasis: { disabled: true },
@@ -815,13 +974,10 @@ const renderSpeciesWeightChart = () => {
       data: totalPerDay.map(() => 0),
     });
 
+    const labelOverflow3 = dayLabels.length > 20;
+    const xDataCount3 = dayLabels.length;
     const option: any = {
-      legend: {
-        data: legendData,
-        bottom: 8,
-        textStyle: { color: "#3d3226", fontSize: 11 },
-        icon: "circle",
-      },
+      legend: { show: false },
       tooltip: {
         trigger: "item",
         backgroundColor: "#fdfaf3",
@@ -836,8 +992,8 @@ const renderSpeciesWeightChart = () => {
       grid: {
         left: "4%",
         right: "6%",
-        bottom: "12%",
-        top: "10%",
+        bottom: labelOverflow3 ? "22%" : "10%",
+        top: "8%",
         containLabel: true,
       },
       xAxis: {
@@ -845,7 +1001,14 @@ const renderSpeciesWeightChart = () => {
         boundaryGap: true,
         data: dayLabels,
         axisLine: { lineStyle: { color: "#c4a35a" } },
-        axisLabel: { color: "#3d3226", fontSize: 10 },
+        axisLabel: {
+          color: "#3d3226",
+          fontSize: 10,
+          rotate: labelOverflow3 ? 35 : 0,
+          interval: labelOverflow3
+            ? Math.ceil(dayLabels.length / 20) - 1
+            : "auto",
+        },
         axisTick: { show: false },
       },
       yAxis: {
@@ -863,6 +1026,20 @@ const renderSpeciesWeightChart = () => {
         },
       },
       series,
+      dataZoom:
+        xDataCount3 > 25
+          ? [
+              {
+                type: "slider",
+                bottom: 0,
+                height: 24,
+                borderColor: "#c4a35a40",
+                fillerColor: "#c4a35a20",
+                handleStyle: { color: "#c4a35a" },
+                textStyle: { color: "#3d3226", fontSize: 10 },
+              },
+            ]
+          : [],
     };
 
     speciesWeightChartInstance.setOption(option);
@@ -870,9 +1047,89 @@ const renderSpeciesWeightChart = () => {
 };
 
 const handleResize = () => {
-  priceChartInstance?.resize();
   billsChartInstance?.resize();
   speciesWeightChartInstance?.resize();
+};
+
+const cardScrollEl = ref<HTMLElement | null>(null);
+let dragTarget: HTMLElement | null = null;
+let dragLastY = 0;
+let dragLastTime = 0;
+let dragVelocity = 0;
+let momentumHandle: number | null = null;
+
+const findScrollable = (el: HTMLElement | null): HTMLElement | null => {
+  while (el) {
+    const style = getComputedStyle(el);
+    const overflowY = style.overflowY;
+    if (overflowY === "auto" || overflowY === "scroll") {
+      if (el.scrollHeight > el.clientHeight) return el;
+    }
+    el = el.parentElement;
+  }
+  return null;
+};
+
+const onCardScrollMouseDown = (e: MouseEvent) => {
+  const target = e.target as HTMLElement;
+  if (target.closest("button, a, input, select, textarea, .echarts, canvas"))
+    return;
+  const scrollable = findScrollable(target);
+  if (!scrollable) return;
+  if (momentumHandle !== null) {
+    cancelAnimationFrame(momentumHandle);
+    momentumHandle = null;
+  }
+  dragTarget = scrollable;
+  dragLastY = e.clientY;
+  dragLastTime = performance.now();
+  dragVelocity = 0;
+  scrollable.style.cursor = "grabbing";
+  window.addEventListener("mousemove", onDragMove);
+  window.addEventListener("mouseup", onDragEnd);
+};
+
+const onDragMove = (e: MouseEvent) => {
+  if (!dragTarget) return;
+  const now = performance.now();
+  const dt = now - dragLastTime;
+  const dy = e.clientY - dragLastY;
+  dragVelocity = dt > 0 ? (dy / dt) * 0.7 : 0;
+  dragLastY = e.clientY;
+  dragLastTime = now;
+  dragTarget.scrollTop -= dy * 1.6;
+};
+
+const onDragEnd = () => {
+  window.removeEventListener("mousemove", onDragMove);
+  window.removeEventListener("mouseup", onDragEnd);
+  if (!dragTarget) return;
+  dragTarget.style.cursor = "";
+  const v = dragVelocity;
+  const target = dragTarget;
+  dragTarget = null;
+  if (Math.abs(v) < 0.2) return;
+  startMomentum(target, v);
+};
+
+const startMomentum = (el: HTMLElement, v: number) => {
+  const friction = 0.94;
+  const step = () => {
+    const scrollMax = el.scrollHeight - el.clientHeight;
+    el.scrollTop += v;
+    if (el.scrollTop <= 0 || el.scrollTop >= scrollMax) {
+      el.scrollTop = el.scrollTop <= 0 ? 0 : scrollMax;
+      momentumHandle = null;
+      return;
+    }
+    v *= friction;
+    if (Math.abs(v) > 0.3) {
+      momentumHandle = requestAnimationFrame(step);
+    } else {
+      momentumHandle = null;
+    }
+  };
+  momentumHandle = requestAnimationFrame(step);
 };
 
 onMounted(() => {
@@ -882,10 +1139,6 @@ onMounted(() => {
 
 onUnmounted(() => {
   window.removeEventListener("resize", handleResize);
-  if (priceChartInstance) {
-    priceChartInstance.dispose();
-    priceChartInstance = null;
-  }
   if (billsChartInstance) {
     billsChartInstance.dispose();
     billsChartInstance = null;
@@ -915,5 +1168,71 @@ onUnmounted(() => {
 .dropdown-leave-to {
   opacity: 0;
   transform: translateY(-4px) scale(0.97);
+}
+
+.trend-scroll-left::-webkit-scrollbar,
+.trend-scroll-left *::-webkit-scrollbar {
+  width: 4px;
+  height: 4px;
+}
+
+.trend-scroll-left::-webkit-scrollbar-track,
+.trend-scroll-left *::-webkit-scrollbar-track {
+  background: transparent;
+  border-radius: 4px;
+}
+
+.trend-scroll-left::-webkit-scrollbar-thumb,
+.trend-scroll-left *::-webkit-scrollbar-thumb {
+  background: #c4a35a60;
+  border-radius: 4px;
+}
+
+.trend-scroll-left::-webkit-scrollbar-thumb:hover,
+.trend-scroll-left *::-webkit-scrollbar-thumb:hover {
+  background: #c4a35a90;
+}
+
+.trend-scroll-left,
+.trend-scroll-left * {
+  scrollbar-width: thin;
+  scrollbar-color: #c4a35a60 transparent;
+}
+
+.trend-scroll-container > :last-child::-webkit-scrollbar,
+.trend-scroll-container > :last-child *::-webkit-scrollbar {
+  width: 0;
+  height: 0;
+}
+
+.trend-scroll-container > :last-child,
+.trend-scroll-container > :last-child * {
+  scrollbar-width: none;
+}
+
+.no-page-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+.no-page-scrollbar {
+  scrollbar-width: none;
+}
+
+.card-no-scroll::-webkit-scrollbar {
+  display: none;
+}
+
+.card-no-scroll {
+  scrollbar-width: none;
+}
+
+.trend-scroll-left .card-dates-scroll::-webkit-scrollbar {
+  width: 0;
+  height: 0;
+}
+
+.trend-scroll-left .card-dates-scroll {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
 }
 </style>

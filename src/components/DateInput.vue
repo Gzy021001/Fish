@@ -208,7 +208,7 @@
             >
               <button
                 type="button"
-                @click="prevMonth"
+                @click="prevMonth()"
                 class="w-7 h-7 rounded-lg flex items-center justify-center text-dunhuang-text/40 hover:bg-dunhuang-yellow/10 hover:text-dunhuang-blue transition-colors"
               >
                 <svg
@@ -448,7 +448,11 @@ const isSelected = (day: { dateStr: string }) => {
   return day.dateStr === props.modelValue;
 };
 
-const isWeekend = (day: { currentMonth: boolean }) => {
+const isWeekend = (day: {
+  value: number;
+  currentMonth: boolean;
+  dateStr: string;
+}) => {
   const pos = calendarDays.value.indexOf(day);
   return pos >= 0 && (pos % 7 === 5 || pos % 7 === 6);
 };

@@ -38,13 +38,13 @@
           </button>
           <input
             type="text"
-            v-model="speciesSearch"
+            v-model="speciesSearchText"
             placeholder="搜索品种..."
             @keydown.enter="handleSearch"
             class="bg-transparent border-none text-sm text-dunhuang-blue font-medium focus:outline-none focus:ring-0 p-0 w-40 ml-2"
           />
           <button
-            v-if="speciesSearch"
+            v-if="speciesSearchText"
             @click="handleClearSearch"
             class="text-dunhuang-text/40 hover:text-dunhuang-red text-sm leading-none px-1"
           >
@@ -160,8 +160,8 @@
               {{ formatMoney(sp.default_price) }}
             </td>
             <td class="px-4 py-1.5 flex-1 flex items-center text-sm">
-               {{ dateStr(sp.release_date || sp.created_at) || '-' }}
-             </td>
+              {{ dateStr(sp.release_date || sp.created_at) || "-" }}
+            </td>
             <td class="px-4 py-1.5 flex-1 flex items-center">
               {{ sp.default_unit }}
             </td>
@@ -293,6 +293,16 @@
             />
           </svg>
         </button>
+        <span class="text-xs text-dunhuang-text/40 ml-1">跳至</span>
+        <input
+          v-model.number="speciesJumpPage"
+          type="number"
+          :min="1"
+          :max="totalPages"
+          class="w-12 h-8 rounded border border-dunhuang-yellow/50 text-center text-sm text-dunhuang-text bg-transparent focus:outline-none focus:border-dunhuang-blue transition-colors [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+          @keydown.enter="jumpSpeciesPage"
+          @blur="jumpSpeciesPage"
+        />
       </div>
     </div>
 
@@ -752,6 +762,8 @@ interface SpeciesItem {
   default_unit: string;
   default_price: number;
   image_url?: string | null;
+  release_date?: string | null;
+  created_at?: string | null;
 }
 
 const router = useRouter();
@@ -763,8 +775,10 @@ const selectedIds = ref<number[]>([]);
 const showAddModal = ref(false);
 const errorMsg = ref("");
 const speciesSearch = ref("");
+const speciesSearchText = ref("");
 
 const currentPage = ref(1);
+const speciesJumpPage = ref<number | null>(null);
 const pageSize = 10;
 
 const totalItems = computed(() => species.value.length);
@@ -790,6 +804,17 @@ const displayedPages = computed(() => {
   }
   return pages;
 });
+
+const jumpSpeciesPage = () => {
+  const val = speciesJumpPage.value;
+  if (val == null || val < 1) {
+    speciesJumpPage.value = null;
+    return;
+  }
+  const target = Math.min(Math.floor(val), totalPages.value);
+  currentPage.value = target;
+  speciesJumpPage.value = target;
+};
 
 const deleteConfirm = ref({
   show: false,
@@ -889,10 +914,12 @@ const closeAddModal = () => {
 const fetchSpecies = async () => {
   errorMsg.value = "";
   try {
-    const params = new URLSearchParams()
-    const q = speciesSearch.value.trim()
-    if (q) params.set("q", q)
-    const url = params.toString() ? `/species?${params.toString()}` : "/species"
+    const params = new URLSearchParams();
+    const q = speciesSearch.value.trim();
+    if (q) params.set("q", q);
+    const url = params.toString()
+      ? `/species?${params.toString()}`
+      : "/species";
     const res = await api.get(url);
     species.value = res.data || [];
   } catch (error: any) {
@@ -904,32 +931,34 @@ const fetchSpecies = async () => {
 
 const handleSearch = () => {
   currentPage.value = 1;
+  speciesSearch.value = speciesSearchText.value.trim();
   fetchSpecies();
 };
 
 const handleClearSearch = () => {
   speciesSearch.value = "";
+  speciesSearchText.value = "";
   currentPage.value = 1;
   fetchSpecies();
 };
 
 const addSpecies = async () => {
-  const name = newSp.value.name_zh.trim()
+  const name = newSp.value.name_zh.trim();
   if (!name) {
-    errorMsg.value = "请输入品种名称"
-    return
+    errorMsg.value = "请输入品种名称";
+    return;
   }
   if (+newSp.value.default_price <= 0) {
-    errorMsg.value = "单价必须大于0"
-    return
+    errorMsg.value = "单价必须大于0";
+    return;
   }
   if (!newSp.value.release_date) {
-    errorMsg.value = "请选择放生日期"
-    return
+    errorMsg.value = "请选择放生日期";
+    return;
   }
   if (species.value.some((s) => s.name_zh === name)) {
-    errorMsg.value = `品种「${name}」已存在，请勿重复添加`
-    return
+    errorMsg.value = `品种「${name}」已存在，请勿重复添加`;
+    return;
   }
   saving.value = true;
   try {
@@ -1024,6 +1053,7 @@ interface ImportRow {
   exists: boolean;
   species_id: number | null;
   overwrite: boolean;
+  release_date?: string | null;
 }
 
 const showImportModal = ref(false);
@@ -1044,8 +1074,8 @@ const triggerSpeciesFileInput = () => {
 
 const downloadSpeciesTemplate = () => {
   const templateData = [
-    { 品种: "草鱼", "单价（元）": 12.5, "放生日期": "2025-01-15" },
-    { 品种: "鲈鱼", "单价（元）": 25.0, "放生日期": "2025-01-15" },
+    { 品种: "草鱼", "单价（元）": 12.5, 放生日期: "2025-01-15" },
+    { 品种: "鲈鱼", "单价（元）": 25.0, 放生日期: "2025-01-15" },
   ];
   const worksheet = XLSX.utils.json_to_sheet(templateData);
   worksheet["!cols"] = [{ wch: 15 }, { wch: 12 }, { wch: 14 }];
@@ -1085,10 +1115,10 @@ const handleSpeciesFileUpload = (event: Event) => {
 
           const release_date = row["放生日期"] || row["日期"] || "";
 
-          const existsInDb = species.value.some((s) => s.name_zh === nameZh);
-          const existsInFile = seen.has(nameZh);
+          if (seen.has(nameZh)) return null;
           seen.add(nameZh);
 
+          const existsInDb = species.value.some((s) => s.name_zh === nameZh);
           const existing = existsInDb
             ? (species.value.find((s) => s.name_zh === nameZh) ?? null)
             : null;
@@ -1097,13 +1127,13 @@ const handleSpeciesFileUpload = (event: Event) => {
             name_zh: nameZh,
             default_price: Number(price.toFixed(2)),
             default_unit: "公斤",
-            exists: existsInDb || existsInFile,
+            exists: existsInDb,
             species_id: existing ? existing.id : null,
             overwrite: false,
             release_date: release_date ? String(release_date).trim() : "",
           };
         })
-        .filter((r) => r.name_zh && r.default_price > 0);
+        .filter((r) => r && r.name_zh && r.default_price > 0);
 
       if (importPreview.value.length === 0) {
         toast.warning("未能解析到有效数据，请确认文件格式与模板一致。");

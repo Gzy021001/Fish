@@ -204,7 +204,7 @@ export function useBillForm(speciesList: Ref<any[]>) {
           : Number(b.fee_value ?? 0).toFixed(2),
       status: b.status,
       release_date: b.release_date
-        ? new Date(b.release_date).toISOString().slice(0, 10)
+        ? b.release_date.slice(0, 10)
         : "",
     }
     showForm.value = true

@@ -649,6 +649,16 @@
               批量删除 ({{ selectedBillIds.length }})
             </button>
 
+            <!-- current tab 专有按钮：导入 -->
+            <button
+              v-if="activeTab === 'current'"
+              @click="goToImport"
+              type="button"
+              class="h-8 px-3.5 rounded-lg text-sm font-medium transition-all duration-200 text-dunhuang-blue/80 hover:text-dunhuang-blue hover:bg-dunhuang-blue/6 border border-dunhuang-blue/15 hover:border-dunhuang-blue/35"
+            >
+              导入
+            </button>
+
             <!-- 导出 -->
             <button
               @click="exportBills"
@@ -660,13 +670,6 @@
 
             <!-- current tab 专有按钮 -->
             <template v-if="activeTab === 'current'">
-              <button
-                @click="goToImport"
-                type="button"
-                class="h-8 px-3.5 rounded-lg text-sm font-medium transition-all duration-200 text-dunhuang-blue/80 hover:text-dunhuang-blue hover:bg-dunhuang-blue/6 border border-dunhuang-blue/15 hover:border-dunhuang-blue/35"
-              >
-                导入
-              </button>
               <button
                 @click="
                   initNewBill();
@@ -956,6 +959,16 @@
                 />
               </svg>
             </button>
+            <span class="text-xs text-dunhuang-text/40 ml-1">跳至</span>
+            <input
+              v-model.number="billingJumpPage"
+              type="number"
+              :min="1"
+              :max="totalPages"
+              class="w-12 h-8 rounded border border-dunhuang-yellow/50 text-center text-sm text-dunhuang-text bg-transparent focus:outline-none focus:border-dunhuang-blue transition-colors [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+              @keydown.enter="jumpBillingPage"
+              @blur="jumpBillingPage"
+            />
           </div>
         </div>
       </div>
@@ -1379,6 +1392,19 @@ const performSearch = () => {
 const clearSearchText = () => {
   searchText.value = "";
   billingSearch.value = "";
+};
+
+const billingJumpPage = ref<number | null>(null);
+
+const jumpBillingPage = () => {
+  const val = billingJumpPage.value;
+  if (val == null || val < 1) {
+    billingJumpPage.value = null;
+    return;
+  }
+  const target = Math.min(Math.floor(val), totalPages.value);
+  currentPage.value = target;
+  billingJumpPage.value = target;
 };
 
 const {

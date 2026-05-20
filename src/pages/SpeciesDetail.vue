@@ -498,7 +498,7 @@ const initEditForm = () => {
     editForm.supplier_name = species.value.supplier_name ?? "";
     editForm.supplier_note = species.value.supplier_note ?? "";
     editForm.release_date = species.value.release_date
-      ? new Date(species.value.release_date).toISOString().slice(0, 10)
+      ? species.value.release_date.slice(0, 10)
       : "";
   }
   imageUploadRef.value?.reset();
