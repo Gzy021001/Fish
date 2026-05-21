@@ -9,7 +9,7 @@ import router from '../router'
 
 const api = axios.create({
   baseURL: import.meta.env.VITE_API_BASE || '/api',
-  timeout: 10000
+  timeout: 20000
 })
 
 // ---- 请求拦截：自动附加 JWT Token ----

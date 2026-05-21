@@ -185,3 +185,38 @@ def get_price_trend(species_id: int, db: Session, year: int = None):
     results = query.group_by(func.date(models.Bill.release_date)).all()
 
     return [{"date": str(r.date), "avg_price": float(r.avg_price)} for r in results]
+
+
+def get_price_trends_batch(species_ids: list[int], db: Session, year: int = None):
+    if not species_ids:
+        return {}
+
+    query = (
+        db.query(
+            models.Bill.species_id,
+            func.date(models.Bill.release_date).label("date"),
+            func.avg(models.Bill.unit_price).label("avg_price"),
+        )
+        .filter(models.Bill.species_id.in_(species_ids))
+        .filter(models.Bill.release_date.isnot(None))
+    )
+
+    if year:
+        query = query.filter(
+            models.Bill.release_date >= datetime(year, 1, 1),
+            models.Bill.release_date < datetime(year + 1, 1, 1),
+        )
+    else:
+        thirty_days_ago = datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(days=30)
+        query = query.filter(models.Bill.release_date >= thirty_days_ago)
+
+    results = query.group_by(models.Bill.species_id, func.date(models.Bill.release_date)).all()
+
+    trends = {}
+    for r in results:
+        sp_id = r.species_id
+        if sp_id not in trends:
+            trends[sp_id] = []
+        trends[sp_id].append({"date": str(r.date), "avg_price": float(r.avg_price)})
+
+    return trends

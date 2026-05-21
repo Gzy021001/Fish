@@ -666,33 +666,18 @@ const fetchAllTrends = async () => {
   }
 
   try {
-    let failedCount = 0;
-    const total = speciesList.value.length;
-
-    const promises = speciesList.value.map((sp) =>
-      api
-        .get(
-          `/stats/price-trend?species_id=${sp.id}&year=${selectedYear.value}`,
-        )
-        .then((res) => ({ id: sp.id, data: res.data }))
-        .catch((err) => {
-          console.error(`Failed to fetch trend for species ${sp.id}`, err);
-          failedCount++;
-          return { id: sp.id, data: [] };
-        }),
+    const ids = speciesList.value.map(sp => sp.id).join(',');
+    const res = await api.get(
+      `/stats/price-trend-batch?species_ids=${ids}&year=${selectedYear.value}`
     );
-    const results = await Promise.all(promises);
-
-    if (failedCount === total && total > 0) {
-      trendErrorMsg.value = "获取价格走势失败。";
-      trendDataMap.value = {};
-      return;
-    }
-
+    
     const newTrendDataMap: Record<number, any[]> = {};
-    results.forEach((res) => {
-      if (res.data && res.data.length > 0) newTrendDataMap[res.id] = res.data;
-    });
+    if (res.data) {
+      // res.data is Record<string, any[]> where keys are species IDs
+      Object.entries(res.data).forEach(([id, data]) => {
+        newTrendDataMap[Number(id)] = data as any[];
+      });
+    }
     trendDataMap.value = newTrendDataMap;
   } catch (error: any) {
     console.error("Failed to fetch trends", error);

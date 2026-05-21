@@ -1,3 +1,5 @@
+import logging
+import traceback
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
@@ -9,9 +11,16 @@ import bootstrap
 
 from routers import auth, species, bills, logs, stats
 
+# 配置日志
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
 
 def create_app() -> FastAPI:
-    Base.metadata.create_all(bind=engine)
+    try:
+        Base.metadata.create_all(bind=engine)
+    except Exception as e:
+        logger.error(f"Database initialization failed: {e}")
 
     app = FastAPI(title="Fish Price Platform API")
 
@@ -38,14 +47,20 @@ def create_app() -> FastAPI:
 
     @app.exception_handler(Exception)
     async def global_exception_handler(request: Request, exc: Exception):
+        logger.error(f"Global exception: {exc}")
+        logger.error(traceback.format_exc())
         return JSONResponse(
             status_code=500,
-            content={"detail": "服务器内部错误，请稍后重试"},
+            content={"detail": "服务器内部错误，请稍后重试", "error": str(exc)},
         )
 
     @app.on_event("startup")
     def startup_event():
-        bootstrap.run()
+        try:
+            bootstrap.run()
+        except Exception as e:
+            logger.error(f"Bootstrap failed: {e}")
+            logger.error(traceback.format_exc())
 
     return app
 

@@ -15,6 +15,11 @@ else:
 kwargs = {}
 if "sqlite" in DATABASE_URL:
     kwargs["connect_args"] = {"check_same_thread": False}
+else:
+    # 针对 PostgreSQL 等数据库的优化
+    kwargs["pool_pre_ping"] = True
+    kwargs["pool_size"] = 10
+    kwargs["max_overflow"] = 20
 
 engine = create_engine(DATABASE_URL, **kwargs)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)

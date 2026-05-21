@@ -25,8 +25,8 @@ class Species(Base):
 class Bill(Base):
     __tablename__ = "bills"
     id = Column(Integer, primary_key=True, index=True)
-    user_id = Column(Integer, ForeignKey("users.id"))
-    species_id = Column(Integer, ForeignKey("species.id"))
+    user_id = Column(Integer, ForeignKey("users.id"), index=True)
+    species_id = Column(Integer, ForeignKey("species.id"), index=True)
     weight = Column(Float)
     unit_price = Column(Float)
     currency = Column(String(10))
@@ -34,9 +34,9 @@ class Bill(Base):
     fee_type = Column(String(20), default="FIXED")
     fee_value = Column(Float)
     total_amount = Column(Float)
-    status = Column(String(20), default="DRAFT")
-    release_date = Column(DateTime, nullable=True)
-    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
+    status = Column(String(20), default="DRAFT", index=True)
+    release_date = Column(DateTime, nullable=True, index=True)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None), index=True)
 
     user = relationship("User")
     species = relationship("Species")
@@ -44,11 +44,11 @@ class Bill(Base):
 class AuditLog(Base):
     __tablename__ = "audit_logs"
     id = Column(Integer, primary_key=True, index=True)
-    bill_id = Column(Integer, ForeignKey("bills.id"), nullable=True)
-    species_id = Column(Integer, ForeignKey("species.id"), nullable=True)
-    entity_type = Column(String(50), default="BILL") # "BILL" or "SPECIES"
-    user_id = Column(Integer, ForeignKey("users.id"))
-    action = Column(String(50)) # "CREATE", "UPDATE", "DELETE"
+    bill_id = Column(Integer, ForeignKey("bills.id"), nullable=True, index=True)
+    species_id = Column(Integer, ForeignKey("species.id"), nullable=True, index=True)
+    entity_type = Column(String(50), default="BILL", index=True) # "BILL" or "SPECIES"
+    user_id = Column(Integer, ForeignKey("users.id"), index=True)
+    action = Column(String(50), index=True) # "CREATE", "UPDATE", "DELETE"
     old_data = Column(String, nullable=True) # JSON string
     new_data = Column(String, nullable=True) # JSON string
-    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None), index=True)
