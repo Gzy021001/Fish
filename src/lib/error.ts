@@ -9,9 +9,9 @@ export function apiErrorMessage(error: any, context: string): string {
     return detail || `${context}失败（错误码 ${status}）`
   }
   if (error.code === 'ECONNABORTED' || error.message?.includes('timeout')) {
-    return `${context}超时，服务器响应过慢，请稍后重试`
+    return `${context}超时，服务器正在唤醒或响应过慢，请稍后重试`
   }
-  return `${context}失败：无法连接到服务器，请确认后端已启动`
+  return `${context}失败：无法连接到服务器。如果这是部署后首次访问，请稍等 10-20 秒待后端冷启动完成。`
 }
 
 export function isAuthError(error: any): boolean {

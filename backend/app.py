@@ -15,13 +15,25 @@ from routers import auth, species, bills, logs, stats
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+# 启动初始化标记
+_initialized = False
 
-def create_app() -> FastAPI:
+def init_app():
+    global _initialized
+    if _initialized:
+        return
+    
+    logger.info("Initializing application...")
     try:
         Base.metadata.create_all(bind=engine)
+        bootstrap.run()
+        _initialized = True
+        logger.info("Application initialized successfully.")
     except Exception as e:
-        logger.error(f"Database initialization failed: {e}")
+        logger.error(f"Initialization failed: {e}")
+        logger.error(traceback.format_exc())
 
+def create_app() -> FastAPI:
     app = FastAPI(title="Fish Price Platform API")
 
     app.add_middleware(
@@ -41,9 +53,16 @@ def create_app() -> FastAPI:
     app.include_router(logs.router)
     app.include_router(stats.router)
 
+    @app.middleware("http")
+    async def ensure_initialized(request: Request, call_next):
+        # 在处理请求前确保已初始化（针对 Vercel 等 Serverless 环境优化）
+        if not _initialized and not request.url.path.startswith("/api/health"):
+            init_app()
+        return await call_next(request)
+
     @app.get("/api/health")
     def health_check():
-        return {"status": "ok"}
+        return {"status": "ok", "initialized": _initialized}
 
     @app.exception_handler(Exception)
     async def global_exception_handler(request: Request, exc: Exception):
@@ -53,14 +72,6 @@ def create_app() -> FastAPI:
             status_code=500,
             content={"detail": "服务器内部错误，请稍后重试", "error": str(exc)},
         )
-
-    @app.on_event("startup")
-    def startup_event():
-        try:
-            bootstrap.run()
-        except Exception as e:
-            logger.error(f"Bootstrap failed: {e}")
-            logger.error(traceback.format_exc())
 
     return app
 
