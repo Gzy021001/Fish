@@ -1,8 +1,4 @@
-import json
-from pathlib import Path
-import shutil
-import uuid
-
+import base64
 from typing import Optional
 
 from fastapi import HTTPException, UploadFile
@@ -10,7 +6,6 @@ from sqlalchemy.orm import Session
 
 import models
 import schemas
-from utils import delete_species_image_file, SPECIES_UPLOAD_DIR
 from services.audit_service import record_create, record_update, record_delete
 
 
@@ -110,21 +105,19 @@ def upload_image(species_id: int, image: UploadFile, db: Session):
     if not image.content_type or not image.content_type.startswith("image/"):
         raise HTTPException(status_code=400, detail="请上传图片文件")
 
-    extension = Path(image.filename or "").suffix.lower() or ".jpg"
-    file_name = f"{species_id}_{uuid.uuid4().hex}{extension}"
-    file_path = SPECIES_UPLOAD_DIR / file_name
-
     try:
-        with file_path.open("wb") as buffer:
-            shutil.copyfileobj(image.file, buffer)
-    except (OSError, IOError):
-        raise HTTPException(status_code=500, detail="图片保存失败，请稍后重试")
-
-    delete_species_image_file(species.image_url)
-    species.image_url = f"/uploads/species/{file_name}"
-    db.commit()
-    db.refresh(species)
-    return species
+        # 读取图片内容并转换为 Base64
+        contents = image.file.read()
+        base64_data = base64.b64encode(contents).decode("utf-8")
+        data_uri = f"data:{image.content_type};base64,{base64_data}"
+        
+        species.image_url = data_uri
+        db.commit()
+        db.refresh(species)
+        return species
+    except Exception as e:
+        print(f"Error processing image: {e}")
+        raise HTTPException(status_code=500, detail="图片处理失败，请稍后重试")
 
 
 def delete_species(species_id: int, user: models.User, db: Session):
@@ -144,8 +137,6 @@ def delete_species(species_id: int, user: models.User, db: Session):
         "supplier_note": species.supplier_note,
         "release_date": species.release_date,
     }
-
-    delete_species_image_file(species.image_url)
 
     record_delete(
         db,

@@ -1,4 +1,4 @@
-from sqlalchemy import Column, ForeignKey, Integer, String, Float, DateTime
+from sqlalchemy import Column, ForeignKey, Integer, String, Float, DateTime, Text
 from sqlalchemy.orm import relationship
 from datetime import datetime, timezone
 from database import Base
@@ -16,7 +16,7 @@ class Species(Base):
     name_zh = Column(String(100), unique=True, index=True)
     default_unit = Column(String(20), default="kg")
     default_price = Column(Float, default=0.0)
-    image_url = Column(String(255), nullable=True)
+    image_url = Column(Text, nullable=True)
     supplier_name = Column(String(200), nullable=True)
     supplier_note = Column(String(500), nullable=True)
     release_date = Column(DateTime, nullable=True)
