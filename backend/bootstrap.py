@@ -51,16 +51,25 @@ def init_seed_data():
     try:
         db = next(get_db())
 
-        if not db.query(models.User).filter(models.User.username == "admin").first():
-            admin_password = os.getenv("ADMIN_PASSWORD", "admin123")
-            admin = models.User(
-                username="admin",
-                password_hash=auth.get_password_hash(admin_password),
-                role="admin",
-            )
-            db.add(admin)
-            db.commit()
-            logger.info("Admin user created.")
+        # 预设用户列表
+        users_to_create = [
+            {"username": "admin", "password": os.getenv("ADMIN_PASSWORD", "admin123"), "role": "admin"},
+            {"username": "operator1", "password": "op123456", "role": "operator"},
+            {"username": "operator2", "password": "op123456", "role": "operator"},
+            {"username": "operator3", "password": "op123456", "role": "operator"},
+        ]
+
+        for user_info in users_to_create:
+            if not db.query(models.User).filter(models.User.username == user_info["username"]).first():
+                new_user = models.User(
+                    username=user_info["username"],
+                    password_hash=auth.get_password_hash(user_info["password"]),
+                    role=user_info["role"],
+                )
+                db.add(new_user)
+                logger.info(f"User {user_info['username']} created.")
+        
+        db.commit()
 
         if not db.query(models.Species).first():
             s1 = models.Species(name_zh="东星斑", default_unit="斤")
