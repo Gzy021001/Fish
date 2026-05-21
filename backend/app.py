@@ -8,7 +8,6 @@ from sqlalchemy.orm import Session
 from sqlalchemy import text
 
 from database import engine, Base, get_db
-from utils import UPLOAD_DIR, SPECIES_UPLOAD_DIR
 import bootstrap
 
 from routers import auth, species, bills, logs, stats
@@ -27,6 +26,11 @@ def init_app():
     
     logger.info("Initializing application...")
     try:
+        if os.getenv("RESET_DATABASE") == "true":
+            logger.warning("RESET_DATABASE is true. Dropping all tables...")
+            Base.metadata.drop_all(bind=engine)
+            logger.warning("All tables dropped.")
+            
         Base.metadata.create_all(bind=engine)
         bootstrap.run()
         _initialized = True
@@ -45,10 +49,6 @@ def create_app() -> FastAPI:
         allow_methods=["*"],
         allow_headers=["*"],
     )
-
-    UPLOAD_DIR.mkdir(exist_ok=True)
-    SPECIES_UPLOAD_DIR.mkdir(exist_ok=True)
-    app.mount("/uploads", StaticFiles(directory=str(UPLOAD_DIR)), name="uploads")
 
     app.include_router(auth.router)
     app.include_router(species.router)
