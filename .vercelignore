@@ -5,3 +5,8 @@ dist
 .trae
 .log
 .figma
+python311/
+backend/uploads/
+fish_price.db
+*.pyc
+__pycache__/
