@@ -1,11 +1,13 @@
 import logging
 import traceback
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, Request, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import JSONResponse
+from sqlalchemy.orm import Session
+from sqlalchemy import text
 
-from database import engine, Base
+from database import engine, Base, get_db
 from utils import UPLOAD_DIR, SPECIES_UPLOAD_DIR
 import bootstrap
 
@@ -32,6 +34,7 @@ def init_app():
     except Exception as e:
         logger.error(f"Initialization failed: {e}")
         logger.error(traceback.format_exc())
+        raise e # 抛出异常以便全局拦截器捕获并返回详情
 
 def create_app() -> FastAPI:
     app = FastAPI(title="Fish Price Platform API")
@@ -57,12 +60,30 @@ def create_app() -> FastAPI:
     async def ensure_initialized(request: Request, call_next):
         # 在处理请求前确保已初始化（针对 Vercel 等 Serverless 环境优化）
         if not _initialized and not request.url.path.startswith("/api/health"):
-            init_app()
+            try:
+                init_app()
+            except Exception as e:
+                # 如果初始化失败，直接返回 500
+                return JSONResponse(
+                    status_code=500,
+                    content={"detail": "服务器初始化失败", "error": str(e)},
+                )
         return await call_next(request)
 
     @app.get("/api/health")
-    def health_check():
-        return {"status": "ok", "initialized": _initialized}
+    def health_check(db: Session = Depends(get_db)):
+        try:
+            # 检查数据库连接
+            db.execute(text("SELECT 1"))
+            db_status = "connected"
+        except Exception as e:
+            db_status = f"error: {str(e)}"
+            
+        return {
+            "status": "ok", 
+            "initialized": _initialized,
+            "database": db_status
+        }
 
     @app.exception_handler(Exception)
     async def global_exception_handler(request: Request, exc: Exception):
