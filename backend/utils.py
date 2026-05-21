@@ -1,10 +1,14 @@
 from pathlib import Path
+import os
 from fastapi import HTTPException
 from sqlalchemy.orm import Session
 import models
 
 BASE_DIR = Path(__file__).resolve().parent
-UPLOAD_DIR = BASE_DIR / "uploads"
+if os.getenv("VERCEL"):
+    UPLOAD_DIR = Path("/tmp/uploads")
+else:
+    UPLOAD_DIR = BASE_DIR / "uploads"
 SPECIES_UPLOAD_DIR = UPLOAD_DIR / "species"
 
 

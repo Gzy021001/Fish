@@ -3,13 +3,17 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import declarative_base, sessionmaker
 
 SQLITE_URL = "sqlite:///./fish_price.db"
-DATABASE_URL = os.getenv("DATABASE_URL", SQLITE_URL)
 
-if DATABASE_URL.startswith("postgres://"):
-    DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
+_raw_url = os.getenv("DATABASE_URL", "")
+if _raw_url:
+    DATABASE_URL = _raw_url.replace("postgres://", "postgresql://", 1)
+elif os.getenv("VERCEL"):
+    DATABASE_URL = "sqlite:////tmp/fish_price.db"
+else:
+    DATABASE_URL = SQLITE_URL
 
 kwargs = {}
-if DATABASE_URL == SQLITE_URL or "sqlite" in DATABASE_URL:
+if "sqlite" in DATABASE_URL:
     kwargs["connect_args"] = {"check_same_thread": False}
 
 engine = create_engine(DATABASE_URL, **kwargs)
