@@ -746,7 +746,7 @@ import { useRouter } from "vue-router";
 import * as XLSX from "xlsx";
 import api from "../api";
 import { apiErrorMessage, isAuthError } from "../lib/error";
-import { formatMoney, dateStr } from "../lib/utils";
+import { formatMoney, dateStr, compressImage } from "../lib/utils";
 import { useToast } from "../composables/useToast";
 import { useSpecies } from "../composables/useSpecies";
 import ConfirmDialog from "../components/ConfirmDialog.vue";
@@ -880,7 +880,7 @@ const clearImage = () => {
   }
 };
 
-const handleImageSelect = (event: Event) => {
+const handleImageSelect = async (event: Event) => {
   const input = event.target as HTMLInputElement;
   const file = input.files?.[0];
   if (!file) {
@@ -888,8 +888,25 @@ const handleImageSelect = (event: Event) => {
     previewUrl.value = null;
     return;
   }
-  selectedFile.value = file;
-  previewUrl.value = URL.createObjectURL(file);
+
+  // 如果文件大于 1MB，进行压缩
+  if (file.size > 1024 * 1024) {
+    try {
+      const compressedBlob = await compressImage(file, 1024, 1024, 0.7);
+      const compressedFile = new File([compressedBlob], file.name, {
+        type: "image/jpeg",
+      });
+      selectedFile.value = compressedFile;
+      previewUrl.value = URL.createObjectURL(compressedFile);
+    } catch (err) {
+      console.error("Image compression failed", err);
+      selectedFile.value = file;
+      previewUrl.value = URL.createObjectURL(file);
+    }
+  } else {
+    selectedFile.value = file;
+    previewUrl.value = URL.createObjectURL(file);
+  }
 };
 
 const closeAddModal = () => {

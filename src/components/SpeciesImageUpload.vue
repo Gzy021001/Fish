@@ -49,6 +49,7 @@
 
 <script setup lang="ts">
 import { computed, ref } from "vue";
+import { compressImage } from "../lib/utils";
 
 const props = defineProps<{
   imageUrl?: string | null;
@@ -68,14 +69,36 @@ const trigger = () => {
   inputRef.value?.click();
 };
 
-const onFileChange = (event: Event) => {
+const onFileChange = async (event: Event) => {
   const input = event.target as HTMLInputElement;
   const file = input.files?.[0] ?? null;
+
   if (localPreview.value) {
     URL.revokeObjectURL(localPreview.value);
   }
-  localPreview.value = file ? URL.createObjectURL(file) : null;
-  emit("select", file);
+
+  if (!file) {
+    localPreview.value = null;
+    emit("select", null);
+    return;
+  }
+
+  // 压缩逻辑
+  let finalFile: File = file;
+  if (file.size > 1024 * 1024) {
+    // 大于 1MB
+    try {
+      const compressedBlob = await compressImage(file, 1024, 1024, 0.7);
+      finalFile = new File([compressedBlob], file.name, {
+        type: "image/jpeg",
+      });
+    } catch (err) {
+      console.error("Image compression failed", err);
+    }
+  }
+
+  localPreview.value = URL.createObjectURL(finalFile);
+  emit("select", finalFile);
 };
 
 const reset = () => {

@@ -434,7 +434,13 @@ import { computed, onMounted, reactive, ref, watch } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import api from "../api";
 import { apiErrorMessage, isAuthError } from "../lib/error";
-import { dateStr, dateTimeStr, diffFields, formatMoney } from "../lib/utils";
+import {
+  dateStr,
+  dateTimeStr,
+  diffFields,
+  formatMoney,
+  compressImage,
+} from "../lib/utils";
 import SpeciesImageUpload from "../components/SpeciesImageUpload.vue";
 import DateInput from "../components/DateInput.vue";
 
