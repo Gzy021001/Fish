@@ -89,7 +89,7 @@
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '../stores/auth'
-import axios from 'axios'
+import api from '../api'
 import { apiErrorMessage } from '../lib/error'
 
 const router = useRouter()
@@ -109,7 +109,7 @@ const handleLogin = async () => {
     formData.append('username', username.value)
     formData.append('password', password.value)
 
-    const response = await axios.post('http://127.0.0.1:8000/api/token', formData, {
+    const response = await api.post('/token', formData, {
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
     })
 
