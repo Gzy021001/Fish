@@ -653,7 +653,7 @@ const fetchSpecies = async () => {
     if (hasSpeciesWeightData.value) renderSpeciesWeightChart();
   } catch (error: any) {
     if (isAuthError(error)) return;
-    trendErrorMsg.value = "获取品种数据失败。";
+    trendErrorMsg.value = apiErrorMessage(error, "获取品种数据");
   } finally {
     loading.value = false;
   }
