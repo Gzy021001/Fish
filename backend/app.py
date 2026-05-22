@@ -37,9 +37,18 @@ def init_app():
         _initialized = True
         logger.info("Application initialized successfully.")
     except Exception as e:
-        logger.error(f"Initialization failed: {e}")
+        error_msg = str(e)
+        logger.error(f"Initialization failed: {error_msg}")
         logger.error(traceback.format_exc())
-        raise e # 抛出异常以便全局拦截器捕获并返回详情
+        
+        # 针对常见的 Supabase 连接错误提供友好的提示
+        if "tenant/user" in error_msg and "not found" in error_msg:
+            friendly_error = "数据库连接失败：Supabase 项目 ID 或区域配置错误。请检查 Vercel 中的 DATABASE_URL 是否使用了正确的项目专属地址（建议使用 5432 端口的直连地址）。"
+            raise Exception(friendly_error)
+        elif "password authentication failed" in error_msg:
+            raise Exception("数据库连接失败：密码错误，请检查 Vercel 中的 DATABASE_URL 配置。")
+        
+        raise e # 抛出原异常或处理后的异常
 
 def create_app() -> FastAPI:
     app = FastAPI(title="Fish Price Platform API")

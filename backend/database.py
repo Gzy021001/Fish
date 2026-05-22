@@ -1,6 +1,9 @@
 import os
 from sqlalchemy import create_engine
 from sqlalchemy.orm import declarative_base, sessionmaker
+import logging
+
+logger = logging.getLogger(__name__)
 
 # 默认本地 SQLite
 SQLITE_URL = "sqlite:///./fish_price.db"
@@ -9,11 +12,25 @@ SQLITE_URL = "sqlite:///./fish_price.db"
 _raw_url = os.getenv("DATABASE_URL", "")
 
 if _raw_url:
+    # 移除可能存在的空格
+    _raw_url = _raw_url.strip()
     # Supabase 提供的链接通常以 postgres:// 开头，SQLAlchemy 需要 postgresql://
     if _raw_url.startswith("postgres://"):
         DATABASE_URL = _raw_url.replace("postgres://", "postgresql://", 1)
     else:
         DATABASE_URL = _raw_url
+    
+    # 针对 Supabase Pooler (6543端口) 经常出现的区域错误进行检测
+    if "pooler.supabase.com:6543" in DATABASE_URL and "aws-0-ap-southeast-1" in DATABASE_URL:
+        logger.warning("检测到正在使用新加坡节点的池化连接，如果连接失败，请检查您的 Supabase 项目区域。")
+    
+    # 记录安全的连接日志
+    try:
+        from urllib.parse import urlparse
+        parsed = urlparse(DATABASE_URL)
+        logger.info(f"Connecting to database at {parsed.hostname}:{parsed.port or 5432}/{parsed.path.lstrip('/')}")
+    except:
+        pass
 elif os.getenv("VERCEL"):
     # 如果在 Vercel 但没配置 DATABASE_URL，退回到临时 SQLite (不推荐)
     DATABASE_URL = "sqlite:////tmp/fish_price.db"
