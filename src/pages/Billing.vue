@@ -479,14 +479,14 @@
 
           <div class="flex gap-2 items-center">
             <!-- 日期筛选 -->
-            <div class="relative">
+            <div class="relative" ref="datePickerWrapperRef">
               <button
                 @click="toggleShowDatePicker"
                 :class="[
                   'flex items-center gap-1.5 rounded-lg px-3 h-8 text-sm font-medium transition-all duration-200',
                   dateRangeLabel
-                    ? 'bg-dunhuang-blue/[0.08] text-dunhuang-blue border border-dunhuang-blue/20 hover:border-dunhuang-blue/40'
-                    : 'bg-dunhuang-bg/50 text-dunhuang-text/40 border border-dunhuang-blue/15 hover:text-dunhuang-text/60 hover:border-dunhuang-blue/35',
+                    ? 'bg-dunhuang-yellow/15 text-dunhuang-blue border border-dunhuang-yellow/40 shadow-sm'
+                    : 'bg-dunhuang-bg/50 text-dunhuang-text/40 border border-dunhuang-blue/15 hover:text-dunhuang-text/60 hover:border-dunhuang-blue/35 hover:bg-white',
                 ]"
               >
                 <svg
@@ -525,7 +525,7 @@
                   stroke-width="2"
                   stroke-linecap="round"
                   stroke-linejoin="round"
-                  class="shrink-0"
+                  class="shrink-0 transition-transform duration-200"
                   :class="showDatePicker ? 'rotate-180' : ''"
                 >
                   <polyline points="6 9 12 15 18 9" />
@@ -537,63 +537,84 @@
                   class="absolute top-full mt-1.5 right-0 z-30"
                 >
                   <div
-                    class="bg-white rounded-2xl shadow-xl border border-dunhuang-yellow/20 p-4 w-auto min-w-[260px]"
+                    class="bg-white rounded-2xl shadow-xl border border-dunhuang-yellow/20 w-[340px]"
+                    style="box-shadow: 0 12px 36px rgba(92,64,51,0.12), 0 4px 12px rgba(92,64,51,0.06);"
                   >
-                    <div class="flex flex-wrap gap-1.5 mb-3">
-                      <button
-                        v-for="preset in datePresets"
-                        :key="preset.label"
-                        @click="applyDatePreset(preset)"
-                        :class="[
-                          'px-2.5 py-1 text-xs rounded-full border transition-colors',
-                          isPresetActive(preset)
-                            ? 'bg-dunhuang-blue/10 text-dunhuang-blue border-dunhuang-blue/30'
-                            : 'bg-dunhuang-bg/50 text-dunhuang-text/60 border-dunhuang-yellow/15 hover:border-dunhuang-blue/30 hover:text-dunhuang-blue',
-                        ]"
-                      >
-                        {{ preset.label }}
-                      </button>
+                    <!-- 面板标题 -->
+                    <div class="flex items-center gap-2.5 px-5 pt-4 pb-3">
+                      <div class="w-1 h-5 rounded-full bg-dunhuang-yellow shrink-0"></div>
+                      <h4 class="text-sm font-serif font-bold text-dunhuang-blue">日期筛选</h4>
+                      <span v-if="dateRangeLabel" class="text-xs text-dunhuang-text/40 ml-auto truncate max-w-[160px]">{{ dateRangeLabel }}</span>
                     </div>
 
-                    <div class="flex items-center gap-2">
-                      <div class="flex-1">
-                        <label class="block text-xs text-dunhuang-text/40 mb-1"
-                          >开始日期</label
+                    <!-- 快捷筛选 -->
+                    <div class="px-5 pb-4 border-b border-dunhuang-yellow/8">
+                      <label class="block text-[11px] text-dunhuang-text/35 mb-2 tracking-wider">快捷选择</label>
+                      <div class="grid grid-cols-4 gap-2">
+                        <button
+                          v-for="preset in datePresets"
+                          :key="preset.label"
+                          @click="applyDatePreset(preset)"
+                          :class="[
+                            'px-0 py-1.5 text-xs rounded-lg border transition-all duration-200 text-center',
+                            isPresetActive(preset)
+                              ? 'bg-dunhuang-yellow/15 text-dunhuang-blue border-dunhuang-yellow/40 shadow-sm font-medium'
+                              : 'bg-dunhuang-bg/50 text-dunhuang-text/60 border-dunhuang-yellow/10 hover:border-dunhuang-yellow/30 hover:text-dunhuang-blue hover:bg-dunhuang-yellow/8',
+                          ]"
                         >
+                          {{ preset.label }}
+                        </button>
+                      </div>
+                    </div>
+
+                    <!-- 自定义日期范围 -->
+                    <div class="px-5 py-4">
+                      <label class="block text-[11px] text-dunhuang-text/35 mb-3 tracking-wider">自定义范围</label>
+                      <div class="flex items-center gap-1.5 border border-dunhuang-yellow/30 rounded-lg bg-dunhuang-bg/30 px-2 h-9 w-full hover:border-dunhuang-yellow/50 focus-within:border-dunhuang-blue focus-within:bg-white focus-within:shadow-sm focus-within:shadow-dunhuang-blue/5 transition-all duration-200">
                         <DateInput
                           v-model="pickerFromDate"
                           placeholder="开始日期"
                           size="sm"
+                          :clearable="false"
+                          variant="ghost"
+                          class="flex-1 min-w-0"
                         />
-                      </div>
-                      <span class="text-dunhuang-text/30 mt-5">—</span>
-                      <div class="flex-1">
-                        <label class="block text-xs text-dunhuang-text/40 mb-1"
-                          >结束日期</label
-                        >
+                        <span class="text-dunhuang-text/40 text-sm font-medium shrink-0 px-1 leading-none flex items-center justify-center pt-[1px]">至</span>
                         <DateInput
                           v-model="pickerToDate"
                           placeholder="结束日期"
                           size="sm"
+                          :clearable="false"
+                          variant="ghost"
+                          class="flex-1 min-w-0"
                         />
                       </div>
                     </div>
 
-                    <div
-                      class="flex justify-end gap-2 mt-3 pt-3 border-t border-dunhuang-yellow/10"
-                    >
+                    <!-- 操作按钮 -->
+                    <div class="flex justify-between items-center px-5 py-3 bg-dunhuang-bg/40 border-t border-dunhuang-yellow/8 rounded-b-2xl">
                       <button
-                        @click="dateApply"
-                        class="px-4 py-1.5 rounded-lg text-xs font-medium bg-dunhuang-blue text-white hover:bg-dunhuang-blue/90 transition-colors shadow-sm"
+                        v-if="filterDateFrom || filterDateTo"
+                        @click="clearDateFilter(); showDatePicker = false"
+                        class="text-xs text-dunhuang-text/40 hover:text-dunhuang-red transition-colors"
                       >
-                        确认
+                        清除筛选
                       </button>
-                      <button
-                        @click="cancelDatePicker"
-                        class="px-3 py-1.5 rounded-lg text-xs text-dunhuang-text/50 hover:text-dunhuang-text/70 hover:bg-dunhuang-yellow/5 transition-colors"
-                      >
-                        取消
-                      </button>
+                      <span v-else></span>
+                      <div class="flex gap-2">
+                        <button
+                          @click="cancelDatePicker"
+                          class="px-4 py-1.5 rounded-lg text-xs text-dunhuang-text/50 hover:text-dunhuang-text/70 hover:bg-dunhuang-bg transition-colors"
+                        >
+                          取消
+                        </button>
+                        <button
+                          @click="dateApply"
+                          class="px-5 py-1.5 rounded-lg text-xs font-medium transition-all duration-200 bg-dunhuang-blue text-white hover:bg-dunhuang-blue/90 shadow-sm hover:shadow-md"
+                        >
+                          确认
+                        </button>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -686,14 +707,14 @@
         <div
           class="border border-dunhuang-yellow/30 rounded-lg bg-white overflow-hidden"
         >
-          <div class="overflow-y-auto">
+          <div class="overflow-y-scroll overflow-x-hidden custom-scrollbar h-[534px]">
             <div class="flex flex-col">
               <div
-                class="sticky top-0 bg-dunhuang-bg/90 backdrop-blur z-20 flex w-full shrink-0"
+                class="sticky top-0 bg-dunhuang-bg/90 backdrop-blur z-20 flex w-full shrink-0 transform-gpu h-[42px]"
               >
                 <div
-                  class="bg-dunhuang-yellow/20 text-dunhuang-blue font-sans font-bold text-sm flex w-full"
-                >
+                    class="bg-dunhuang-yellow/20 text-dunhuang-blue font-sans font-bold text-sm flex w-full h-full"
+                  >
                   <div
                     class="px-3 py-2 border-b border-dunhuang-yellow/40 flex items-center justify-center w-10 shrink-0 sticky left-0 bg-dunhuang-yellow/20 backdrop-blur z-30 sticky-col-left"
                   >
@@ -736,7 +757,7 @@
                 </div>
               </div>
 
-              <div class="flex flex-col relative">
+              <div class="flex flex-col relative min-h-[450px]">
                 <div
                   v-for="(b, index) in paginatedBills"
                   :key="b.id"
@@ -806,7 +827,7 @@
                   </div>
                 </div>
                 <template
-                  v-for="i in pageSize - paginatedBills.length"
+                  v-for="i in Math.max(0, 10 - paginatedBills.length)"
                   :key="'placeholder-' + i"
                 >
                   <div
@@ -845,10 +866,10 @@
                   </div>
                 </template>
                 <div
-                  class="flex w-full shrink-0 h-[42px] bg-dunhuang-yellow/5 border-t-2 border-dunhuang-yellow/30"
+                  class="flex w-full shrink-0 h-[42px] bg-white border-t-2 border-dunhuang-yellow/30 sticky bottom-0 z-20 transform-gpu"
                 >
                   <div
-                    class="w-10 shrink-0 sticky left-0 bg-dunhuang-yellow/5 sticky-col-left"
+                    class="w-10 shrink-0 sticky left-0 bg-white sticky-col-left"
                   ></div>
                   <div class="px-4 py-2 flex-[0.25] flex items-center"></div>
                   <div class="px-4 py-2 flex-[0.55] flex items-center"></div>
@@ -877,7 +898,7 @@
                   <div class="px-4 py-2 flex-[0.9] flex items-center"></div>
                   <div
                     v-if="activeTab === 'current'"
-                    class="px-3 py-2 w-40 shrink-0 sticky right-0 bg-dunhuang-yellow/5 sticky-col-right"
+                    class="px-3 py-2 w-40 shrink-0 sticky right-0 bg-white sticky-col-right"
                   ></div>
                 </div>
                 <div
@@ -896,7 +917,7 @@
         </div>
 
         <div
-          class="flex justify-between items-center mt-4 shrink-0 relative z-10"
+          class="flex justify-between items-center mt-4 shrink-0 relative z-30"
         >
           <div class="text-sm text-dunhuang-text/70">
             共
@@ -904,72 +925,12 @@
             条
           </div>
 
-          <!-- 分页控件 -->
-          <div class="flex items-center gap-2" v-if="totalPages > 1">
-            <button
-              @click="currentPage--"
-              :disabled="currentPage === 1"
-              class="w-8 h-8 flex items-center justify-center rounded border border-dunhuang-yellow/50 text-dunhuang-blue hover:bg-dunhuang-yellow/20 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-            >
-              <svg
-                class="w-4 h-4"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M15 19l-7-7 7-7"
-                />
-              </svg>
-            </button>
-            <div class="flex gap-1">
-              <button
-                v-for="page in displayedPages"
-                :key="page"
-                @click="currentPage = page"
-                :class="[
-                  'w-8 h-8 flex items-center justify-center rounded border transition-colors text-sm',
-                  currentPage === page
-                    ? 'bg-dunhuang-blue border-dunhuang-blue text-white shadow-sm'
-                    : 'border-dunhuang-yellow/50 text-dunhuang-text/80 hover:bg-dunhuang-yellow/20',
-                ]"
-              >
-                {{ page }}
-              </button>
-            </div>
-            <button
-              @click="currentPage++"
-              :disabled="currentPage === totalPages"
-              class="w-8 h-8 flex items-center justify-center rounded border border-dunhuang-yellow/50 text-dunhuang-blue hover:bg-dunhuang-yellow/20 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-            >
-              <svg
-                class="w-4 h-4"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M9 5l7 7-7 7"
-                />
-              </svg>
-            </button>
-            <span class="text-xs text-dunhuang-text/40 ml-1">跳至</span>
-            <input
-              v-model.number="billingJumpPage"
-              type="number"
-              :min="1"
-              :max="totalPages"
-              class="w-12 h-8 rounded border border-dunhuang-yellow/50 text-center text-sm text-dunhuang-text bg-transparent focus:outline-none focus:border-dunhuang-blue transition-colors [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-              @keydown.enter="jumpBillingPage"
-              @blur="jumpBillingPage"
-            />
-          </div>
+          <Pagination 
+          v-model:currentPage="currentPage" 
+          v-model:pageSize="pageSize"
+          :totalPages="totalPages" 
+          :showPageSizeSelect="true"
+        />
         </div>
       </div>
     </Transition>
@@ -1238,12 +1199,13 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, ref } from "vue";
+import { onMounted, onBeforeUnmount, ref } from "vue";
 import { useI18n } from "vue-i18n";
 import { useRouter } from "vue-router";
 import { dateStr, dateTimeStr, formatMoney } from "../lib/utils";
 import ConfirmDialog from "../components/ConfirmDialog.vue";
 import DateInput from "../components/DateInput.vue";
+import Pagination from "../components/Pagination.vue";
 import { useSpecies } from "../composables/useSpecies";
 import { useBillForm } from "../composables/useBillForm";
 import { useBillTable } from "../composables/useBillTable";
@@ -1253,6 +1215,17 @@ const { t } = useI18n();
 const router = useRouter();
 
 const showDatePicker = ref(false);
+const datePickerWrapperRef = ref<HTMLElement | null>(null);
+
+const handleDatePickerClickOutside = (e: MouseEvent) => {
+  if (
+    showDatePicker.value &&
+    datePickerWrapperRef.value &&
+    !datePickerWrapperRef.value.contains(e.target as Node)
+  ) {
+    cancelDatePicker();
+  }
+};
 
 const now = new Date();
 const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
@@ -1368,7 +1341,6 @@ const {
   tableSumSubtotal,
   tableSumFee,
   tableSumTotal,
-  displayedPages,
   isAllSelected,
   toggleSelectAll,
   getSpeciesName,
@@ -1394,19 +1366,6 @@ const clearSearchText = () => {
   billingSearch.value = "";
 };
 
-const billingJumpPage = ref<number | null>(null);
-
-const jumpBillingPage = () => {
-  const val = billingJumpPage.value;
-  if (val == null || val < 1) {
-    billingJumpPage.value = null;
-    return;
-  }
-  const target = Math.min(Math.floor(val), totalPages.value);
-  currentPage.value = target;
-  billingJumpPage.value = target;
-};
-
 const {
   showViewModal,
   viewingBill,
@@ -1430,8 +1389,13 @@ const handleSaveBill = async () => {
 };
 
 onMounted(() => {
+  document.addEventListener("click", handleDatePickerClickOutside);
   fetchSpecies();
   fetchBills();
+});
+
+onBeforeUnmount(() => {
+  document.removeEventListener("click", handleDatePickerClickOutside);
 });
 </script>
 

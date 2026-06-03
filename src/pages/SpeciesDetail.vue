@@ -12,9 +12,45 @@
     <Transition name="switch-fade" mode="out-in">
       <div
         v-if="loading"
-        class="bg-white/80 backdrop-blur rounded-2xl shadow-sm border border-dunhuang-yellow/30 p-10 text-center text-dunhuang-text/60 flex-1"
+        class="bg-white rounded-2xl shadow-lg ring-1 ring-dunhuang-yellow/10 px-4 py-3 flex-1 min-h-0 flex flex-col relative"
       >
-        正在加载品种详情...
+        <!-- 骨架屏 Header -->
+        <div class="flex items-center justify-between mb-4 border-b border-dunhuang-yellow/20 pb-2 shrink-0">
+          <div class="flex items-center gap-4">
+            <div class="w-8 h-8 rounded-full bg-dunhuang-yellow/10 animate-pulse"></div>
+            <div class="w-24 h-8 rounded bg-dunhuang-yellow/10 animate-pulse"></div>
+          </div>
+        </div>
+        
+        <!-- 骨架屏 Content -->
+        <div class="relative z-10 flex-1 min-h-0 flex flex-col">
+          <div class="flex-1 flex gap-4 min-h-0">
+            <div class="flex-1 grid grid-cols-1 md:grid-cols-[7fr_3fr] gap-6 min-h-0">
+              <!-- 左侧图片骨架 -->
+              <div class="w-full h-full rounded-2xl bg-dunhuang-yellow/5 animate-pulse flex items-center justify-center border border-dunhuang-yellow/10">
+                <svg class="w-12 h-12 text-dunhuang-yellow/20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                </svg>
+              </div>
+              
+              <!-- 右侧表单骨架 -->
+              <div class="flex flex-col gap-6 pt-2">
+                <div>
+                  <div class="w-16 h-3.5 mb-2 rounded bg-dunhuang-yellow/10 animate-pulse"></div>
+                  <div class="w-full h-10 rounded-lg bg-dunhuang-yellow/5 animate-pulse border border-dunhuang-yellow/10"></div>
+                </div>
+                <div>
+                  <div class="w-16 h-3.5 mb-2 rounded bg-dunhuang-yellow/10 animate-pulse"></div>
+                  <div class="w-full h-24 rounded-lg bg-dunhuang-yellow/5 animate-pulse border border-dunhuang-yellow/10"></div>
+                </div>
+                <div>
+                  <div class="w-16 h-3.5 mb-2 rounded bg-dunhuang-yellow/10 animate-pulse"></div>
+                  <div class="w-full h-10 rounded-lg bg-dunhuang-yellow/5 animate-pulse border border-dunhuang-yellow/10"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
 
       <div

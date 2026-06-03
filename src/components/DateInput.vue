@@ -4,11 +4,17 @@
       type="button"
       @click="toggle"
       :class="[
-        'w-full flex items-center gap-2.5 rounded-lg border transition-all duration-200 focus:outline-none group',
-        size === 'sm' ? 'py-2 px-4 text-sm' : 'py-2.5 px-3 text-sm',
-        hasValue
-          ? 'bg-white border-dunhuang-blue/30 text-dunhuang-blue shadow-sm shadow-dunhuang-blue/5 hover:border-dunhuang-blue/50'
-          : 'bg-dunhuang-bg border-dunhuang-yellow/50 text-dunhuang-text/40 hover:border-dunhuang-blue/40 hover:text-dunhuang-text/60 hover:bg-white',
+        'w-full flex items-center gap-2.5 transition-all duration-200 focus:outline-none group',
+        variant === 'ghost' ? 'justify-center' : '',
+        variant === 'default' ? 'rounded-lg border' : 'rounded-md',
+        size === 'sm' ? (variant === 'default' ? 'py-2 px-3.5 text-sm' : 'py-1 text-sm') : 'py-2.5 px-3 text-sm',
+        variant === 'default'
+          ? (hasValue
+            ? 'bg-white border-dunhuang-blue/30 text-dunhuang-blue shadow-sm shadow-dunhuang-blue/5 hover:border-dunhuang-blue/50 hover:shadow-md hover:shadow-dunhuang-blue/8'
+            : 'bg-white/70 border-dunhuang-yellow/25 text-dunhuang-text/50 hover:border-dunhuang-yellow/40 hover:text-dunhuang-text/70 hover:bg-white hover:shadow-sm')
+          : (hasValue
+            ? 'text-dunhuang-blue hover:bg-dunhuang-blue/5'
+            : 'text-dunhuang-text/50 hover:bg-black/5')
       ]"
     >
       <svg
@@ -16,7 +22,7 @@
         :class="[
           hasValue
             ? 'text-dunhuang-blue'
-            : 'text-dunhuang-text/25 group-hover:text-dunhuang-blue/50',
+            : 'text-dunhuang-yellow/60 group-hover:text-dunhuang-blue/60',
           size === 'sm' ? 'w-4 h-4' : 'w-[18px] h-[18px]',
         ]"
         viewBox="0 0 24 24"
@@ -40,7 +46,7 @@
         v-if="hasValue && clearable"
         type="button"
         @click.stop="clear"
-        class="ml-auto shrink-0 w-5 h-5 rounded-full flex items-center justify-center text-dunhuang-text/30 hover:text-dunhuang-red hover:bg-dunhuang-red/10 transition-colors"
+        class="ml-auto shrink-0 w-5 h-5 rounded-full flex items-center justify-center text-dunhuang-text/25 hover:text-dunhuang-red hover:bg-dunhuang-red/10 transition-colors"
       >
         <svg
           class="w-3 h-3"
@@ -336,12 +342,14 @@ const props = withDefaults(
     size?: "sm" | "default";
     clearable?: boolean;
     placement?: "left" | "right";
+    variant?: "default" | "ghost";
   }>(),
   {
     placeholder: "请选择日期",
     size: "default",
     clearable: true,
     placement: "right",
+    variant: "default",
   },
 );
 

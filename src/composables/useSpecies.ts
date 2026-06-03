@@ -35,6 +35,7 @@ export function useSpecies() {
 
   const invalidateCache = () => {
     speciesList.value = []
+    return fetchSpecies()
   }
 
   return { speciesList, fetchSpecies, invalidateCache }

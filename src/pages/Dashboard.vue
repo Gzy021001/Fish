@@ -384,7 +384,7 @@ import { ref, onMounted, onUnmounted, computed } from "vue";
 import { useI18n } from "vue-i18n";
 import * as echarts from "echarts";
 import api from "../api";
-import { isAuthError } from "../lib/error";
+import { isAuthError, apiErrorMessage } from "../lib/error";
 
 const { t } = useI18n();
 

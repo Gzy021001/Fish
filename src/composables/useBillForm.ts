@@ -184,10 +184,10 @@ export function useBillForm(speciesList: Ref<any[]>) {
       toast.success(`成功保存 ${saved} 条`)
     } catch (error: any) {
       if (isAuthError(error)) return
-      billEntries.value = []
-      bill.value.release_date = ""
-      showForm.value = false
       if (saved > 0) {
+        billEntries.value = []
+        bill.value.release_date = ""
+        showForm.value = false
         toast.warning(`已保存 ${saved} 条，其余保存失败`)
       } else {
         toast.error(apiErrorMessage(error, "保存单据"))

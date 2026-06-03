@@ -36,7 +36,7 @@ export function useBillTable(speciesList: Ref<any[]>) {
   })
 
   const currentPage = ref(1)
-  const pageSize = 10
+  const pageSize = ref(10)
 
   const filteredBills = computed(() => {
     const q = billingSearch.value.trim().toLowerCase()
@@ -49,11 +49,11 @@ export function useBillTable(speciesList: Ref<any[]>) {
   })
 
   const totalItems = computed(() => filteredBills.value.length)
-  const totalPages = computed(() => Math.ceil(totalItems.value / pageSize))
+  const totalPages = computed(() => Math.ceil(totalItems.value / pageSize.value))
 
   const paginatedBills = computed(() => {
-    const start = (currentPage.value - 1) * pageSize
-    const end = start + pageSize
+    const start = (currentPage.value - 1) * pageSize.value
+    const end = start + pageSize.value
     return filteredBills.value.slice(start, end)
   })
 
@@ -84,21 +84,6 @@ export function useBillTable(speciesList: Ref<any[]>) {
         .toFixed(2),
     ),
   )
-
-  const displayedPages = computed(() => {
-    const pages = []
-    let start = Math.max(1, currentPage.value - 2)
-    let end = Math.min(totalPages.value, start + 4)
-
-    if (end - start < 4) {
-      start = Math.max(1, end - 4)
-    }
-
-    for (let i = start; i <= end; i++) {
-      pages.push(i)
-    }
-    return pages
-  })
 
   const isAllSelected = computed({
     get: () => {
@@ -290,7 +275,6 @@ export function useBillTable(speciesList: Ref<any[]>) {
     tableSumSubtotal,
     tableSumFee,
     tableSumTotal,
-    displayedPages,
     isAllSelected,
     toggleSelectAll,
     getSpeciesName,

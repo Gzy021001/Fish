@@ -12,45 +12,12 @@
     </Transition>
     <div class="flex items-center justify-between mb-6">
       <div class="flex items-center gap-4">
-        <!-- 搜索 -->
-        <div
-          class="flex items-center bg-white border border-dunhuang-blue/30 rounded-lg px-3 py-1.5 shadow-sm transition-colors hover:border-dunhuang-blue/50 focus-within:border-dunhuang-blue focus-within:ring-2 focus-within:ring-dunhuang-blue/20"
-        >
-          <button
-            type="button"
-            @click="handleSearch"
-            class="text-dunhuang-blue hover:text-dunhuang-blue/70 transition-colors shrink-0"
-          >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              width="16"
-              height="16"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="2"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-            >
-              <circle cx="11" cy="11" r="8"></circle>
-              <line x1="21" x2="16.65" y1="21" y2="16.65"></line>
-            </svg>
-          </button>
-          <input
-            type="text"
-            v-model="speciesSearchText"
-            placeholder="搜索品种..."
-            @keydown.enter="handleSearch"
-            class="bg-transparent border-none text-sm text-dunhuang-blue font-medium focus:outline-none focus:ring-0 p-0 w-40 ml-2"
-          />
-          <button
-            v-if="speciesSearchText"
-            @click="handleClearSearch"
-            class="text-dunhuang-text/40 hover:text-dunhuang-red text-sm leading-none px-1"
-          >
-            ✕
-          </button>
-        </div>
+        <SearchInput
+          v-model="speciesSearchText"
+          placeholder="搜索品种..."
+          @search="handleSearch"
+          @clear="handleClearSearch"
+        />
       </div>
       <div class="flex gap-3">
         <button
@@ -76,12 +43,14 @@
     </div>
 
     <div
-      class="overflow-y-auto custom-scrollbar border border-dunhuang-yellow/30 rounded-lg bg-white"
+      class="overflow-y-scroll overflow-x-hidden custom-scrollbar border border-dunhuang-yellow/30 rounded-lg bg-white h-[494px]"
     >
       <table class="w-full text-left border-collapse whitespace-nowrap">
-        <thead class="sticky top-0 bg-white/90 backdrop-blur z-20 flex w-full">
+        <thead
+          class="sticky top-0 bg-white/90 backdrop-blur z-20 flex w-full transform-gpu h-[42px]"
+        >
           <tr
-            class="bg-dunhuang-yellow/20 text-dunhuang-blue font-serif text-sm flex w-full"
+            class="bg-dunhuang-yellow/20 text-dunhuang-blue font-serif text-sm flex w-full h-full"
           >
             <th
               class="px-3 py-2 border-b border-dunhuang-yellow/40 w-10 flex items-center justify-center shrink-0 sticky left-0 bg-dunhuang-yellow/20 backdrop-blur z-30 sticky-col-left"
@@ -130,11 +99,11 @@
             </th>
           </tr>
         </thead>
-        <tbody class="flex flex-col relative">
+        <tbody class="flex flex-col relative min-h-[450px]">
           <tr
             v-for="(sp, index) in paginatedSpecies"
             :key="sp.id"
-            class="border-b border-dunhuang-yellow/20 hover:bg-dunhuang-yellow/10 transition-colors text-sm group flex w-full"
+            class="border-b border-dunhuang-yellow/20 hover:bg-dunhuang-yellow/10 transition-colors text-sm group flex w-full shrink-0 h-[45px]"
           >
             <td
               class="px-3 py-1.5 flex items-center justify-center w-10 shrink-0 sticky left-0 bg-white/60 backdrop-blur-md group-hover:bg-dunhuang-yellow/10 transition-colors sticky-col-left"
@@ -211,6 +180,24 @@
             </td>
           </tr>
           <tr
+            v-for="i in Math.max(0, 10 - paginatedSpecies.length)"
+            :key="'placeholder-' + i"
+            class="border-b border-dunhuang-yellow/10 text-sm flex w-full shrink-0 h-[45px]"
+          >
+            <td
+              class="px-3 py-1.5 w-10 shrink-0 sticky left-0 bg-white/60 sticky-col-left"
+            ></td>
+            <td class="px-4 py-1.5 flex-1"></td>
+            <td class="px-4 py-1.5 flex-1"></td>
+            <td class="px-4 py-1.5 flex-1"></td>
+            <td class="px-4 py-1.5 flex-1"></td>
+            <td class="px-4 py-1.5 flex-1"></td>
+            <td class="px-4 py-1.5 flex-1"></td>
+            <td
+              class="px-3 py-1.5 w-40 shrink-0 sticky right-0 bg-white/60 sticky-col-right"
+            ></td>
+          </tr>
+          <tr
             v-if="species.length === 0 && !errorMsg"
             class="absolute inset-0 flex items-center justify-center pointer-events-none"
           >
@@ -224,7 +211,7 @@
       </table>
     </div>
 
-    <div class="flex justify-between items-center mt-4 shrink-0 relative z-10">
+    <div class="flex justify-between items-center mt-4 shrink-0 relative z-30">
       <div class="text-sm text-dunhuang-text/70">
         共
         <span class="font-bold text-dunhuang-blue">{{ totalItems }}</span>
@@ -238,72 +225,12 @@
         </span>
       </div>
 
-      <!-- 分页控件 -->
-      <div class="flex items-center gap-2" v-if="totalPages > 1">
-        <button
-          @click="currentPage--"
-          :disabled="currentPage === 1"
-          class="w-8 h-8 flex items-center justify-center rounded border border-dunhuang-yellow/50 text-dunhuang-blue hover:bg-dunhuang-yellow/20 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-        >
-          <svg
-            class="w-4 h-4"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              d="M15 19l-7-7 7-7"
-            />
-          </svg>
-        </button>
-        <div class="flex gap-1">
-          <button
-            v-for="page in displayedPages"
-            :key="page"
-            @click="currentPage = page"
-            :class="[
-              'w-8 h-8 flex items-center justify-center rounded border transition-colors text-sm',
-              currentPage === page
-                ? 'bg-dunhuang-blue border-dunhuang-blue text-white shadow-sm'
-                : 'border-dunhuang-yellow/50 text-dunhuang-text/80 hover:bg-dunhuang-yellow/20',
-            ]"
-          >
-            {{ page }}
-          </button>
-        </div>
-        <button
-          @click="currentPage++"
-          :disabled="currentPage === totalPages"
-          class="w-8 h-8 flex items-center justify-center rounded border border-dunhuang-yellow/50 text-dunhuang-blue hover:bg-dunhuang-yellow/20 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-        >
-          <svg
-            class="w-4 h-4"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              d="M9 5l7 7-7 7"
-            />
-          </svg>
-        </button>
-        <span class="text-xs text-dunhuang-text/40 ml-1">跳至</span>
-        <input
-          v-model.number="speciesJumpPage"
-          type="number"
-          :min="1"
-          :max="totalPages"
-          class="w-12 h-8 rounded border border-dunhuang-yellow/50 text-center text-sm text-dunhuang-text bg-transparent focus:outline-none focus:border-dunhuang-blue transition-colors [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-          @keydown.enter="jumpSpeciesPage"
-          @blur="jumpSpeciesPage"
-        />
-      </div>
+      <Pagination
+        v-model:currentPage="currentPage"
+        v-model:pageSize="pageSize"
+        :totalPages="totalPages"
+        :showPageSizeSelect="true"
+      />
     </div>
 
     <Transition name="modal-backdrop">
@@ -751,6 +678,8 @@ import { useToast } from "../composables/useToast";
 import { useSpecies } from "../composables/useSpecies";
 import ConfirmDialog from "../components/ConfirmDialog.vue";
 import DateInput from "../components/DateInput.vue";
+import Pagination from "../components/Pagination.vue";
+import SearchInput from "../components/SearchInput.vue";
 
 // ============================================================
 //  品种管理：列表 + 新增 + 批量删除 + 分页
@@ -778,43 +707,16 @@ const speciesSearch = ref("");
 const speciesSearchText = ref("");
 
 const currentPage = ref(1);
-const speciesJumpPage = ref<number | null>(null);
-const pageSize = 10;
+const pageSize = ref(10);
 
 const totalItems = computed(() => species.value.length);
-const totalPages = computed(() => Math.ceil(totalItems.value / pageSize));
+const totalPages = computed(() => Math.ceil(totalItems.value / pageSize.value));
 
 const paginatedSpecies = computed(() => {
-  const start = (currentPage.value - 1) * pageSize;
-  const end = start + pageSize;
+  const start = (currentPage.value - 1) * pageSize.value;
+  const end = start + pageSize.value;
   return species.value.slice(start, end);
 });
-
-const displayedPages = computed(() => {
-  const pages = [];
-  let start = Math.max(1, currentPage.value - 2);
-  let end = Math.min(totalPages.value, start + 4);
-
-  if (end - start < 4) {
-    start = Math.max(1, end - 4);
-  }
-
-  for (let i = start; i <= end; i++) {
-    pages.push(i);
-  }
-  return pages;
-});
-
-const jumpSpeciesPage = () => {
-  const val = speciesJumpPage.value;
-  if (val == null || val < 1) {
-    speciesJumpPage.value = null;
-    return;
-  }
-  const target = Math.min(Math.floor(val), totalPages.value);
-  currentPage.value = target;
-  speciesJumpPage.value = target;
-};
 
 const deleteConfirm = ref({
   show: false,
@@ -996,8 +898,7 @@ const addSpecies = async () => {
     }
 
     closeAddModal();
-    invalidateCache();
-    await fetchSpecies();
+    await invalidateCache();
   } catch (error: any) {
     if (isAuthError(error)) return;
     errorMsg.value = apiErrorMessage(error, "保存品种");
@@ -1031,14 +932,12 @@ const executeDeleteSpecies = async () => {
       }
       selectedIds.value = [];
       deleteConfirm.value.show = false;
-      invalidateCache();
-      await fetchSpecies();
+      await invalidateCache();
     } catch (error: any) {
       if (isAuthError(error)) return;
       errorMsg.value = apiErrorMessage(error, "批量删除");
       deleteConfirm.value.show = false;
-      invalidateCache();
-      await fetchSpecies();
+      await invalidateCache();
     }
   } else {
     const id = deleteConfirm.value.id;
@@ -1049,8 +948,7 @@ const executeDeleteSpecies = async () => {
         (selectedId) => selectedId !== id,
       );
       deleteConfirm.value.show = false;
-      invalidateCache();
-      await fetchSpecies();
+      await invalidateCache();
     } catch (error: any) {
       if (isAuthError(error)) return;
       errorMsg.value = apiErrorMessage(error, "删除品种");
@@ -1205,8 +1103,7 @@ const confirmImportSpecies = async () => {
 
     importPreview.value = [];
     showImportModal.value = false;
-    invalidateCache();
-    await fetchSpecies();
+    await invalidateCache();
   } catch (error: any) {
     if (isAuthError(error)) return;
     errorMsg.value = apiErrorMessage(error, "导入品种");

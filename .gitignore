@@ -12,3 +12,4 @@ node_modules/
 backend/uploads/
 fish_price.db
 .vercel
+.env*.local

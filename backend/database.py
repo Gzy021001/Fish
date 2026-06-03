@@ -14,6 +14,20 @@ _raw_url = os.getenv("DATABASE_URL", "")
 if _raw_url:
     # 移除可能存在的空格
     _raw_url = _raw_url.strip()
+    
+    # 自动处理密码中的特殊字符（例如密码中的 .. 导致解析失败的问题）
+    from urllib.parse import urlparse, quote_plus, unquote_plus
+    try:
+        parsed = urlparse(_raw_url)
+        if parsed.password:
+            # 只有当密码没有被 URL 编码时，才进行编码
+            decoded_pwd = unquote_plus(parsed.password)
+            if decoded_pwd == parsed.password and any(c in parsed.password for c in ['@', ':', '/', '?', '&', '=', '+', '.', '-']):
+                encoded_pwd = quote_plus(parsed.password)
+                _raw_url = _raw_url.replace(f":{parsed.password}@", f":{encoded_pwd}@")
+    except Exception as e:
+        logger.warning(f"Failed to auto-encode password: {e}")
+
     # Supabase 提供的链接通常以 postgres:// 开头，SQLAlchemy 需要 postgresql://
     if _raw_url.startswith("postgres://"):
         DATABASE_URL = _raw_url.replace("postgres://", "postgresql://", 1)
