@@ -6,6 +6,7 @@ from sqlalchemy.orm import Session
 import models
 import auth
 from database import get_db
+from cache import trends_cache
 from services.bill_service import get_price_trend, get_price_trends_batch
 
 router = APIRouter(prefix="/api", tags=["stats"])
@@ -18,7 +19,14 @@ def get_price_trend_route(
     db: Session = Depends(get_db),
     current_user: models.User = Depends(auth.get_current_user),
 ):
-    return get_price_trend(species_id, db, year=year)
+    cache_key = f"trend_{species_id}_{year or 'recent'}"
+    cached_result = trends_cache.get(cache_key)
+    if cached_result is not None:
+        return cached_result
+        
+    result = get_price_trend(species_id, db, year=year)
+    trends_cache.set(cache_key, result)
+    return result
 
 
 @router.get("/stats/price-trend-batch")
@@ -29,4 +37,13 @@ def get_price_trends_batch_route(
     current_user: models.User = Depends(auth.get_current_user),
 ):
     ids = [int(i.strip()) for i in species_ids.split(",") if i.strip()]
-    return get_price_trends_batch(ids, db, year=year)
+    sorted_ids_str = "_".join(map(str, sorted(ids)))
+    cache_key = f"trend_batch_{sorted_ids_str}_{year or 'recent'}"
+    
+    cached_result = trends_cache.get(cache_key)
+    if cached_result is not None:
+        return cached_result
+        
+    result = get_price_trends_batch(ids, db, year=year)
+    trends_cache.set(cache_key, result)
+    return result

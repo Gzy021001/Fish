@@ -69,22 +69,55 @@ def sync_bills(date: str, user: models.User, db: Session):
     return count
 
 
-def list_bills(db: Session, limit: int = 100, status: str = None, date: str = None, date_from: str = None, date_to: str = None):
+def list_bills(db: Session, page: int = 1, page_size: int = 10, limit: int = 100, status: str = None, date: str = None, date_from: str = None, date_to: str = None, q: str = None):
     from sqlalchemy.orm import joinedload
-    query = db.query(models.Bill).options(joinedload(models.Bill.species)).order_by(models.Bill.release_date.desc())
+    from sqlalchemy import or_
+    query = db.query(models.Bill).join(models.Species).options(joinedload(models.Bill.species)).order_by(models.Bill.release_date.desc().nullslast(), models.Bill.id.desc())
     if status:
         query = query.filter(models.Bill.status == status)
     if date_from:
         date_from_dt = datetime.strptime(date_from, "%Y-%m-%d")
-        query = query.filter(func.coalesce(models.Bill.release_date, models.Bill.created_at) >= date_from_dt)
+        query = query.filter(
+            or_(
+                models.Bill.release_date >= date_from_dt,
+                (models.Bill.release_date.is_(None) & (models.Bill.created_at >= date_from_dt))
+            )
+        )
     if date_to:
         end = datetime.strptime(date_to, "%Y-%m-%d") + timedelta(days=1)
-        query = query.filter(func.coalesce(models.Bill.release_date, models.Bill.created_at) < end)
+        query = query.filter(
+            or_(
+                models.Bill.release_date < end,
+                (models.Bill.release_date.is_(None) & (models.Bill.created_at < end))
+            )
+        )
     if date:
-        query = query.filter(cast(models.Bill.release_date, String).startswith(date))
+        date_dt = datetime.strptime(date, "%Y-%m-%d")
+        date_end = date_dt + timedelta(days=1)
+        query = query.filter(models.Bill.release_date >= date_dt, models.Bill.release_date < date_end)
+        
+    if q:
+        query = query.filter(models.Species.name_zh.ilike(f"%{q}%"))
+        
+    # 为了兼容以前的调用（如果 limit > 0，则忽略分页，返回最多 limit 条）
     if limit > 0:
         query = query.limit(limit)
-    return query.all()
+        items = query.all()
+        return {"total": len(items), "items": items}
+    
+    # 真正的后端分页
+    total = query.count()
+    
+    # 对于导出功能，如果 page_size == -1，则返回全部满足条件的数据
+    if page_size == -1:
+        items = query.all()
+        return {"total": total, "items": items}
+        
+    if page_size > 0:
+        query = query.offset((page - 1) * page_size).limit(page_size)
+    items = query.all()
+    
+    return {"total": total, "items": items}
 
 
 def update_bill(bill_id: int, data: schemas.BillCreate, user: models.User, db: Session):

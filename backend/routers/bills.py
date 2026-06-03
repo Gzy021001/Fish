@@ -7,6 +7,7 @@ import models
 import schemas
 import auth
 from database import get_db
+from cache import trends_cache
 from services.bill_service import (
     create_bill,
     sync_bills,
@@ -24,7 +25,9 @@ def create_bill_route(
     db: Session = Depends(get_db),
     current_user: models.User = Depends(auth.get_current_user),
 ):
-    return create_bill(bill, current_user, db)
+    result = create_bill(bill, current_user, db)
+    trends_cache.clear()
+    return result
 
 
 @router.post("/bills/sync")
@@ -34,20 +37,24 @@ def sync_bills_route(
     current_user: models.User = Depends(auth.get_current_user),
 ):
     count = sync_bills(payload.date, current_user, db)
+    trends_cache.clear()
     return {"message": f"已归档 {count} 条至历史", "count": count}
 
 
-@router.get("/bills", response_model=List[schemas.Bill])
+@router.get("/bills")
 def list_bills_route(
+    page: int = 1,
+    page_size: int = 10,
     limit: int = 100,
     status: str = None,
     date: str = None,
     date_from: str = None,
     date_to: str = None,
+    q: str = None,
     db: Session = Depends(get_db),
     current_user: models.User = Depends(auth.get_current_user),
 ):
-    return list_bills(db, limit=limit, status=status, date=date, date_from=date_from, date_to=date_to)
+    return list_bills(db, page=page, page_size=page_size, limit=limit, status=status, date=date, date_from=date_from, date_to=date_to, q=q)
 
 
 @router.put("/bills/{bill_id}", response_model=schemas.Bill)
@@ -57,7 +64,9 @@ def update_bill_route(
     db: Session = Depends(get_db),
     current_user: models.User = Depends(auth.get_current_user),
 ):
-    return update_bill(bill_id, bill_update, current_user, db)
+    result = update_bill(bill_id, bill_update, current_user, db)
+    trends_cache.clear()
+    return result
 
 
 @router.delete("/bills/{bill_id}")
@@ -66,4 +75,6 @@ def delete_bill_route(
     db: Session = Depends(get_db),
     current_user: models.User = Depends(auth.get_current_user),
 ):
-    return delete_bill(bill_id, current_user, db)
+    result = delete_bill(bill_id, current_user, db)
+    trends_cache.clear()
+    return result

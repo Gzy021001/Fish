@@ -33,28 +33,30 @@ export function useBillTable(speciesList: Ref<any[]>) {
 
   watch(billingSearch, () => {
     currentPage.value = 1
+    fetchBills()
   })
 
   const currentPage = ref(1)
   const pageSize = ref(10)
 
-  const filteredBills = computed(() => {
-    const q = billingSearch.value.trim().toLowerCase()
-    return q
-      ? bills.value.filter((b: any) => {
-        const sp = speciesList.value.find((s: any) => s.id === b.species_id)
-        return sp && sp.name_zh.toLowerCase().includes(q)
-      })
-      : bills.value
+  watch(currentPage, () => {
+    fetchBills()
+  })
+  
+  watch(pageSize, () => {
+    currentPage.value = 1
+    fetchBills()
   })
 
-  const totalItems = computed(() => filteredBills.value.length)
+  const filteredBills = computed(() => {
+    return bills.value
+  })
+
+  const totalItems = ref(0)
   const totalPages = computed(() => Math.ceil(totalItems.value / pageSize.value))
 
   const paginatedBills = computed(() => {
-    const start = (currentPage.value - 1) * pageSize.value
-    const end = start + pageSize.value
-    return filteredBills.value.slice(start, end)
+    return bills.value
   })
 
   const tableSumWeight = computed(() =>
@@ -140,16 +142,35 @@ export function useBillTable(speciesList: Ref<any[]>) {
   const fetchBills = async () => {
     try {
       const params = new URLSearchParams()
-      params.set("limit", "0")
+      params.set("limit", "0") // Disable old limit
+      params.set("page", currentPage.value.toString())
+      params.set("page_size", pageSize.value.toString())
+      
       if (filterDateFrom.value) {
         params.set("date_from", filterDateFrom.value)
       }
       if (filterDateTo.value) {
         params.set("date_to", filterDateTo.value)
       }
+      if (billingSearch.value.trim()) {
+        params.set("q", billingSearch.value.trim())
+      }
+      if (activeTab.value === "current") {
+        params.set("status", "DRAFT")
+      } else if (activeTab.value === "history") {
+        params.set("status", "COMPLETED")
+      }
+
       const res = await api.get(`/bills?${params.toString()}`)
-      bills.value = Array.isArray(res.data) ? res.data : []
-      currentPage.value = 1
+      
+      if (res.data && typeof res.data.total === 'number') {
+        bills.value = res.data.items || []
+        totalItems.value = res.data.total
+      } else {
+        // Fallback
+        bills.value = Array.isArray(res.data) ? res.data : []
+        totalItems.value = bills.value.length
+      }
     } catch (error: any) {
       if (isAuthError(error)) return
       console.error("Failed to fetch bills", error)
@@ -169,8 +190,34 @@ export function useBillTable(speciesList: Ref<any[]>) {
     fetchBills()
   }
 
-  const exportBills = () => {
-    const source = filteredBills.value
+  const exportBills = async () => {
+    toast.info("正在准备导出数据...")
+    let source = []
+    try {
+      const params = new URLSearchParams()
+      params.set("limit", "0")
+      params.set("page_size", "-1") // 获取全部
+      
+      if (filterDateFrom.value) params.set("date_from", filterDateFrom.value)
+      if (filterDateTo.value) params.set("date_to", filterDateTo.value)
+      if (billingSearch.value.trim()) params.set("q", billingSearch.value.trim())
+      if (activeTab.value === "current") {
+        params.set("status", "DRAFT")
+      } else if (activeTab.value === "history") {
+        params.set("status", "COMPLETED")
+      }
+      
+      const res = await api.get(`/bills?${params.toString()}`)
+      if (res.data && res.data.items) {
+        source = res.data.items
+      } else {
+        source = Array.isArray(res.data) ? res.data : []
+      }
+    } catch (error) {
+      toast.error("获取导出数据失败")
+      return
+    }
+
     if (source.length === 0) {
       toast.info("没有可导出的单据数据")
       return
