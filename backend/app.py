@@ -27,6 +27,17 @@ def init_app():
     
     logger.info("Initializing application...")
     try:
+        # 优化 Vercel 冷启动：如果表已存在，跳过耗时的 create_all 和 bootstrap
+        if os.getenv("VERCEL"):
+            try:
+                with engine.connect() as conn:
+                    conn.execute(text("SELECT 1 FROM users LIMIT 1"))
+                _initialized = True
+                logger.info("Database already initialized, skipping create_all to save cold start time.")
+                return
+            except Exception:
+                pass  # 表不存在，继续执行初始化
+
         if os.getenv("RESET_DATABASE") == "true":
             logger.warning("RESET_DATABASE is true. Dropping all tables...")
             Base.metadata.drop_all(bind=engine)
