@@ -13,3 +13,8 @@ backend/uploads/
 fish_price.db
 .vercel
 .env*.local
+.env.prod.*
+.env.test
+test_rewrite.py
+backend/migration_data.sql
+backend/export_sql.py
