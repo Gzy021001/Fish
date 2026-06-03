@@ -48,6 +48,9 @@ if _raw_url:
     if "db.kntqzmldrvvonhbggysa.supabase.co" in DATABASE_URL:
         DATABASE_URL = DATABASE_URL.replace("db.kntqzmldrvvonhbggysa.supabase.co", "aws-0-ap-southeast-1.pooler.supabase.com")
         DATABASE_URL = DATABASE_URL.replace(":5432", ":6543")
+        # Supabase Pooler (6543) 需要在用户名中包含 project ID 作为 tenant identifier
+        if "postgres:" in DATABASE_URL and "postgres.kntqzmldrvvonhbggysa:" not in DATABASE_URL:
+            DATABASE_URL = DATABASE_URL.replace("postgres:", "postgres.kntqzmldrvvonhbggysa:", 1)
     
     # 针对 Supabase Pooler (6543端口) 经常出现的区域错误进行检测
     if "pooler.supabase.com:6543" in DATABASE_URL and "aws-0-ap-southeast-1" in DATABASE_URL:
