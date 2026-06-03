@@ -16,9 +16,19 @@ if _raw_url:
     _raw_url = _raw_url.strip()
     
     # 自动处理密码中的特殊字符（例如密码中的 .. 导致解析失败的问题）
-    from urllib.parse import urlparse, quote_plus, unquote_plus
+    from urllib.parse import urlparse, quote_plus, unquote_plus, urlencode, parse_qs
     try:
         parsed = urlparse(_raw_url)
+        
+        # 移除 psycopg2 不支持的 supa 参数
+        if parsed.query:
+            qs = parse_qs(parsed.query)
+            if 'supa' in qs:
+                del qs['supa']
+            # 重建 URL
+            parsed = parsed._replace(query=urlencode(qs, doseq=True))
+            _raw_url = parsed.geturl()
+
         if parsed.password:
             # 只有当密码没有被 URL 编码时，才进行编码
             decoded_pwd = unquote_plus(parsed.password)
