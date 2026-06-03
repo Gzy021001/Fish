@@ -43,6 +43,14 @@ class Species(SpeciesBase):
             return None
         return v.strftime('%Y-%m-%d')
 
+class SpeciesInBill(BaseModel):
+    id: int
+    name_zh: str
+    default_unit: str
+    
+    class Config:
+        from_attributes = True
+
 class BillBase(BaseModel):
     species_id: int
     weight: float
@@ -62,7 +70,7 @@ class Bill(BillBase):
     subtotal: float
     total_amount: float
     created_at: datetime
-    species: Optional[Species] = None
+    species: Optional[SpeciesInBill] = None
 
     class Config:
         from_attributes = True

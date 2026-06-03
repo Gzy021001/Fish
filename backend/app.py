@@ -3,6 +3,7 @@ import traceback
 import os
 from fastapi import FastAPI, Request, Depends
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
@@ -64,6 +65,9 @@ def init_app():
 def create_app() -> FastAPI:
     app = FastAPI(title="Fish Price Platform API")
 
+    # Add GZip Middleware to compress large payloads (like base64 images)
+    app.add_middleware(GZipMiddleware, minimum_size=1000)
+
     app.add_middleware(
         CORSMiddleware,
         allow_origins=["*"],
@@ -76,6 +80,25 @@ def create_app() -> FastAPI:
     app.include_router(bills.router)
     app.include_router(logs.router)
     app.include_router(stats.router)
+
+    @app.middleware("http")
+    async def performance_monitoring_middleware(request: Request, call_next):
+        import time
+        start_time = time.time()
+        
+        response = await call_next(request)
+        
+        process_time = (time.time() - start_time) * 1000  # 转换为毫秒
+        formatted_process_time = '{0:.2f}'.format(process_time)
+        
+        # 记录请求信息和耗时
+        logger.info(f"[{request.method}] {request.url.path} - {response.status_code} - {formatted_process_time}ms")
+        
+        # 对于耗时超过 500ms 的请求，打印警告级别的慢查询日志
+        if process_time > 500:
+            logger.warning(f"SLOW REQUEST DETECTED: [{request.method}] {request.url.path} took {formatted_process_time}ms")
+            
+        return response
 
     @app.middleware("http")
     async def ensure_initialized(request: Request, call_next):
