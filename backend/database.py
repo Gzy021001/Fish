@@ -43,6 +43,11 @@ if _raw_url:
         DATABASE_URL = _raw_url.replace("postgres://", "postgresql://", 1)
     else:
         DATABASE_URL = _raw_url
+
+    # 强制将 Supabase 直连地址 (IPv6) 转换为池化地址 (IPv4) 以兼容 Vercel
+    if "db.kntqzmldrvvonhbggysa.supabase.co" in DATABASE_URL:
+        DATABASE_URL = DATABASE_URL.replace("db.kntqzmldrvvonhbggysa.supabase.co", "aws-0-ap-southeast-1.pooler.supabase.com")
+        DATABASE_URL = DATABASE_URL.replace(":5432", ":6543")
     
     # 针对 Supabase Pooler (6543端口) 经常出现的区域错误进行检测
     if "pooler.supabase.com:6543" in DATABASE_URL and "aws-0-ap-southeast-1" in DATABASE_URL:
