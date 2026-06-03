@@ -8,8 +8,8 @@ logger = logging.getLogger(__name__)
 # 默认本地 SQLite
 SQLITE_URL = "sqlite:///./fish_price.db"
 
-# 优先从环境变量读取 DATABASE_URL (支持 Supabase/PostgreSQL)
-_raw_url = os.getenv("DATABASE_URL", "")
+# 优先从环境变量读取 POSTGRES_URL (Supabase Vercel Integration)，其次读取 DATABASE_URL
+_raw_url = os.getenv("POSTGRES_URL") or os.getenv("DATABASE_URL", "")
 
 if _raw_url:
     # 移除可能存在的空格
