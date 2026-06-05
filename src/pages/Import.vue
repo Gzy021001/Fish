@@ -173,7 +173,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from "vue";
+import { ref, shallowRef, onMounted } from "vue";
 import { useRouter } from "vue-router";
 import * as XLSX from "xlsx";
 import { apiErrorMessage, isAuthError } from "../lib/error";
@@ -189,7 +189,7 @@ const { speciesList, fetchSpecies } = useSpecies();
 const fileInput = ref<HTMLInputElement | null>(null);
 const showPreview = ref(false);
 const importing = ref(false);
-const importRows = ref<any[]>([]);
+const importRows = shallowRef<any[]>([]);
 
 const goBack = () => {
   router.push("/billing");

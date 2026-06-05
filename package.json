@@ -12,12 +12,9 @@
     "lint:fix": "eslint . --ext .ts,.vue --fix"
   },
   "dependencies": {
-    "@vercel/analytics": "^2.0.1",
     "@vercel/speed-insights": "^2.0.0",
-    "ai": "^6.0.194",
     "axios": "^1.15.0",
     "echarts": "^6.0.0",
-    "lucide-vue-next": "^0.511.0",
     "pinia": "^3.0.4",
     "vue": "^3.4.15",
     "vue-i18n": "^11.3.2",

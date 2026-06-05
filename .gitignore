@@ -18,3 +18,4 @@ fish_price.db
 test_rewrite.py
 backend/migration_data.sql
 backend/export_sql.py
+.env*.local

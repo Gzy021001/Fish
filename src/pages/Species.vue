@@ -668,7 +668,7 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, ref, computed } from "vue";
+import { onMounted, ref, shallowRef, computed } from "vue";
 import { useRouter } from "vue-router";
 import * as XLSX from "xlsx";
 import api from "../api";
@@ -699,7 +699,7 @@ const router = useRouter();
 const toast = useToast();
 const { invalidateCache } = useSpecies();
 
-const species = ref<SpeciesItem[]>([]);
+const species = shallowRef<SpeciesItem[]>([]);
 const selectedIds = ref<number[]>([]);
 const showAddModal = ref(false);
 const errorMsg = ref("");

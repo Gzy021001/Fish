@@ -1,8 +1,8 @@
-import { ref } from "vue"
+import { ref, shallowRef } from "vue"
 import api from "../api"
 import { isAuthError } from "../lib/error"
 
-const speciesList = ref<any[]>([])
+const speciesList = shallowRef<any[]>([])
 let fetchPromise: Promise<void> | null = null
 
 const preloadImages = (list: any[]) => {

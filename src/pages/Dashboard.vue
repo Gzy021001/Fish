@@ -380,20 +380,40 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted, computed } from "vue";
+import { ref, shallowRef, onMounted, onUnmounted, computed } from "vue";
 import { useI18n } from "vue-i18n";
-import * as echarts from "echarts";
+import * as echarts from "echarts/core";
+import { BarChart, LineChart } from "echarts/charts";
+import {
+  TitleComponent,
+  TooltipComponent,
+  GridComponent,
+  LegendComponent,
+  DataZoomComponent,
+} from "echarts/components";
+import { CanvasRenderer } from "echarts/renderers";
 import api from "../api";
 import { isAuthError, apiErrorMessage } from "../lib/error";
 
+echarts.use([
+  TitleComponent,
+  TooltipComponent,
+  GridComponent,
+  LegendComponent,
+  DataZoomComponent,
+  BarChart,
+  LineChart,
+  CanvasRenderer,
+]);
+
 const { t } = useI18n();
 
-const speciesList = ref<any[]>([]);
-const trendDataMap = ref<Record<number, any[]>>({});
-const billWeekMap = ref<
+const speciesList = shallowRef<any[]>([]);
+const trendDataMap = shallowRef<Record<number, any[]>>({});
+const billWeekMap = shallowRef<
   Map<string, { total_amount: number; total_weight: number }>
 >(new Map());
-const speciesWeekWeightMap = ref<Map<string, Map<number, number>>>(new Map());
+const speciesWeekWeightMap = shallowRef<Map<string, Map<number, number>>>(new Map());
 const loading = ref(false);
 const trendErrorMsg = ref("");
 const billsErrorMsg = ref("");

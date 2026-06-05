@@ -1,4 +1,4 @@
-import { ref, computed, watch, type Ref } from "vue"
+import { ref, shallowRef, computed, watch, type Ref } from "vue"
 import * as XLSX from "xlsx"
 import api from "../api"
 import { apiErrorMessage, isAuthError } from "../lib/error"
@@ -11,7 +11,7 @@ export function useBillTable(speciesList: Ref<any[]>) {
   const filterDateFrom = ref("")
   const filterDateTo = ref("")
   const billingSearch = ref("")
-  const bills = ref<any[]>([])
+  const bills = shallowRef<any[]>([])
   const selectedBillIds = ref<number[]>([])
 
   const deleteConfirm = ref({
@@ -297,9 +297,11 @@ export function useBillTable(speciesList: Ref<any[]>) {
   const upsertBill = (data: any) => {
     const index = bills.value.findIndex((b: any) => b.id === data.id)
     if (index !== -1) {
-      bills.value[index] = data
+      const newBills = [...bills.value]
+      newBills[index] = data
+      bills.value = newBills
     } else {
-      bills.value.unshift(data)
+      bills.value = [data, ...bills.value]
     }
     currentPage.value = 1
   }

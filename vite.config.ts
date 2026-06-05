@@ -4,6 +4,25 @@ import vue from '@vitejs/plugin-vue'
 // https://vitejs.dev/config/
 export default defineConfig({
   plugins: [vue()],
+  esbuild: {
+    drop: ['console', 'debugger']
+  },
+  build: {
+    target: 'es2015',
+    minify: 'esbuild',
+    cssCodeSplit: true,
+    sourcemap: false,
+    chunkSizeWarningLimit: 500,
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          'vue-vendor': ['vue', 'vue-router', 'pinia', 'vue-i18n'],
+          'echarts-vendor': ['echarts'],
+          'xlsx-vendor': ['xlsx']
+        }
+      }
+    }
+  },
   server: {
     // 允许通过所有 IP 和 Host 访问，防止跨域问题
     host: '0.0.0.0',
