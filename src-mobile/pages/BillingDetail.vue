@@ -31,7 +31,7 @@
       </button>
       <div class="min-w-0">
         <h1 class="truncate text-xl font-serif text-[#6d4f32]">
-          {{ bill?.species?.name_zh || `账单 #${billId}` }}
+          {{ bill?.species?.name_zh || '账单详情' }}
         </h1>
         <p class="mt-1 text-xs text-[#8a6b4a]">只读详情</p>
       </div>
@@ -103,10 +103,6 @@
           <div class="flex items-center justify-between gap-3 text-sm">
             <span class="text-[#8a6b4a]">创建时间</span>
             <span class="text-[#5c4033]">{{ formatDateTime(bill.created_at) }}</span>
-          </div>
-          <div class="flex items-center justify-between gap-3 text-sm">
-            <span class="text-[#8a6b4a]">账单编号</span>
-            <span class="text-[#5c4033]">#{{ bill.id }}</span>
           </div>
         </div>
       </article>

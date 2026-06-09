@@ -156,7 +156,7 @@
         <div class="flex items-start justify-between gap-3">
           <div class="min-w-0 flex-1">
             <p class="truncate text-sm font-semibold text-[#5c4033]">
-              {{ item.species?.name_zh || `账单 #${item.id}` }}
+              {{ item.species?.name_zh || '未知账单' }}
             </p>
             <p class="mt-1 text-xs text-[#8a6b4a]">
               {{ formatWeight(item.weight, item.species?.default_unit) }}
