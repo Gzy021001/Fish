@@ -181,15 +181,85 @@ const fetchSpecies = async () => {
   }
 }
 
+const fetchBillDetail = async () => {
+  if (!isEdit.value) return
+  try {
+    const res = await api.get(`/bills/${billId.value}`)
+    const data = res.data
+    formData.value = {
+      release_date: data.release_date ? data.release_date.slice(0, 10) : '',
+      species_id: data.species_id,
+      weight: String(data.weight),
+      unit_price: String(data.unit_price),
+      status: data.status,
+      fee_value: data.fee_value || 0,
+    }
+  } catch (error: any) {
+    if (!isAuthError(error)) {
+      errorMsg.value = apiErrorMessage(error, '加载账单详情失败')
+    }
+  }
+}
+
 const goBack = () => {
   router.back()
 }
 
 const handleSave = async () => {
-  // TODO: Validation and API calls
+  errorMsg.value = ''
+  
+  // Validation
+  if (!formData.value.species_id) {
+    errorMsg.value = '请选择品种'
+    return
+  }
+  if (!formData.value.weight || parseFloat(String(formData.value.weight)) <= 0) {
+    errorMsg.value = '请输入有效的重量'
+    return
+  }
+  if (!formData.value.unit_price || parseFloat(String(formData.value.unit_price)) <= 0) {
+    errorMsg.value = '请输入有效的单价'
+    return
+  }
+
+  saving.value = true
+  try {
+    const payload = {
+      ...formData.value,
+      weight: parseFloat(String(formData.value.weight)),
+      unit_price: parseFloat(String(formData.value.unit_price)),
+      species_id: Number(formData.value.species_id)
+    }
+
+    if (isEdit.value) {
+      await api.put(`/bills/${billId.value}`, payload)
+      alert('修改成功')
+      goBack()
+    } else {
+      await api.post('/bills', payload)
+      alert('保存成功')
+      // 重置表单，但保留日期
+      const keptDate = formData.value.release_date
+      formData.value = {
+        release_date: keptDate,
+        species_id: '',
+        weight: '',
+        unit_price: '',
+        status: 'COMPLETED',
+        fee_value: 0,
+      }
+    }
+  } catch (error: any) {
+    if (!isAuthError(error)) {
+      errorMsg.value = apiErrorMessage(error, '保存失败')
+    }
+  } finally {
+    saving.value = false
+  }
 }
 
-onMounted(() => {
-  fetchSpecies()
+onMounted(async () => {
+  await fetchSpecies()
+  await fetchBillDetail()
 })
 </script>
