@@ -20,20 +20,14 @@ export function useBillTable(speciesList: Ref<any[]>) {
     isBatch: false,
   })
 
-  watch(
-    () => activeTab.value,
-    (newTab) => {
-      billingSearch.value = ""
-      if (newTab === "history") {
-        filterDateFrom.value = ""
-        filterDateTo.value = ""
-      }
-    },
-  )
+  // activeTab 的状态同步已在 switchTab 中手动处理，避免触发多余的 watcher
 
   watch(billingSearch, () => {
-    currentPage.value = 1
-    fetchBills()
+    if (currentPage.value !== 1) {
+      currentPage.value = 1 // 这会触发 currentPage 的 watcher 来请求数据
+    } else {
+      fetchBills()
+    }
   })
 
   const currentPage = ref(1)
@@ -42,10 +36,13 @@ export function useBillTable(speciesList: Ref<any[]>) {
   watch(currentPage, () => {
     fetchBills()
   })
-  
+
   watch(pageSize, () => {
-    currentPage.value = 1
-    fetchBills()
+    if (currentPage.value !== 1) {
+      currentPage.value = 1
+    } else {
+      fetchBills()
+    }
   })
 
   const filteredBills = computed(() => {
@@ -59,33 +56,10 @@ export function useBillTable(speciesList: Ref<any[]>) {
     return bills.value
   })
 
-  const tableSumWeight = computed(() =>
-    Number(
-      filteredBills.value.reduce((s, b) => s + (b.weight || 0), 0).toFixed(2),
-    ),
-  )
-
-  const tableSumSubtotal = computed(() =>
-    Number(
-      filteredBills.value.reduce((s, b) => s + (b.subtotal || 0), 0).toFixed(2),
-    ),
-  )
-
-  const tableSumFee = computed(() =>
-    Number(
-      filteredBills.value
-        .reduce((s, b) => s + ((b.total_amount || 0) - (b.subtotal || 0)), 0)
-        .toFixed(2),
-    ),
-  )
-
-  const tableSumTotal = computed(() =>
-    Number(
-      filteredBills.value
-        .reduce((s, b) => s + (b.total_amount || 0), 0)
-        .toFixed(2),
-    ),
-  )
+  const tableSumWeight = ref(0)
+  const tableSumSubtotal = ref(0)
+  const tableSumFee = ref(0)
+  const tableSumTotal = ref(0)
 
   const isAllSelected = computed({
     get: () => {
@@ -145,7 +119,7 @@ export function useBillTable(speciesList: Ref<any[]>) {
       params.set("limit", "0") // Disable old limit
       params.set("page", currentPage.value.toString())
       params.set("page_size", pageSize.value.toString())
-      
+
       if (filterDateFrom.value) {
         params.set("date_from", filterDateFrom.value)
       }
@@ -162,14 +136,24 @@ export function useBillTable(speciesList: Ref<any[]>) {
       }
 
       const res = await api.get(`/bills?${params.toString()}`)
-      
+
       if (res.data && typeof res.data.total === 'number') {
         bills.value = res.data.items || []
         totalItems.value = res.data.total
+
+        tableSumWeight.value = res.data.sum_weight || 0
+        tableSumSubtotal.value = res.data.sum_subtotal || 0
+        tableSumTotal.value = res.data.sum_total_amount || 0
+        tableSumFee.value = tableSumTotal.value - tableSumSubtotal.value
       } else {
         // Fallback
         bills.value = Array.isArray(res.data) ? res.data : []
         totalItems.value = bills.value.length
+
+        tableSumWeight.value = Number(bills.value.reduce((s, b) => s + (b.weight || 0), 0).toFixed(2))
+        tableSumSubtotal.value = Number(bills.value.reduce((s, b) => s + (b.subtotal || 0), 0).toFixed(2))
+        tableSumTotal.value = Number(bills.value.reduce((s, b) => s + (b.total_amount || 0), 0).toFixed(2))
+        tableSumFee.value = tableSumTotal.value - tableSumSubtotal.value
       }
     } catch (error: any) {
       if (isAuthError(error)) return
@@ -178,10 +162,25 @@ export function useBillTable(speciesList: Ref<any[]>) {
   }
 
   const switchTab = (tab: string) => {
+    if (activeTab.value === tab) return
+    bills.value = [] // 立即清空当前数据，消除显示旧数据的视觉延迟
     activeTab.value = tab
     selectedBillIds.value = []
-    currentPage.value = 1
-    fetchBills()
+
+    // 手动重置筛选条件，避免触发多个 watcher 导致重复请求
+    const oldSearch = billingSearch.value
+    billingSearch.value = ""
+    if (tab === "history") {
+      filterDateFrom.value = ""
+      filterDateTo.value = ""
+    }
+
+    if (currentPage.value !== 1) {
+      currentPage.value = 1
+    } else if (!oldSearch) {
+      // 只有在 currentPage 和 billingSearch 都没触发 watcher 的情况下才手动请求
+      fetchBills()
+    }
   }
 
   const clearDateFilter = () => {
@@ -197,7 +196,7 @@ export function useBillTable(speciesList: Ref<any[]>) {
       const params = new URLSearchParams()
       params.set("limit", "0")
       params.set("page_size", "-1") // 获取全部
-      
+
       if (filterDateFrom.value) params.set("date_from", filterDateFrom.value)
       if (filterDateTo.value) params.set("date_to", filterDateTo.value)
       if (billingSearch.value.trim()) params.set("q", billingSearch.value.trim())
@@ -206,7 +205,7 @@ export function useBillTable(speciesList: Ref<any[]>) {
       } else if (activeTab.value === "history") {
         params.set("status", "COMPLETED")
       }
-      
+
       const res = await api.get(`/bills?${params.toString()}`)
       if (res.data && res.data.items) {
         source = res.data.items
@@ -267,12 +266,10 @@ export function useBillTable(speciesList: Ref<any[]>) {
         for (const id of selectedBillIds.value) {
           await api.delete(`/bills/${id}`)
         }
-        bills.value = bills.value.filter(
-          (b) => !selectedBillIds.value.includes(b.id),
-        )
         selectedBillIds.value = []
         deleteConfirm.value.show = false
         toast.success("批量删除成功！")
+        await fetchBills()
       } catch (error: any) {
         if (isAuthError(error)) return
         toast.error(apiErrorMessage(error, "批量删除"))
@@ -286,7 +283,7 @@ export function useBillTable(speciesList: Ref<any[]>) {
       try {
         await api.delete(`/bills/${id}`)
         deleteConfirm.value.show = false
-        bills.value = bills.value.filter((b) => b.id !== id)
+        await fetchBills()
       } catch (error: any) {
         if (isAuthError(error)) return
         toast.error(apiErrorMessage(error, "删除单据"))
@@ -294,16 +291,12 @@ export function useBillTable(speciesList: Ref<any[]>) {
     }
   }
 
-  const upsertBill = (data: any) => {
-    const index = bills.value.findIndex((b: any) => b.id === data.id)
-    if (index !== -1) {
-      const newBills = [...bills.value]
-      newBills[index] = data
-      bills.value = newBills
+  const upsertBill = async (data: any) => {
+    if (currentPage.value === 1) {
+      await fetchBills()
     } else {
-      bills.value = [data, ...bills.value]
+      currentPage.value = 1
     }
-    currentPage.value = 1
   }
 
   return {

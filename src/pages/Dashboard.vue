@@ -713,9 +713,14 @@ const fetchBills = async () => {
     const dateFrom = `${selectedYear.value}-01-01`;
     const dateTo = `${selectedYear.value}-12-31`;
     const res = await api.get(
-      `/bills?limit=0&date_from=${dateFrom}&date_to=${dateTo}`,
+      `/bills?limit=0&page_size=-1&date_from=${dateFrom}&date_to=${dateTo}`,
     );
-    const bills = Array.isArray(res.data) ? res.data : [];
+    let bills = [];
+    if (res.data && typeof res.data.total === 'number') {
+      bills = res.data.items || [];
+    } else {
+      bills = Array.isArray(res.data) ? res.data : [];
+    }
     const map = new Map<
       string,
       { total_amount: number; total_weight: number }

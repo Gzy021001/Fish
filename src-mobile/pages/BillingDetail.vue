@@ -64,12 +64,6 @@
               {{ formatMoney(bill.total_amount) }}
             </p>
           </div>
-          <span
-            class="rounded-full px-3 py-1 text-xs"
-            :class="bill.status === 'COMPLETED' ? 'bg-[#e4f3e4] text-[#2f6f3e]' : 'bg-[#f6ead5] text-[#8b6914]'"
-          >
-            {{ bill.status === 'COMPLETED' ? '已完成' : '待处理' }}
-          </span>
         </div>
       </article>
 

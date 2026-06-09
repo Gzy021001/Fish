@@ -103,21 +103,105 @@ def list_bills(db: Session, page: int = 1, page_size: int = 10, limit: int = 100
     if limit > 0:
         query = query.limit(limit)
         items = query.all()
-        return {"total": len(items), "items": items}
+        
+        sum_weight = sum((item.weight or 0) for item in items)
+        sum_subtotal = sum((item.subtotal or 0) for item in items)
+        sum_total_amount = sum((item.total_amount or 0) for item in items)
+        
+        return {
+            "total": len(items), 
+            "items": items,
+            "sum_weight": sum_weight,
+            "sum_subtotal": sum_subtotal,
+            "sum_total_amount": sum_total_amount
+        }
     
     # 真正的后端分页
+    # 必须在修改 SELECT 子句之前计算 count
     total = query.count()
+    
+    # 为了避免 with_entities 修改 query 的状态，我们使用 session 构建一个新的汇总查询
+    from sqlalchemy import func
+    
+    # 构建基础的 where 条件
+    base_filters = []
+    if status:
+        base_filters.append(models.Bill.status == status)
+    if date_from:
+        date_from_dt = datetime.strptime(date_from, "%Y-%m-%d")
+        base_filters.append(
+            or_(
+                models.Bill.release_date >= date_from_dt,
+                (models.Bill.release_date.is_(None) & (models.Bill.created_at >= date_from_dt))
+            )
+        )
+    if date_to:
+        end = datetime.strptime(date_to, "%Y-%m-%d") + timedelta(days=1)
+        base_filters.append(
+            or_(
+                models.Bill.release_date < end,
+                (models.Bill.release_date.is_(None) & (models.Bill.created_at < end))
+            )
+        )
+    if date:
+        date_dt = datetime.strptime(date, "%Y-%m-%d")
+        date_end = date_dt + timedelta(days=1)
+        base_filters.append(models.Bill.release_date >= date_dt)
+        base_filters.append(models.Bill.release_date < date_end)
+        
+    # 汇总查询
+    sum_query = db.query(
+        func.sum(models.Bill.weight),
+        func.sum(models.Bill.subtotal),
+        func.sum(models.Bill.total_amount)
+    )
+    
+    # 如果有 q（品种名），我们需要 join Species
+    if q:
+        sum_query = sum_query.join(models.Species).filter(models.Species.name_zh.ilike(f"%{q}%"))
+        
+    for f in base_filters:
+        sum_query = sum_query.filter(f)
+        
+    sum_result = sum_query.first()
+    
+    sum_weight = sum_result[0] or 0.0 if sum_result else 0.0
+    sum_subtotal = sum_result[1] or 0.0 if sum_result else 0.0
+    sum_total_amount = sum_result[2] or 0.0 if sum_result else 0.0
     
     # 对于导出功能，如果 page_size == -1，则返回全部满足条件的数据
     if page_size == -1:
         items = query.all()
-        return {"total": total, "items": items}
+        return {
+            "total": total, 
+            "items": items,
+            "sum_weight": sum_weight,
+            "sum_subtotal": sum_subtotal,
+            "sum_total_amount": sum_total_amount
+        }
         
     if page_size > 0:
         query = query.offset((page - 1) * page_size).limit(page_size)
     items = query.all()
     
-    return {"total": total, "items": items}
+    return {
+        "total": total, 
+        "items": items,
+        "sum_weight": sum_weight,
+        "sum_subtotal": sum_subtotal,
+        "sum_total_amount": sum_total_amount
+    }
+
+
+def get_bill(bill_id: int, db: Session):
+    from sqlalchemy.orm import joinedload
+
+    return (
+        db.query(models.Bill)
+        .options(joinedload(models.Bill.species))
+        .filter(models.Bill.id == bill_id)
+        .first()
+    ) or get_bill_or_404(bill_id, db)
 
 
 def update_bill(bill_id: int, data: schemas.BillCreate, user: models.User, db: Session):

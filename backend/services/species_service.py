@@ -1,4 +1,3 @@
-import base64
 from typing import Optional
 
 from fastapi import HTTPException, UploadFile
@@ -7,6 +6,7 @@ from sqlalchemy.orm import Session
 import models
 import schemas
 from services.audit_service import record_create, record_update, record_delete
+from services.image_storage import store_image_asset
 
 
 def list_species(db: Session, q: Optional[str] = None):
@@ -14,6 +14,25 @@ def list_species(db: Session, q: Optional[str] = None):
     if q:
         query = query.filter(models.Species.name_zh.ilike(f"%{q}%"))
     return query.order_by(models.Species.id.asc()).all()
+
+
+def serialize_species_list(items, include_images: bool = True):
+    result = []
+    for item in items:
+        result.append(
+            {
+                "id": item.id,
+                "name_zh": item.name_zh,
+                "default_unit": item.default_unit,
+                "default_price": item.default_price,
+                "image_url": item.image_url if include_images else None,
+                "supplier_name": item.supplier_name,
+                "supplier_note": item.supplier_note,
+                "release_date": item.release_date,
+                "created_at": item.created_at,
+            }
+        )
+    return result
 
 
 def get_species(species_id: int, db: Session):
@@ -106,12 +125,8 @@ def upload_image(species_id: int, image: UploadFile, db: Session):
         raise HTTPException(status_code=400, detail="请上传图片文件")
 
     try:
-        # 读取图片内容并转换为 Base64
         contents = image.file.read()
-        base64_data = base64.b64encode(contents).decode("utf-8")
-        data_uri = f"data:{image.content_type};base64,{base64_data}"
-        
-        species.image_url = data_uri
+        species.image_url = store_image_asset(contents, image.content_type, folder="species")
         db.commit()
         db.refresh(species)
         return species

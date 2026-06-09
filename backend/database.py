@@ -1,12 +1,12 @@
 import os
 from sqlalchemy import create_engine
+from pathlib import Path
 from sqlalchemy.orm import declarative_base, sessionmaker
 import logging
-
 logger = logging.getLogger(__name__)
 
 # 默认本地 SQLite
-SQLITE_URL = "sqlite:///./fish_price.db"
+SQLITE_URL = f"sqlite:///{(Path(__file__).resolve().parent / 'fish_price.db').as_posix()}"
 
 # 优先从环境变量读取 POSTGRES_URL (Supabase Vercel Integration)，其次读取 DATABASE_URL
 _raw_url = os.getenv("POSTGRES_URL") or os.getenv("DATABASE_URL", "")

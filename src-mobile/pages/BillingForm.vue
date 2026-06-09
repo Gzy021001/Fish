@@ -87,29 +87,6 @@
           <span class="text-sm text-[#8a6b4a]">小计金额：</span>
           <span class="text-lg font-bold text-[#8b6914]">¥ {{ subtotal.toFixed(2) }}</span>
         </div>
-        
-        <!-- 状态选择 -->
-        <div>
-          <label class="mb-1 block text-sm font-medium text-[#8a6b4a]">状态</label>
-          <div class="flex gap-2">
-            <button
-              type="button"
-              class="flex-1 rounded-xl border py-2.5 text-sm transition-colors"
-              :class="formData.status === 'COMPLETED' ? 'border-[#8b6914] bg-[#8b6914] text-white' : 'border-[#d8c1a0] bg-white text-[#6d4f32]'"
-              @click="formData.status = 'COMPLETED'"
-            >
-              已完成
-            </button>
-            <button
-              type="button"
-              class="flex-1 rounded-xl border py-2.5 text-sm transition-colors"
-              :class="formData.status === 'DRAFT' ? 'border-[#8b6914] bg-[#8b6914] text-white' : 'border-[#d8c1a0] bg-white text-[#6d4f32]'"
-              @click="formData.status = 'DRAFT'"
-            >
-              待处理
-            </button>
-          </div>
-        </div>
       </div>
       
       <button

@@ -14,22 +14,6 @@
       </button>
     </div>
 
-    <div class="flex gap-2 overflow-x-auto pb-1">
-      <button
-        v-for="item in statusOptions"
-        :key="item.value"
-        class="shrink-0 rounded-full border px-3 py-1.5 text-xs transition-colors"
-        :class="
-          status === item.value
-            ? 'border-[#8b6914] bg-[#8b6914] text-white'
-            : 'border-[#d8c1a0] bg-white/80 text-[#6d4f32]'
-        "
-        @click="changeStatus(item.value)"
-      >
-        {{ item.label }}
-      </button>
-    </div>
-
     <div class="rounded-2xl bg-white/90 p-4 shadow-sm space-y-3">
       <input
         v-model.trim="searchText"
@@ -251,18 +235,11 @@ const sumWeight = ref(0)
 const sumSubtotal = ref(0)
 const sumTotalAmount = ref(0)
 const currentPage = ref(1)
-const status = ref<string>('')
 const searchText = ref('')
 const dateFrom = ref('')
 const dateTo = ref('')
 const activeQuickRange = ref('')
 const bills = ref<BillItem[]>([])
-
-const statusOptions = [
-  { label: '全部', value: '' },
-  { label: '待处理', value: 'DRAFT' },
-  { label: '已完成', value: 'COMPLETED' },
-]
 
 const quickDateRanges = [
   { key: 'today', label: '今天' },
@@ -278,15 +255,11 @@ const sumWeightLabel = computed(() => `${Number(sumWeight.value || 0).toFixed(2)
 const sumSubtotalLabel = computed(() => formatMoney(sumSubtotal.value))
 const sumTotalAmountLabel = computed(() => formatMoney(sumTotalAmount.value))
 const hasActiveFilters = computed(() => {
-  return Boolean(status.value || searchText.value || dateFrom.value || dateTo.value)
+  return Boolean(searchText.value || dateFrom.value || dateTo.value)
 })
 const activeFilterTags = computed(() => {
   const tags: string[] = []
-  const statusLabel = statusOptions.find(item => item.value === status.value)?.label
 
-  if (statusLabel && status.value) {
-    tags.push(`状态：${statusLabel}`)
-  }
   if (searchText.value) {
     tags.push(`搜索：${searchText.value}`)
   }
@@ -323,7 +296,6 @@ const formatInputDate = (value: Date) => {
 const restoreStateFromContext = () => {
   const saved = billingContextStore.restoreListState()
   currentPage.value = saved.page
-  status.value = saved.status
   searchText.value = saved.q
   dateFrom.value = saved.dateFrom
   dateTo.value = saved.dateTo
@@ -332,7 +304,6 @@ const restoreStateFromContext = () => {
 const syncListState = () => {
   billingContextStore.setListState({
     page: currentPage.value,
-    status: status.value,
     q: searchText.value,
     dateFrom: dateFrom.value,
     dateTo: dateTo.value,
@@ -354,9 +325,6 @@ const fetchBills = async () => {
       limit: '0',
     })
 
-    if (status.value) {
-      params.set('status', status.value)
-    }
     if (searchText.value) {
       params.set('q', searchText.value)
     }
@@ -383,16 +351,6 @@ const fetchBills = async () => {
   } finally {
     loading.value = false
   }
-}
-
-const changeStatus = (value: string) => {
-  if (status.value === value) return
-  status.value = value
-  if (currentPage.value === 1) {
-    fetchBills()
-    return
-  }
-  currentPage.value = 1
 }
 
 const applyQuickRange = (key: string) => {
@@ -428,7 +386,6 @@ const resetFilters = () => {
   searchText.value = ''
   dateFrom.value = ''
   dateTo.value = ''
-  status.value = ''
   activeQuickRange.value = ''
   if (currentPage.value === 1) {
     fetchBills()

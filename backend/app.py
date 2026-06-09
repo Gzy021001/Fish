@@ -13,6 +13,7 @@ from database import engine, Base, get_db
 import bootstrap
 
 from routers import auth, species, bills, logs, stats
+from services.image_storage import get_uploads_dir
 
 # 配置日志
 logging.basicConfig(level=logging.INFO)
@@ -64,6 +65,7 @@ def init_app():
 
 def create_app() -> FastAPI:
     app = FastAPI(title="Fish Price Platform API")
+    uploads_dir = get_uploads_dir()
 
     # Add GZip Middleware to compress large payloads (like base64 images)
     app.add_middleware(GZipMiddleware, minimum_size=1000)
@@ -74,6 +76,8 @@ def create_app() -> FastAPI:
         allow_methods=["*"],
         allow_headers=["*"],
     )
+
+    app.mount("/uploads", StaticFiles(directory=str(uploads_dir), check_dir=False), name="uploads")
 
     app.include_router(auth.router)
     app.include_router(species.router)

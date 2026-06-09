@@ -10,6 +10,7 @@ from database import get_db
 from cache import trends_cache
 from services.bill_service import (
     create_bill,
+    get_bill,
     sync_bills,
     list_bills,
     update_bill,
@@ -55,6 +56,15 @@ def list_bills_route(
     current_user: models.User = Depends(auth.get_current_user),
 ):
     return list_bills(db, page=page, page_size=page_size, limit=limit, status=status, date=date, date_from=date_from, date_to=date_to, q=q)
+
+
+@router.get("/bills/{bill_id}", response_model=schemas.Bill)
+def get_bill_route(
+    bill_id: int,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(auth.get_current_user),
+):
+    return get_bill(bill_id, db)
 
 
 @router.put("/bills/{bill_id}", response_model=schemas.Bill)

@@ -15,6 +15,7 @@ from services.species_service import (
     update_species,
     upload_image,
     delete_species,
+    serialize_species_list,
 )
 
 router = APIRouter(prefix="/api", tags=["species"])
@@ -23,15 +24,16 @@ router = APIRouter(prefix="/api", tags=["species"])
 @router.get("/species", response_model=List[schemas.Species])
 def list_species_route(
     q: Optional[str] = Query(None, description="搜索品种名称"),
+    include_images: bool = Query(True, description="是否在列表中包含图片字段"),
     db: Session = Depends(get_db),
     current_user: models.User = Depends(auth.get_current_user),
 ):
-    cache_key = f"species_list_{q or 'all'}"
+    cache_key = f"species_list_{q or 'all'}_{'with_images' if include_images else 'lite'}"
     cached_result = species_cache.get(cache_key)
     if cached_result is not None:
         return cached_result
         
-    result = list_species(db, q)
+    result = serialize_species_list(list_species(db, q), include_images=include_images)
     species_cache.set(cache_key, result)
     return result
 

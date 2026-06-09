@@ -538,18 +538,35 @@
                 >
                   <div
                     class="bg-white rounded-2xl shadow-xl border border-dunhuang-yellow/20 w-[340px]"
-                    style="box-shadow: 0 12px 36px rgba(92,64,51,0.12), 0 4px 12px rgba(92,64,51,0.06);"
+                    style="
+                      box-shadow:
+                        0 12px 36px rgba(92, 64, 51, 0.12),
+                        0 4px 12px rgba(92, 64, 51, 0.06);
+                    "
                   >
                     <!-- 面板标题 -->
                     <div class="flex items-center gap-2.5 px-5 pt-4 pb-3">
-                      <div class="w-1 h-5 rounded-full bg-dunhuang-yellow shrink-0"></div>
-                      <h4 class="text-sm font-serif font-bold text-dunhuang-blue">日期筛选</h4>
-                      <span v-if="dateRangeLabel" class="text-xs text-dunhuang-text/40 ml-auto truncate max-w-[160px]">{{ dateRangeLabel }}</span>
+                      <div
+                        class="w-1 h-5 rounded-full bg-dunhuang-yellow shrink-0"
+                      ></div>
+                      <h4
+                        class="text-sm font-serif font-bold text-dunhuang-blue"
+                      >
+                        日期筛选
+                      </h4>
+                      <span
+                        v-if="dateRangeLabel"
+                        class="text-xs text-dunhuang-text/40 ml-auto truncate max-w-[160px]"
+                        >{{ dateRangeLabel }}</span
+                      >
                     </div>
 
                     <!-- 快捷筛选 -->
                     <div class="px-5 pb-4 border-b border-dunhuang-yellow/8">
-                      <label class="block text-[11px] text-dunhuang-text/35 mb-2 tracking-wider">快捷选择</label>
+                      <label
+                        class="block text-[11px] text-dunhuang-text/35 mb-2 tracking-wider"
+                        >快捷选择</label
+                      >
                       <div class="grid grid-cols-4 gap-2">
                         <button
                           v-for="preset in datePresets"
@@ -569,8 +586,13 @@
 
                     <!-- 自定义日期范围 -->
                     <div class="px-5 py-4">
-                      <label class="block text-[11px] text-dunhuang-text/35 mb-3 tracking-wider">自定义范围</label>
-                      <div class="flex items-center gap-1.5 border border-dunhuang-yellow/30 rounded-lg bg-dunhuang-bg/30 px-2 h-9 w-full hover:border-dunhuang-yellow/50 focus-within:border-dunhuang-blue focus-within:bg-white focus-within:shadow-sm focus-within:shadow-dunhuang-blue/5 transition-all duration-200">
+                      <label
+                        class="block text-[11px] text-dunhuang-text/35 mb-3 tracking-wider"
+                        >自定义范围</label
+                      >
+                      <div
+                        class="flex items-center gap-1.5 border border-dunhuang-yellow/30 rounded-lg bg-dunhuang-bg/30 px-2 h-9 w-full hover:border-dunhuang-yellow/50 focus-within:border-dunhuang-blue focus-within:bg-white focus-within:shadow-sm focus-within:shadow-dunhuang-blue/5 transition-all duration-200"
+                      >
                         <DateInput
                           v-model="pickerFromDate"
                           placeholder="开始日期"
@@ -579,7 +601,10 @@
                           variant="ghost"
                           class="flex-1 min-w-0"
                         />
-                        <span class="text-dunhuang-text/40 text-sm font-medium shrink-0 px-1 leading-none flex items-center justify-center pt-[1px]">至</span>
+                        <span
+                          class="text-dunhuang-text/40 text-sm font-medium shrink-0 px-1 leading-none flex items-center justify-center pt-[1px]"
+                          >至</span
+                        >
                         <DateInput
                           v-model="pickerToDate"
                           placeholder="结束日期"
@@ -592,10 +617,15 @@
                     </div>
 
                     <!-- 操作按钮 -->
-                    <div class="flex justify-between items-center px-5 py-3 bg-dunhuang-bg/40 border-t border-dunhuang-yellow/8 rounded-b-2xl">
+                    <div
+                      class="flex justify-between items-center px-5 py-3 bg-dunhuang-bg/40 border-t border-dunhuang-yellow/8 rounded-b-2xl"
+                    >
                       <button
                         v-if="filterDateFrom || filterDateTo"
-                        @click="clearDateFilter(); showDatePicker = false"
+                        @click="
+                          clearDateFilter();
+                          showDatePicker = false;
+                        "
                         class="text-xs text-dunhuang-text/40 hover:text-dunhuang-red transition-colors"
                       >
                         清除筛选
@@ -707,14 +737,16 @@
         <div
           class="border border-dunhuang-yellow/30 rounded-lg bg-white overflow-hidden"
         >
-          <div class="overflow-y-scroll overflow-x-hidden custom-scrollbar h-[534px]">
+          <div
+            class="overflow-y-scroll overflow-x-hidden custom-scrollbar h-[534px]"
+          >
             <div class="flex flex-col">
               <div
                 class="sticky top-0 bg-dunhuang-bg/90 backdrop-blur z-20 flex w-full shrink-0 transform-gpu h-[42px]"
               >
                 <div
-                    class="bg-dunhuang-yellow/20 text-dunhuang-blue font-sans font-bold text-sm flex w-full h-full"
-                  >
+                  class="bg-dunhuang-yellow/20 text-dunhuang-blue font-sans font-bold text-sm flex w-full h-full"
+                >
                   <div
                     class="px-3 py-2 border-b border-dunhuang-yellow/40 flex items-center justify-center w-10 shrink-0 sticky left-0 bg-dunhuang-yellow/20 backdrop-blur z-30 sticky-col-left"
                   >
@@ -925,12 +957,12 @@
             条
           </div>
 
-          <Pagination 
-          v-model:currentPage="currentPage" 
-          v-model:pageSize="pageSize"
-          :totalPages="totalPages" 
-          :showPageSizeSelect="true"
-        />
+          <Pagination
+            v-model:currentPage="currentPage"
+            v-model:pageSize="pageSize"
+            :totalPages="totalPages"
+            :showPageSizeSelect="true"
+          />
         </div>
       </div>
     </Transition>

@@ -12,7 +12,6 @@
     "lint:fix": "eslint . --ext .ts,.vue --fix"
   },
   "dependencies": {
-    "@vercel/speed-insights": "^2.0.0",
     "axios": "^1.15.0",
     "echarts": "^6.0.0",
     "pinia": "^3.0.4",
