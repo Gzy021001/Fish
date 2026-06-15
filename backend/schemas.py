@@ -1,4 +1,4 @@
-from pydantic import BaseModel, field_serializer
+from pydantic import BaseModel, field_serializer, field_validator
 from datetime import datetime, date
 from typing import Optional
 
@@ -114,6 +114,25 @@ class BatchImportRow(BaseModel):
     unit_price: float = 0.0
     fee_value: float = 0.0
     release_date: Optional[datetime] = None
+
+    @field_validator('release_date', mode='before')
+    @classmethod
+    def coerce_release_date(cls, v):
+        if v is None or v == '':
+            return None
+        if isinstance(v, datetime):
+            return v
+        s = str(v).strip()
+        for fmt in ('%Y-%m-%d', '%Y-%m', '%Y/%m/%d', '%Y.%m.%d'):
+            try:
+                return datetime.strptime(s, fmt)
+            except ValueError:
+                continue
+        # Last resort: try ISO format
+        try:
+            return datetime.fromisoformat(s)
+        except (ValueError, TypeError):
+            return None
 
 class BatchImportRequest(BaseModel):
     rows: list[BatchImportRow]

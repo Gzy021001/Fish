@@ -1,4 +1,4 @@
-import json
+﻿import json
 from datetime import datetime, timedelta, timezone
 
 from fastapi import HTTPException
@@ -313,7 +313,7 @@ def batch_create_bills(data: schemas.BatchImportRequest, user: models.User, db: 
                 name_zh=name_zh,
                 default_price=row.unit_price,
                 default_unit="公斤",
-                release_date=row.release_date + '-01' if row.release_date and len(row.release_date) == 7 else row.release_date,
+                release_date=row.release_date,
             )
             db.add(species)
             db.flush()
@@ -324,7 +324,7 @@ def batch_create_bills(data: schemas.BatchImportRequest, user: models.User, db: 
             weight=row.weight or 0,
             unit_price=row.unit_price,
             fee_value=row.fee_value or 0,
-            release_date=row.release_date + '-01' if row.release_date and len(row.release_date) == 7 else row.release_date,
+            release_date=row.release_date,
         )
         bill = create_bill(bill_create, user, db)
         bills.append(bill)

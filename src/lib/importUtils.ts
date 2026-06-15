@@ -38,7 +38,7 @@ export function normalizeSpeciesName(raw: string): string {
   if (pm2) s = pm2[2]
   s = s.replace(/[（(]\u4e2a[）)]/g, "")
   s = s.replace(/[\(（][^)）]*[\)）]/g, "")
-  if (s.length > 3) { s = s.replace(/\u9c7c\u7c7b$/,"").replace(/\u9c7c$/,"") }
+  if (s.length > 4) { s = s.replace(/鱼鱻$/,"") }
   s = s.replace(/[\uff01-\uff5e]/g, (c:string)=>String.fromCharCode(c.charCodeAt(0)-0xfee0))
   return s.trim()
 }
