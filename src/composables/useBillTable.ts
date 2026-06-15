@@ -1,4 +1,4 @@
-import { ref, shallowRef, computed, watch, type Ref } from "vue"
+﻿import { ref, shallowRef, computed, watch, type Ref } from "vue"
 import * as XLSX from "xlsx"
 import api from "../api"
 import { apiErrorMessage, isAuthError } from "../lib/error"
@@ -129,11 +129,7 @@ export function useBillTable(speciesList: Ref<any[]>) {
       if (billingSearch.value.trim()) {
         params.set("q", billingSearch.value.trim())
       }
-      if (activeTab.value === "current") {
-        params.set("status", "DRAFT")
-      } else if (activeTab.value === "history") {
-        params.set("status", "COMPLETED")
-      }
+
 
       const res = await api.get(`/bills?${params.toString()}`)
 
@@ -200,11 +196,7 @@ export function useBillTable(speciesList: Ref<any[]>) {
       if (filterDateFrom.value) params.set("date_from", filterDateFrom.value)
       if (filterDateTo.value) params.set("date_to", filterDateTo.value)
       if (billingSearch.value.trim()) params.set("q", billingSearch.value.trim())
-      if (activeTab.value === "current") {
-        params.set("status", "DRAFT")
-      } else if (activeTab.value === "history") {
-        params.set("status", "COMPLETED")
-      }
+
 
       const res = await api.get(`/bills?${params.toString()}`)
       if (res.data && res.data.items) {
