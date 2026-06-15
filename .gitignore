@@ -1,4 +1,4 @@
-python311/
+﻿python311/
 .venv/
 venv/
 env/
@@ -19,3 +19,12 @@ test_rewrite.py
 backend/migration_data.sql
 backend/export_sql.py
 .env*.local
+# IDE spec and local config files
+.trae/
+.claude/
+
+# Redundant / unused entry points
+backend/main.py
+
+# Root-level redundant files
+requirements.txt

@@ -1,5 +1,9 @@
 function parseUTC(dateStr: string | undefined | null): Date | null {
   if (!dateStr) return null
+  // 处理 yyyy-mm 格式（缺日期），自动补为当月1日
+  if (/^\d{4}-\d{2}$/.test(dateStr)) {
+    dateStr = dateStr + "-01"
+  }
   if (dateStr.endsWith("Z") || dateStr.includes("+") || dateStr.includes("[")) {
     return new Date(dateStr)
   }

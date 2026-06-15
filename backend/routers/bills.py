@@ -15,6 +15,7 @@ from services.bill_service import (
     list_bills,
     update_bill,
     delete_bill,
+    batch_create_bills,
 )
 
 router = APIRouter(prefix="/api", tags=["bills"])
@@ -58,6 +59,17 @@ def list_bills_route(
     return list_bills(db, page=page, page_size=page_size, limit=limit, status=status, date=date, date_from=date_from, date_to=date_to, q=q)
 
 
+@router.post("/bills/batch", response_model=schemas.BatchImportResult)
+def batch_create_bills_route(
+    payload: schemas.BatchImportRequest,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(auth.get_current_user),
+):
+    result = batch_create_bills(payload, current_user, db)
+    trends_cache.clear()
+    return result
+
+
 @router.get("/bills/{bill_id}", response_model=schemas.Bill)
 def get_bill_route(
     bill_id: int,
@@ -88,3 +100,4 @@ def delete_bill_route(
     result = delete_bill(bill_id, current_user, db)
     trends_cache.clear()
     return result
+

@@ -1216,15 +1216,10 @@
       @confirm="executeDeleteBill"
     >
       <template v-if="!deleteConfirm.isBatch">
-        即将删除单号为 #{{
-          String(deleteConfirm.id).padStart(5, "0")
-        }}
-        的单据。<br />此操作不可撤销，确定要删除吗？
+        确定删除此条单据？<br />此操作不可撤销。
       </template>
       <template v-else>
-        即将删除选中的
-        {{ selectedBillIds.length }}
-        条。<br />此操作不可撤销，确定要批量删除吗？
+        确定删除选中的 {{ selectedBillIds.length }} 条单据？<br />此操作不可撤销。
       </template>
     </ConfirmDialog>
   </div>

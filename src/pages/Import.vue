@@ -83,6 +83,13 @@
         </div>
 
         <div v-else class="flex-1 flex flex-col min-h-0 relative z-10">
+          <div class="mb-3 shrink-0 flex items-center gap-3 text-xs text-dunhuang-text/50 bg-dunhuang-bg/50 rounded-lg px-4 py-2">
+            <span>识别列：</span>
+            <template v-for="(col, key) in detectedColumns" :key="key">
+              <span v-if="col" class="text-dunhuang-green font-medium">{{ keyLabels[key] + " → " + col }}</span>
+              <span v-else class="text-dunhuang-red/60">{{ keyLabels[key] + "=未识别" }}</span>
+            </template>
+          </div>
           <div class="mb-4 flex justify-between items-center shrink-0">
             <h4 class="text-lg font-serif text-dunhuang-blue">预览导入数据</h4>
             <div class="text-sm text-dunhuang-text/70">
@@ -95,8 +102,9 @@
           </div>
 
           <div
-            class="flex-1 overflow-auto custom-scrollbar border border-dunhuang-yellow/30 rounded-lg mb-6 min-h-0"
+            class="flex-1 border border-dunhuang-yellow/30 rounded-lg mb-6 min-h-0 overflow-hidden" :class="{ 'max-h-[55vh]': importRows.length > 10 }"
           >
+            <div class="h-full overflow-y-auto thin-scrollbar">
             <table class="w-full text-left border-collapse whitespace-nowrap">
               <thead class="sticky top-0 bg-dunhuang-bg">
                 <tr class="bg-dunhuang-yellow/20 text-dunhuang-blue font-serif">
@@ -136,7 +144,7 @@
                     {{ formatMoney(row.fee_value) }}
                   </td>
                   <td class="p-3 text-sm">
-                    {{ row.release_date || "-" }}
+                    {{ dateStr(row.release_date) || "-" }}
                   </td>
                 </tr>
                 <tr v-if="importRows.length === 0">
@@ -146,6 +154,7 @@
                 </tr>
               </tbody>
             </table>
+            </div>
           </div>
 
           <div class="flex justify-end gap-3 shrink-0">
@@ -166,30 +175,44 @@
               {{ importing ? "导入中..." : "确认导入" }}
             </button>
           </div>
-        </div>
+    </div>
       </Transition>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, shallowRef, onMounted } from "vue";
+import { ref, shallowRef } from "vue";
 import { useRouter } from "vue-router";
 import * as XLSX from "xlsx";
 import { apiErrorMessage, isAuthError } from "../lib/error";
-import { formatMoney } from "../lib/utils";
-import { useSpecies } from "../composables/useSpecies";
+import { dateStr, formatMoney } from "../lib/utils";
 import { useToast } from "../composables/useToast";
-import { saveImportedRows } from "../services/billingEntryService";
+import { saveImportedRowsBatch } from "../services/billingEntryService";
+import {
+  detectColumns,
+  parseImportRows,
+  parseSheetDate,
+  type ParsedRow,
+  type SkippedRow,
+} from "../lib/importUtils";
 
 const router = useRouter();
 const toast = useToast();
-const { speciesList, fetchSpecies } = useSpecies();
 
 const fileInput = ref<HTMLInputElement | null>(null);
 const showPreview = ref(false);
 const importing = ref(false);
 const importRows = shallowRef<any[]>([]);
+const detectedColumns = shallowRef<Record<string, string | null>>({});
+
+const keyLabels: Record<string, string> = {
+  species: "品种",
+  weight: "重量",
+  unit_price: "单价",
+  fee_value: "服务费",
+  release_date: "日期",
+};
 
 const goBack = () => {
   router.push("/billing");
@@ -240,6 +263,39 @@ const cancelImport = () => {
   importRows.value = [];
 };
 
+/** Auto-detect the header row by scanning for known column keywords. */
+function getSheetHeaders(worksheet: XLSX.WorkSheet): { headers: string[]; headerRow: number } {
+  const range = XLSX.utils.decode_range(worksheet["!ref"] || "A1");
+  const headerKeywords = ['品种', '品名', '名称', '物种', '重量', '公斤', '斤', '单价', '价格', '总计', '实付', '服务费', '日期'];
+
+  // Scan first 10 rows for header-like content
+  for (let r = range.s.r; r <= Math.min(range.s.r + 10, range.e.r); r++) {
+    const rowValues: string[] = [];
+    let keywordMatches = 0;
+    for (let c = range.s.c; c <= range.e.c; c++) {
+      const addr = XLSX.utils.encode_cell({ r, c });
+      const cell = worksheet[addr];
+      const val = cell ? String(cell.v ?? "").trim() : "";
+      rowValues.push(val);
+      if (headerKeywords.some(k => val.includes(k))) {
+        keywordMatches++;
+      }
+    }
+    if (keywordMatches >= 2) {
+      return { headers: rowValues, headerRow: r };
+    }
+  }
+
+  // Fallback: use row 1
+  const fallback: string[] = [];
+  for (let c = range.s.c; c <= range.e.c; c++) {
+    const addr = XLSX.utils.encode_cell({ r: range.s.r, c });
+    const cell = worksheet[addr];
+    fallback.push(cell ? String(cell.v ?? "").trim() : "");
+  }
+  return { headers: fallback, headerRow: range.s.r };
+}
+
 const handleFileUpload = (event: Event) => {
   const input = event.target as HTMLInputElement;
   const file = input.files?.[0];
@@ -250,28 +306,52 @@ const handleFileUpload = (event: Event) => {
     try {
       const data = new Uint8Array(e.target?.result as ArrayBuffer);
       const workbook = XLSX.read(data, { type: "array" });
-      const firstSheetName = workbook.SheetNames[0];
-      const worksheet = workbook.Sheets[firstSheetName];
 
-      const jsonData = XLSX.utils.sheet_to_json(worksheet);
+      const allValid: any[] = [];
+      const allSkipped: any[] = [];
+      let firstColumns: Record<string, string | null> | null = null;
 
-      importRows.value = jsonData
-        .map((row: any) => {
-          const name_zh = row["品种"] || row["名称"] || "";
-          const weight = parseFloat(row["重量（公斤）"] || row["重量"] || 0);
-          const unit_price = parseFloat(row["单价（元）"] || row["单价"] || 0);
-          const fee_value = parseFloat(row["服务费（元）"] || row["服务费"] || 0);
-          const release_date = row["放生日期"] || row["日期"] || "";
+      // Process ALL sheets
+      for (const sheetName of workbook.SheetNames) {
+        const worksheet = workbook.Sheets[sheetName];
+        if (!worksheet || !worksheet["!ref"]) continue;
 
-          return {
-            name_zh,
-            weight,
-            unit_price,
-            fee_value,
-            release_date: release_date ? String(release_date).trim() : undefined,
-          };
-        })
-        .filter((r) => r.name_zh && r.unit_price > 0);
+        // Parse release date from sheet tab name (e.g., "1月3日" → "2026-01-03")
+        const sheetDate = parseSheetDate(sheetName, 2026);
+
+        // Detect header row automatically
+        const { headers, headerRow } = getSheetHeaders(worksheet);
+        const columns = detectColumns(headers);
+        if (!firstColumns) {
+          firstColumns = columns;
+          detectedColumns.value = columns;
+        }
+
+        // Read raw rows and build properly-keyed objects
+        const rawRows = XLSX.utils.sheet_to_json(worksheet, { header: 1, defval: "" }) as unknown[][];
+        const dataStartRow = headerRow + 1;
+        const jsonData = rawRows.slice(dataStartRow).map(row => {
+          const obj: Record<string, unknown> = {};
+          headers.forEach((h, i) => {
+            if (h) obj[h] = (row as unknown[])[i];
+          });
+          // Force release_date from sheet tab if not already present
+          if (sheetDate && !obj[columns.release_date || '']) {
+            obj[columns.release_date || '放生日期'] = sheetDate;
+          }
+          return obj;
+        });
+
+        const result = parseImportRows(
+          jsonData as Record<string, unknown>[],
+          columns,
+          sheetDate, // fallback: date from sheet tab if no date column in headers
+        );
+        allValid.push(...result.validRows);
+        allSkipped.push(...result.skippedRows);
+      }
+
+      importRows.value = allValid;
 
       showPreview.value = true;
     } catch (error) {
@@ -285,8 +365,12 @@ const handleFileUpload = (event: Event) => {
 const confirmImport = async () => {
   importing.value = true;
   try {
-    const saved = await saveImportedRows(importRows.value, speciesList.value);
-    toast.success(`成功导入 ${saved} 条`);
+    const result = await saveImportedRowsBatch(importRows.value, true);
+    if (result.skip_count > 0) {
+      toast.success(`成功导入 ${result.success_count} 条，${result.skip_count} 条被跳过`);
+    } else {
+      toast.success(`成功导入 ${result.success_count} 条`);
+    }
     router.push("/billing");
   } catch (error: any) {
     if (isAuthError(error)) return;
@@ -297,7 +381,4 @@ const confirmImport = async () => {
   }
 };
 
-onMounted(() => {
-  fetchSpecies();
-});
 </script>

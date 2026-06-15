@@ -277,6 +277,67 @@ def delete_bill(bill_id: int, user: models.User, db: Session):
     return {"message": "Bill deleted successfully"}
 
 
+
+def batch_create_bills(data: schemas.BatchImportRequest, user: models.User, db: Session):
+    success_count = 0
+    skip_count = 0
+    bills = []
+    errors = []
+
+    # If replace mode: delete existing bills with same release dates
+    if data.replace:
+        from datetime import datetime, timedelta
+        dates_to_replace = set()
+        for row in data.rows:
+            if row.release_date:
+                dates_to_replace.add(row.release_date)
+        for d in dates_to_replace:
+            db.query(models.Bill).filter(
+                models.Bill.release_date >= d,
+                models.Bill.release_date < (d + timedelta(days=1))
+            ).delete()
+        db.flush()
+
+    existing_species = {s.name_zh: s for s in db.query(models.Species).all()}
+
+    for row in data.rows:
+        name_zh = row.name_zh.strip()
+        if not name_zh or row.unit_price <= 0:
+            skip_count += 1
+            errors.append(f'跳过 "{name_zh or "(空)"}": 名称无效或单价 <= 0')
+            continue
+
+        species = existing_species.get(name_zh)
+        if not species:
+            species = models.Species(
+                name_zh=name_zh,
+                default_price=row.unit_price,
+                default_unit="公斤",
+                release_date=row.release_date + '-01' if row.release_date and len(row.release_date) == 7 else row.release_date,
+            )
+            db.add(species)
+            db.flush()
+            existing_species[name_zh] = species
+
+        bill_create = schemas.BillCreate(
+            species_id=species.id,
+            weight=row.weight or 0,
+            unit_price=row.unit_price,
+            fee_value=row.fee_value or 0,
+            release_date=row.release_date + '-01' if row.release_date and len(row.release_date) == 7 else row.release_date,
+        )
+        bill = create_bill(bill_create, user, db)
+        bills.append(bill)
+        success_count += 1
+
+    return schemas.BatchImportResult(
+        success_count=success_count,
+        skip_count=skip_count,
+        bills=bills,
+        errors=errors,
+    )
+
+
 def get_price_trend(species_id: int, db: Session, year: int = None):
     species = db.query(models.Species).filter(models.Species.id == species_id).first()
     if not species:

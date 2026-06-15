@@ -614,7 +614,7 @@
                         {{ formatMoney(row.default_price) }}
                       </td>
                       <td class="px-4 py-2 text-sm">
-                        {{ row.release_date || "-" }}
+                        {{ dateStr(row.release_date) || "-" }}
                       </td>
                       <td class="px-4 py-2">
                         <button

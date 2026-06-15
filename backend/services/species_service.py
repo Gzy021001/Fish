@@ -1,3 +1,4 @@
+import logging
 from typing import Optional
 
 from fastapi import HTTPException, UploadFile
@@ -7,6 +8,8 @@ import models
 import schemas
 from services.audit_service import record_create, record_update, record_delete
 from services.image_storage import store_image_asset
+
+logger = logging.getLogger(__name__)
 
 
 def list_species(db: Session, q: Optional[str] = None):
@@ -131,7 +134,7 @@ def upload_image(species_id: int, image: UploadFile, db: Session):
         db.refresh(species)
         return species
     except Exception as e:
-        print(f"Error processing image: {e}")
+        logger.error("Error processing image: %s", e)
         raise HTTPException(status_code=500, detail="图片处理失败，请稍后重试")
 
 

@@ -106,3 +106,22 @@ class TokenData(BaseModel):
 
 class SyncRequest(BaseModel):
     date: str
+
+
+class BatchImportRow(BaseModel):
+    name_zh: str
+    weight: float = 0.0
+    unit_price: float = 0.0
+    fee_value: float = 0.0
+    release_date: Optional[datetime] = None
+
+class BatchImportRequest(BaseModel):
+    rows: list[BatchImportRow]
+    replace: bool = False  # If True, delete existing bills with same release_date before import
+
+class BatchImportResult(BaseModel):
+    success_count: int
+    skip_count: int
+    bills: list[Bill]
+    errors: list[str] = []
+

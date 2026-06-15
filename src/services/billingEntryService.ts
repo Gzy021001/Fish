@@ -74,3 +74,10 @@ export async function saveImportedRows(
   }
   return saved
 }
+
+
+/** Batch import: single API call for all rows. Much faster than sequential. */
+export async function saveImportedRowsBatch(rows: ImportRow[], replace = false): Promise<{ success_count: number; skip_count: number; errors: string[] }> {
+  const res = await api.post('/bills/batch', { rows, replace })
+  return res.data
+}
