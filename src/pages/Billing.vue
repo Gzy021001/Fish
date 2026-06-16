@@ -103,8 +103,7 @@
                 <div>
                   <label
                     class="block text-sm font-medium text-dunhuang-text mb-2"
-                    >重量 ({{ editingSpecies?.default_unit ?? "公斤" }})</label
-                  >
+                    >重量 ({{ editingSpecies?.default_unit ?? "公斤" }})</label>
                   <input
                     type="text"
                     inputmode="decimal"
@@ -633,6 +632,7 @@
                       <span v-else></span>
                       <div class="flex gap-2">
                         <button
+                        <button
                           @click="cancelDatePicker"
                           class="px-4 py-1.5 rounded-lg text-xs text-dunhuang-text/50 hover:text-dunhuang-text/70 hover:bg-dunhuang-bg transition-colors"
                         >
@@ -716,7 +716,7 @@
               type="button"
               class="h-8 px-3.5 rounded-lg text-sm font-medium transition-all duration-200 text-dunhuang-blue/80 hover:text-dunhuang-blue hover:bg-dunhuang-blue/6 border border-dunhuang-blue/15 hover:border-dunhuang-blue/35"
             >
-              {{ activeTab === "current" ? "导出" : "导出" }}
+              导出
             </button>
 
             <!-- current tab 专有按钮 -->
@@ -1219,7 +1219,8 @@
         确定删除此条单据？<br />此操作不可撤销。
       </template>
       <template v-else>
-        确定删除选中的 {{ selectedBillIds.length }} 条单据？<br />此操作不可撤销。
+        确定删除选中的
+        {{ selectedBillIds.length }} 条单据？<br />此操作不可撤销。
       </template>
     </ConfirmDialog>
   </div>

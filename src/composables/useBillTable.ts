@@ -119,6 +119,7 @@ export function useBillTable(speciesList: Ref<any[]>) {
       params.set("limit", "0") // Disable old limit
       params.set("page", currentPage.value.toString())
       params.set("page_size", pageSize.value.toString())
+      params.set("status", activeTab.value === "current" ? "DRAFT" : "COMPLETED")
 
       if (filterDateFrom.value) {
         params.set("date_from", filterDateFrom.value)
@@ -163,18 +164,10 @@ export function useBillTable(speciesList: Ref<any[]>) {
     activeTab.value = tab
     selectedBillIds.value = []
 
-    // 手动重置筛选条件，避免触发多个 watcher 导致重复请求
-    const oldSearch = billingSearch.value
-    billingSearch.value = ""
-    if (tab === "history") {
-      filterDateFrom.value = ""
-      filterDateTo.value = ""
-    }
-
+    // 切换 tab 时保留搜索和日期筛选，只由 status 参数区分不同标签
     if (currentPage.value !== 1) {
       currentPage.value = 1
-    } else if (!oldSearch) {
-      // 只有在 currentPage 和 billingSearch 都没触发 watcher 的情况下才手动请求
+    } else {
       fetchBills()
     }
   }
@@ -192,6 +185,7 @@ export function useBillTable(speciesList: Ref<any[]>) {
       const params = new URLSearchParams()
       params.set("limit", "0")
       params.set("page_size", "-1") // 获取全部
+      params.set("status", activeTab.value === "current" ? "DRAFT" : "COMPLETED")
 
       if (filterDateFrom.value) params.set("date_from", filterDateFrom.value)
       if (filterDateTo.value) params.set("date_to", filterDateTo.value)

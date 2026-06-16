@@ -19,6 +19,11 @@ def create_bill(data: schemas.BillCreate, user: models.User, db: Session):
         data.weight, data.unit_price, data.fee_value
     )
 
+    if data.release_date and data.release_date.date() <= (datetime.now(timezone.utc) - timedelta(days=1)).date():
+        new_status = "COMPLETED"
+    else:
+        new_status = data.status or "DRAFT"
+
     bill = models.Bill(
         user_id=user.id,
         species_id=data.species_id,
@@ -29,7 +34,7 @@ def create_bill(data: schemas.BillCreate, user: models.User, db: Session):
         fee_type=data.fee_type,
         fee_value=data.fee_value,
         total_amount=total_amount,
-        status=data.status or "DRAFT",
+        status=new_status,
         release_date=data.release_date,
     )
     db.add(bill)
@@ -229,7 +234,10 @@ def update_bill(bill_id: int, data: schemas.BillCreate, user: models.User, db: S
     bill.currency = data.currency
     bill.fee_type = data.fee_type
     bill.fee_value = data.fee_value
-    bill.status = data.status
+    if data.release_date and data.release_date.date() <= (datetime.now(timezone.utc) - timedelta(days=1)).date():
+        bill.status = "COMPLETED"
+    else:
+        bill.status = data.status
     bill.subtotal = subtotal
     bill.total_amount = total_amount
     if data.release_date is not None:
