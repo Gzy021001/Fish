@@ -1,4 +1,4 @@
-﻿import json
+import json
 from datetime import datetime, timedelta, timezone
 
 from fastapi import HTTPException
@@ -76,8 +76,8 @@ def sync_bills(date: str, user: models.User, db: Session):
 
 def list_bills(db: Session, page: int = 1, page_size: int = 10, limit: int = 100, status: str = None, date: str = None, date_from: str = None, date_to: str = None, q: str = None):
     from sqlalchemy.orm import joinedload
-    from sqlalchemy import or_
-    query = db.query(models.Bill).join(models.Species).options(joinedload(models.Bill.species)).order_by(models.Bill.release_date.desc().nullslast(), models.Bill.id.desc())
+    from sqlalchemy import or_, func
+    query = db.query(models.Bill).join(models.Species).options(joinedload(models.Bill.species)).order_by(func.coalesce(models.Bill.release_date, models.Species.release_date).desc().nullslast(), models.Bill.id.desc())
     if status:
         query = query.filter(models.Bill.status == status)
     if date_from:
@@ -85,7 +85,7 @@ def list_bills(db: Session, page: int = 1, page_size: int = 10, limit: int = 100
         query = query.filter(
             or_(
                 models.Bill.release_date >= date_from_dt,
-                (models.Bill.release_date.is_(None) & (models.Bill.created_at >= date_from_dt))
+                (models.Bill.release_date.is_(None) & (models.Species.release_date >= date_from_dt))
             )
         )
     if date_to:
@@ -93,7 +93,7 @@ def list_bills(db: Session, page: int = 1, page_size: int = 10, limit: int = 100
         query = query.filter(
             or_(
                 models.Bill.release_date < end,
-                (models.Bill.release_date.is_(None) & (models.Bill.created_at < end))
+                (models.Bill.release_date.is_(None) & (models.Species.release_date < end))
             )
         )
     if date:
@@ -125,9 +125,6 @@ def list_bills(db: Session, page: int = 1, page_size: int = 10, limit: int = 100
     # 必须在修改 SELECT 子句之前计算 count
     total = query.count()
     
-    # 为了避免 with_entities 修改 query 的状态，我们使用 session 构建一个新的汇总查询
-    from sqlalchemy import func
-    
     # 构建基础的 where 条件
     base_filters = []
     if status:
@@ -137,7 +134,7 @@ def list_bills(db: Session, page: int = 1, page_size: int = 10, limit: int = 100
         base_filters.append(
             or_(
                 models.Bill.release_date >= date_from_dt,
-                (models.Bill.release_date.is_(None) & (models.Bill.created_at >= date_from_dt))
+                (models.Bill.release_date.is_(None) & (models.Species.release_date >= date_from_dt))
             )
         )
     if date_to:
@@ -145,7 +142,7 @@ def list_bills(db: Session, page: int = 1, page_size: int = 10, limit: int = 100
         base_filters.append(
             or_(
                 models.Bill.release_date < end,
-                (models.Bill.release_date.is_(None) & (models.Bill.created_at < end))
+                (models.Bill.release_date.is_(None) & (models.Species.release_date < end))
             )
         )
     if date:
@@ -154,16 +151,16 @@ def list_bills(db: Session, page: int = 1, page_size: int = 10, limit: int = 100
         base_filters.append(models.Bill.release_date >= date_dt)
         base_filters.append(models.Bill.release_date < date_end)
         
-    # 汇总查询
+    # 汇总查询 - 始终 join Species，因为 date 筛选可能用到 Species.release_date
     sum_query = db.query(
         func.sum(models.Bill.weight),
         func.sum(models.Bill.subtotal),
         func.sum(models.Bill.total_amount)
-    )
+    ).join(models.Species)
     
-    # 如果有 q（品种名），我们需要 join Species
+    # 如果有 q（品种名）
     if q:
-        sum_query = sum_query.join(models.Species).filter(models.Species.name_zh.ilike(f"%{q}%"))
+        sum_query = sum_query.filter(models.Species.name_zh.ilike(f"%{q}%"))
         
     for f in base_filters:
         sum_query = sum_query.filter(f)

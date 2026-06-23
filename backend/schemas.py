@@ -47,9 +47,16 @@ class SpeciesInBill(BaseModel):
     id: int
     name_zh: str
     default_unit: str
+    release_date: Optional[datetime] = None
     
     class Config:
         from_attributes = True
+
+    @field_serializer('release_date')
+    def serialize_release_date(self, v: Optional[datetime]) -> Optional[str]:
+        if v is None:
+            return None
+        return v.strftime('%Y-%m-%d')
 
 class BillBase(BaseModel):
     species_id: int
