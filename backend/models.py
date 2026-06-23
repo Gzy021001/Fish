@@ -1,6 +1,6 @@
-from sqlalchemy import Column, ForeignKey, Integer, String, Float, DateTime, Text
+from sqlalchemy import Column, ForeignKey, Integer, String, Float, Date, Text
 from sqlalchemy.orm import relationship
-from datetime import datetime, timezone
+from datetime import date
 from database import Base
 
 class User(Base):
@@ -19,8 +19,8 @@ class Species(Base):
     image_url = Column(Text, nullable=True)
     supplier_name = Column(String(200), nullable=True)
     supplier_note = Column(String(500), nullable=True)
-    release_date = Column(DateTime, nullable=True)
-    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
+    release_date = Column(Date, nullable=True)
+    created_at = Column(Date, default=date.today)
 
 class Bill(Base):
     __tablename__ = "bills"
@@ -35,8 +35,8 @@ class Bill(Base):
     fee_value = Column(Float)
     total_amount = Column(Float)
     status = Column(String(20), default="DRAFT", index=True)
-    release_date = Column(DateTime, nullable=True, index=True)
-    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None), index=True)
+    release_date = Column(Date, nullable=True, index=True)
+    created_at = Column(Date, default=date.today, index=True)
 
     user = relationship("User")
     species = relationship("Species")
@@ -46,9 +46,9 @@ class AuditLog(Base):
     id = Column(Integer, primary_key=True, index=True)
     bill_id = Column(Integer, ForeignKey("bills.id"), nullable=True, index=True)
     species_id = Column(Integer, ForeignKey("species.id"), nullable=True, index=True)
-    entity_type = Column(String(50), default="BILL", index=True) # "BILL" or "SPECIES"
+    entity_type = Column(String(50), default="BILL", index=True)
     user_id = Column(Integer, ForeignKey("users.id"), index=True)
-    action = Column(String(50), index=True) # "CREATE", "UPDATE", "DELETE"
-    old_data = Column(String, nullable=True) # JSON string
-    new_data = Column(String, nullable=True) # JSON string
-    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None), index=True)
+    action = Column(String(50), index=True)
+    old_data = Column(String, nullable=True)
+    new_data = Column(String, nullable=True)
+    created_at = Column(Date, default=date.today, index=True)

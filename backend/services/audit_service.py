@@ -1,5 +1,5 @@
 import json
-from datetime import datetime, date
+from datetime import date
 from typing import Optional
 
 from sqlalchemy.orm import Session
@@ -8,7 +8,7 @@ import models
 
 
 def _json_default(obj):
-    if isinstance(obj, (datetime, date)):
+    if isinstance(obj, date):
         return obj.isoformat()
     raise TypeError(f"Object of type {type(obj).__name__} is not JSON serializable")
 

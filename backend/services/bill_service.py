@@ -1,5 +1,5 @@
 import json
-from datetime import datetime, timedelta, timezone
+from datetime import date, timedelta
 
 from fastapi import HTTPException
 from sqlalchemy import func, cast, String
@@ -19,7 +19,7 @@ def create_bill(data: schemas.BillCreate, user: models.User, db: Session):
         data.weight, data.unit_price, data.fee_value
     )
 
-    if data.release_date and data.release_date.date() <= (datetime.now(timezone.utc) - timedelta(days=1)).date():
+    if data.release_date and data.release_date <= date.today() - timedelta(days=1):
         new_status = "COMPLETED"
     else:
         new_status = data.status or "DRAFT"
@@ -53,11 +53,11 @@ def create_bill(data: schemas.BillCreate, user: models.User, db: Session):
     return bill
 
 
-def sync_bills(date: str, user: models.User, db: Session):
+def sync_bills(date_str: str, user: models.User, db: Session):
     draft_bills = db.query(models.Bill).filter(models.Bill.status == "DRAFT").all()
     count = 0
     for bill in draft_bills:
-        if bill.created_at and bill.created_at.isoformat().startswith(date):
+        if bill.created_at and bill.created_at.isoformat() == date_str:
             bill.status = "COMPLETED"
             count += 1
 
@@ -74,12 +74,12 @@ def sync_bills(date: str, user: models.User, db: Session):
     return count
 
 
-def _apply_bill_filters(query, status=None, date_from=None, date_to=None, date=None, q=None):
+def _apply_bill_filters(query, status=None, date_from=None, date_to=None, date_str=None, q=None):
     from sqlalchemy import or_
     if status:
         query = query.filter(models.Bill.status == status)
     if date_from:
-        date_from_dt = datetime.strptime(date_from, "%Y-%m-%d")
+        date_from_dt = date.fromisoformat(date_from)
         query = query.filter(
             or_(
                 models.Bill.release_date >= date_from_dt,
@@ -87,15 +87,15 @@ def _apply_bill_filters(query, status=None, date_from=None, date_to=None, date=N
             )
         )
     if date_to:
-        end = datetime.strptime(date_to, "%Y-%m-%d") + timedelta(days=1)
+        end = date.fromisoformat(date_to) + timedelta(days=1)
         query = query.filter(
             or_(
                 models.Bill.release_date < end,
                 (models.Bill.release_date.is_(None) & (models.Species.release_date < end))
             )
         )
-    if date:
-        date_dt = datetime.strptime(date, "%Y-%m-%d")
+    if date_str:
+        date_dt = date.fromisoformat(date_str)
         date_end = date_dt + timedelta(days=1)
         query = query.filter(models.Bill.release_date >= date_dt, models.Bill.release_date < date_end)
     if q:
@@ -104,7 +104,6 @@ def _apply_bill_filters(query, status=None, date_from=None, date_to=None, date=N
 
 def list_bills(db: Session, page: int = 1, page_size: int = 10, limit: int = 100, status: str = None, date: str = None, date_from: str = None, date_to: str = None, q: str = None):
     from sqlalchemy.orm import joinedload
-    from sqlalchemy import func
     query = db.query(models.Bill).join(models.Species).options(joinedload(models.Bill.species)).order_by(func.coalesce(models.Bill.release_date, models.Species.release_date).desc().nullslast(), models.Bill.id.desc())
     query = _apply_bill_filters(query, status, date_from, date_to, date, q)
 
@@ -197,7 +196,7 @@ def update_bill(bill_id: int, data: schemas.BillCreate, user: models.User, db: S
     bill.currency = data.currency
     bill.fee_type = data.fee_type
     bill.fee_value = data.fee_value
-    if data.release_date and data.release_date.date() <= (datetime.now(timezone.utc) - timedelta(days=1)).date():
+    if data.release_date and data.release_date <= date.today() - timedelta(days=1):
         bill.status = "COMPLETED"
     else:
         bill.status = data.status
@@ -255,9 +254,7 @@ def batch_create_bills(data: schemas.BatchImportRequest, user: models.User, db: 
     bills = []
     errors = []
 
-    # If replace mode: delete existing bills with same release dates
     if data.replace:
-        from datetime import datetime, timedelta
         dates_to_replace = set()
         for row in data.rows:
             if row.release_date:
@@ -316,7 +313,7 @@ def get_price_trend(species_id: int, db: Session, year: int = None):
 
     query = (
         db.query(
-            func.date(models.Bill.release_date).label("date"),
+            models.Bill.release_date.label("date"),
             func.avg(models.Bill.unit_price).label("avg_price"),
         )
         .filter(models.Bill.species_id == species.id)
@@ -325,16 +322,16 @@ def get_price_trend(species_id: int, db: Session, year: int = None):
 
     if year:
         query = query.filter(
-            models.Bill.release_date >= datetime(year, 1, 1),
-            models.Bill.release_date < datetime(year + 1, 1, 1),
+            models.Bill.release_date >= date(year, 1, 1),
+            models.Bill.release_date < date(year + 1, 1, 1),
         )
     else:
-        thirty_days_ago = datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(days=30)
+        thirty_days_ago = date.today() - timedelta(days=30)
         query = query.filter(models.Bill.release_date >= thirty_days_ago)
 
-    results = query.group_by(func.date(models.Bill.release_date)).all()
+    results = query.group_by(models.Bill.release_date).all()
 
-    return [{"date": str(r.date), "avg_price": float(r.avg_price)} for r in results]
+    return [{"date": r.date.strftime('%Y-%m-%d'), "avg_price": float(r.avg_price)} for r in results]
 
 
 def get_price_trends_batch(species_ids: list[int], db: Session, year: int = None):
@@ -344,7 +341,7 @@ def get_price_trends_batch(species_ids: list[int], db: Session, year: int = None
     query = (
         db.query(
             models.Bill.species_id,
-            func.date(models.Bill.release_date).label("date"),
+            models.Bill.release_date.label("date"),
             func.avg(models.Bill.unit_price).label("avg_price"),
         )
         .filter(models.Bill.species_id.in_(species_ids))
@@ -353,20 +350,20 @@ def get_price_trends_batch(species_ids: list[int], db: Session, year: int = None
 
     if year:
         query = query.filter(
-            models.Bill.release_date >= datetime(year, 1, 1),
-            models.Bill.release_date < datetime(year + 1, 1, 1),
+            models.Bill.release_date >= date(year, 1, 1),
+            models.Bill.release_date < date(year + 1, 1, 1),
         )
     else:
-        thirty_days_ago = datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(days=30)
+        thirty_days_ago = date.today() - timedelta(days=30)
         query = query.filter(models.Bill.release_date >= thirty_days_ago)
 
-    results = query.group_by(models.Bill.species_id, func.date(models.Bill.release_date)).all()
+    results = query.group_by(models.Bill.species_id, models.Bill.release_date).all()
 
     trends = {}
     for r in results:
         sp_id = r.species_id
         if sp_id not in trends:
             trends[sp_id] = []
-        trends[sp_id].append({"date": str(r.date), "avg_price": float(r.avg_price)})
+        trends[sp_id].append({"date": r.date.strftime('%Y-%m-%d'), "avg_price": float(r.avg_price)})
 
     return trends

@@ -259,7 +259,7 @@
         </div>
       </div>
 
-      <div class="flex gap-5 mb-5" style="height: 400px">
+      <div class="flex gap-5 mb-5" style="aspect-ratio: 3/1; max-height: 400px">
         <div class="relative" style="flex: 0 0 58%">
           <Transition name="fade">
             <div
@@ -360,6 +360,7 @@ import {
   GridComponent,
   LegendComponent,
   DataZoomComponent,
+  GraphicComponent,
 } from "echarts/components";
 import { CanvasRenderer } from "echarts/renderers";
 import api from "../api";
@@ -377,6 +378,7 @@ echarts.use([
   GridComponent,
   LegendComponent,
   DataZoomComponent,
+  GraphicComponent,
   BarChart,
   LineChart,
   PieChart,
@@ -1497,69 +1499,39 @@ const renderPieChart = async () => {
   if (pieData.length === 0) return;
 
   const totalPct = pieData.reduce((s, d) => s + d.value, 0);
+
+  const containerWidth = pieChart.value.clientWidth || 350;
+  const s = Math.min(1, containerWidth / 350);
+  const fs = Math.max(7, Math.round(11 * s));
+  const fsSm = Math.max(6, Math.round(9 * s));
+  const fsXs = Math.max(5, Math.round(8 * s));
+  const gap = Math.max(4, Math.round(10 * s));
+  const itemSz = Math.max(4, Math.round(10 * s));
+  const nameW = Math.max(36, Math.round(66 * s));
+  const pctW = Math.max(28, Math.round(48 * s));
+  const tooltipFs = Math.max(10, Math.round(13 * s));
+
   const option: any = {
-    graphic: [
-      {
-        type: "text",
-        left: "42%",
-        top: "center",
-        style: {
-          text: "放生总重",
-          textAlign: "center",
-          fill: "#9ca3af",
-          fontSize: 12,
-          lineHeight: 18,
-        },
-      },
-      {
-        type: "text",
-        left: "42%",
-        top: "center",
-        style: {
-          text: formatPrice(totalWeight),
-          textAlign: "center",
-          fill: "#374151",
-          fontSize: 24,
-          fontWeight: "bold",
-          lineHeight: 28,
-          fontFamily:
-            "ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, monospace",
-          y: 20,
-        },
-      },
-      {
-        type: "text",
-        left: "42%",
-        top: "center",
-        style: {
-          text: "公斤",
-          textAlign: "center",
-          fill: "#9ca3af",
-          fontSize: 11,
-          lineHeight: 16,
-          y: 48,
-        },
-      },
-    ],
+    graphic: [],
     legend: {
       orient: "vertical",
-      right: "4%",
+      right: "2%",
       top: "center",
-      itemGap: 10,
-      itemWidth: 10,
-      itemHeight: 10,
-      borderRadius: 5,
+      itemGap: gap,
+      itemWidth: itemSz,
+      itemHeight: itemSz,
+      borderRadius: Math.round(5 * s),
       textStyle: {
         color: "#374151",
-        fontSize: 11,
+        fontSize: fs,
         fontWeight: 500,
         rich: {
-          name: { color: "#374151", fontSize: 11, fontWeight: 500, width: 66 },
+          name: { color: "#374151", fontSize: fs, fontWeight: 500, width: nameW },
           pct: {
             color: "#6b7280",
-            fontSize: 11,
+            fontSize: fs,
             fontWeight: 600,
-            width: 48,
+            width: pctW,
             align: "right",
           },
         },
@@ -1576,11 +1548,11 @@ const renderPieChart = async () => {
       appendToBody: true,
       backgroundColor: "#ffffff",
       borderColor: "#e5e7eb",
-      borderWidth: 1,
-      padding: [10, 14],
-      textStyle: { color: "#374151", fontSize: 13 },
+      borderWidth: Math.max(1, Math.round(s)),
+      padding: [Math.round(10 * s), Math.round(14 * s)],
+      textStyle: { color: "#374151", fontSize: tooltipFs },
       formatter: (params: any) => {
-        return `<div style="font-size:14px;font-weight:bold;margin-bottom:5px;">${params.marker} ${params.name}</div>
+        return `<div style="font-size:${tooltipFs + 1}px;font-weight:bold;margin-bottom:5px;">${params.marker} ${params.name}</div>
                   <div style="color:#6b7280;">放生重量：<b style="color:#374151;">${formatPrice(params.value)}</b> 公斤</div>
                   <div style="color:#6b7280;">占比：<b style="color:#374151;">${params.percent}%</b></div>`;
       },
@@ -1592,9 +1564,9 @@ const renderPieChart = async () => {
         center: ["42%", "50%"],
         avoidLabelOverlap: true,
         itemStyle: {
-          borderRadius: 4,
+          borderRadius: Math.round(4 * s),
           borderColor: "#fff",
-          borderWidth: 2,
+          borderWidth: Math.max(1, Math.round(2 * s)),
         },
         label: {
           show: true,
@@ -1604,42 +1576,42 @@ const renderPieChart = async () => {
           },
           rich: {
             name: {
-              fontSize: 10,
+              fontSize: fsSm,
               fontWeight: 600,
               color: "#374151",
-              lineHeight: 16,
+              lineHeight: Math.round(16 * s),
             },
             pct: {
-              fontSize: 9,
+              fontSize: fsXs,
               color: "#6b7280",
-              lineHeight: 14,
+              lineHeight: Math.round(14 * s),
             },
           },
         },
         labelLine: {
           show: true,
-          length: 18,
-          length2: 14,
-          lineStyle: { color: "#cbd5e1", width: 1 },
+          length: Math.round(18 * s),
+          length2: Math.round(14 * s),
+          lineStyle: { color: "#cbd5e1", width: Math.max(0.5, s) },
         },
         emphasis: {
-          scaleSize: 8,
+          scaleSize: Math.round(8 * s),
           itemStyle: {
-            shadowBlur: 24,
+            shadowBlur: Math.round(24 * s),
             shadowOffsetX: 0,
-            shadowOffsetY: 8,
+            shadowOffsetY: Math.round(8 * s),
             shadowColor: "rgba(0,0,0,0.12)",
           },
           label: {
             show: true,
-            fontSize: 12,
+            fontSize: Math.round(12 * s),
             fontWeight: "bold",
           },
         },
         data: pieData,
         animationType: "scale",
         animationEasing: "cubicOut",
-        animationDelay: (idx: number) => idx * 120,
+        animationDelay: (idx: number) => idx * Math.round(120 * s),
       },
     ],
   };

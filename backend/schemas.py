@@ -22,8 +22,8 @@ class SpeciesBase(BaseModel):
     image_url: Optional[str] = None
     supplier_name: Optional[str] = None
     supplier_note: Optional[str] = None
-    release_date: Optional[datetime] = None
-    created_at: Optional[datetime] = None
+    release_date: Optional[date] = None
+    created_at: Optional[date] = None
 
 class SpeciesCreate(SpeciesBase):
     pass
@@ -38,7 +38,7 @@ class Species(SpeciesBase):
         from_attributes = True
 
     @field_serializer('release_date')
-    def serialize_release_date(self, v: Optional[datetime]) -> Optional[str]:
+    def serialize_release_date(self, v: Optional[date]) -> Optional[str]:
         if v is None:
             return None
         return v.strftime('%Y-%m-%d')
@@ -47,13 +47,13 @@ class SpeciesInBill(BaseModel):
     id: int
     name_zh: str
     default_unit: str
-    release_date: Optional[datetime] = None
+    release_date: Optional[date] = None
     
     class Config:
         from_attributes = True
 
     @field_serializer('release_date')
-    def serialize_release_date(self, v: Optional[datetime]) -> Optional[str]:
+    def serialize_release_date(self, v: Optional[date]) -> Optional[str]:
         if v is None:
             return None
         return v.strftime('%Y-%m-%d')
@@ -66,7 +66,7 @@ class BillBase(BaseModel):
     fee_type: str = "FIXED"
     fee_value: float
     status: str = "DRAFT"
-    release_date: Optional[datetime] = None
+    release_date: Optional[date] = None
 
 class BillCreate(BillBase):
     pass
@@ -76,16 +76,20 @@ class Bill(BillBase):
     user_id: int
     subtotal: float
     total_amount: float
-    created_at: datetime
+    created_at: date
     species: Optional[SpeciesInBill] = None
 
     class Config:
         from_attributes = True
 
     @field_serializer('release_date')
-    def serialize_release_date(self, v: Optional[datetime]) -> Optional[str]:
+    def serialize_release_date(self, v: Optional[date]) -> Optional[str]:
         if v is None:
             return None
+        return v.strftime('%Y-%m-%d')
+
+    @field_serializer('created_at')
+    def serialize_created_at(self, v: date) -> str:
         return v.strftime('%Y-%m-%d')
 
 class AuditLogBase(BaseModel):
@@ -99,7 +103,7 @@ class AuditLogBase(BaseModel):
 class AuditLog(AuditLogBase):
     id: int
     user_id: int
-    created_at: datetime
+    created_at: date
 
     class Config:
         from_attributes = True
@@ -120,34 +124,32 @@ class BatchImportRow(BaseModel):
     weight: float = 0.0
     unit_price: float = 0.0
     fee_value: float = 0.0
-    release_date: Optional[datetime] = None
+    release_date: Optional[date] = None
 
     @field_validator('release_date', mode='before')
     @classmethod
     def coerce_release_date(cls, v):
         if v is None or v == '':
             return None
-        if isinstance(v, datetime):
+        if isinstance(v, date):
             return v
         s = str(v).strip()
         for fmt in ('%Y-%m-%d', '%Y-%m', '%Y/%m/%d', '%Y.%m.%d'):
             try:
-                return datetime.strptime(s, fmt)
+                return datetime.strptime(s, fmt).date()
             except ValueError:
                 continue
-        # Last resort: try ISO format
         try:
-            return datetime.fromisoformat(s)
+            return datetime.fromisoformat(s).date()
         except (ValueError, TypeError):
             return None
 
 class BatchImportRequest(BaseModel):
     rows: list[BatchImportRow]
-    replace: bool = False  # If True, delete existing bills with same release_date before import
+    replace: bool = False
 
 class BatchImportResult(BaseModel):
     success_count: int
     skip_count: int
     bills: list[Bill]
     errors: list[str] = []
-

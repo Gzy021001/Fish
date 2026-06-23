@@ -1,28 +1,14 @@
-function parseUTC(dateStr: string | undefined | null): Date | null {
-  if (!dateStr) return null
-  // 处理 yyyy-mm 格式（缺日期），自动补为当月1日
-  if (/^\d{4}-\d{2}$/.test(dateStr)) {
-    dateStr = dateStr + "-01"
+export function dateStr(d: string | undefined | null): string {
+  if (!d) return ""
+  const parts = d.split("-")
+  if (parts.length === 3) {
+    return `${parseInt(parts[0])}/${parseInt(parts[1])}/${parseInt(parts[2])}`
   }
-  if (dateStr.endsWith("Z") || dateStr.includes("+") || dateStr.includes("[")) {
-    return new Date(dateStr)
-  }
-  if (dateStr.includes("T")) {
-    return new Date(dateStr + "Z")
-  }
-  return new Date(dateStr + "T00:00:00Z")
+  return d
 }
 
-export function dateTimeStr(dateStr: string | undefined | null): string {
-  const d = parseUTC(dateStr)
-  if (!d) return ""
-  return d.toLocaleString("zh-CN", { hour12: false })
-}
-
-export function dateStr(dateStr: string | undefined | null): string {
-  const d = parseUTC(dateStr)
-  if (!d) return ""
-  return d.toLocaleDateString("zh-CN")
+export function dateTimeStr(d: string | undefined | null): string {
+  return dateStr(d)
 }
 
 export function formatMoney(value: number | undefined | null): string {
