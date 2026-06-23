@@ -29,7 +29,7 @@ export async function ensureSpecies(
     name_zh: nameZh,
     default_price: defaultPrice,
     default_unit: "公斤",
-    release_date: releaseDate || new Date().toISOString().slice(0, 10),
+    release_date: releaseDate || new Date().toLocaleDateString("sv-SE"),
   })
   const species = spRes.data
   existingList.push(species)

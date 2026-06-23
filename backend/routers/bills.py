@@ -28,7 +28,8 @@ def create_bill_route(
     current_user: models.User = Depends(auth.get_current_user),
 ):
     result = create_bill(bill, current_user, db)
-    trends_cache.clear()
+    if result.species_id:
+        trends_cache.invalidate_by_species([result.species_id])
     return result
 
 
@@ -36,7 +37,7 @@ def create_bill_route(
 def sync_bills_route(
     payload: schemas.SyncRequest,
     db: Session = Depends(get_db),
-    current_user: models.User = Depends(auth.get_current_user),
+    current_user: models.User = Depends(auth.require_admin),
 ):
     count = sync_bills(payload.date, current_user, db)
     trends_cache.clear()
@@ -63,10 +64,12 @@ def list_bills_route(
 def batch_create_bills_route(
     payload: schemas.BatchImportRequest,
     db: Session = Depends(get_db),
-    current_user: models.User = Depends(auth.get_current_user),
+    current_user: models.User = Depends(auth.require_admin),
 ):
     result = batch_create_bills(payload, current_user, db)
-    trends_cache.clear()
+    affected_ids = list(set(row.species_id for row in payload.rows if row.species_id))
+    if affected_ids:
+        trends_cache.invalidate_by_species(affected_ids)
     return result
 
 
@@ -87,7 +90,13 @@ def update_bill_route(
     current_user: models.User = Depends(auth.get_current_user),
 ):
     result = update_bill(bill_id, bill_update, current_user, db)
-    trends_cache.clear()
+    affected = set()
+    if result.species_id:
+        affected.add(result.species_id)
+    if bill_update.species_id:
+        affected.add(bill_update.species_id)
+    if affected:
+        trends_cache.invalidate_by_species(list(affected))
     return result
 
 
@@ -97,7 +106,8 @@ def delete_bill_route(
     db: Session = Depends(get_db),
     current_user: models.User = Depends(auth.get_current_user),
 ):
+    bill = get_bill(bill_id, db)
     result = delete_bill(bill_id, current_user, db)
-    trends_cache.clear()
+    if bill and bill.species_id:
+        trends_cache.invalidate_by_species([bill.species_id])
     return result
-

@@ -657,7 +657,7 @@
 
             <!-- 批量删除 -->
             <button
-              v-if="selectedBillIds.length > 0"
+              v-if="activeTab === 'current' && selectedBillIds.length > 0"
               @click="confirmBatchDeleteBills"
               class="h-8 px-3.5 rounded-lg text-sm font-medium transition-all duration-200 text-dunhuang-red hover:bg-dunhuang-red/8 border border-dunhuang-red/25 hover:border-dunhuang-red/40"
             >
@@ -666,7 +666,7 @@
 
             <!-- current tab 专有按钮：导入 -->
             <button
-              v-if="activeTab === 'current'"
+              v-if="activeTab === 'current' && authStore.isAdmin"
               @click="goToImport"
               type="button"
               class="h-8 px-3.5 rounded-lg text-sm font-medium transition-all duration-200 text-dunhuang-blue/80 hover:text-dunhuang-blue hover:bg-dunhuang-blue/6 border border-dunhuang-blue/15 hover:border-dunhuang-blue/35"
@@ -712,6 +712,7 @@
                   class="bg-dunhuang-yellow/20 text-dunhuang-blue font-sans font-bold text-sm flex w-full h-full"
                 >
                   <div
+                    v-if="activeTab === 'current'"
                     class="px-3 py-2 border-b border-dunhuang-yellow/40 flex items-center justify-center w-10 shrink-0 sticky left-0 bg-dunhuang-yellow/20 backdrop-blur z-30 sticky-col-left"
                   >
                     <input
@@ -721,7 +722,14 @@
                       @change="toggleSelectAll"
                     />
                   </div>
-                  <div class="col-th flex-[0.25] flex items-center">序号</div>
+                  <div
+                    class="col-th flex-[0.25] flex items-center"
+                    :class="
+                      activeTab === 'current' ? '' : 'sticky left-0 z-30 pl-2'
+                    "
+                  >
+                    序号
+                  </div>
                   <div class="col-th flex-[0.55] flex items-center">品种</div>
                   <div class="col-th flex-[0.5] flex items-center">
                     重量（公斤）
@@ -760,6 +768,7 @@
                   class="border-b border-dunhuang-yellow/20 hover:bg-dunhuang-yellow/10 transition-colors text-sm group flex w-full shrink-0 h-[45px]"
                 >
                   <div
+                    v-if="activeTab === 'current'"
                     class="px-3 py-2 flex items-center justify-center w-10 shrink-0 sticky left-0 bg-white/60 backdrop-blur-md group-hover:bg-dunhuang-yellow/10 transition-colors sticky-col-left"
                   >
                     <input
@@ -769,7 +778,14 @@
                       v-model="selectedBillIds"
                     />
                   </div>
-                  <div class="col-td-muted flex-[0.25] flex items-center">
+                  <div
+                    class="col-td-muted flex-[0.25] flex items-center"
+                    :class="
+                      activeTab === 'current'
+                        ? ''
+                        : 'sticky left-0 bg-white/60 backdrop-blur-md z-20 pl-2'
+                    "
+                  >
                     {{ (currentPage - 1) * pageSize + index + 1 }}
                   </div>
                   <div class="col-td font-medium flex-[0.55] flex items-center">
@@ -864,9 +880,6 @@
                 <div
                   class="flex w-full shrink-0 h-[42px] bg-white border-t-2 border-dunhuang-yellow/30 sticky bottom-0 z-20 transform-gpu"
                 >
-                  <div
-                    class="w-10 shrink-0 sticky left-0 bg-white sticky-col-left"
-                  ></div>
                   <div class="px-4 py-2 flex-[0.25] flex items-center"></div>
                   <div class="px-4 py-2 flex-[0.55] flex items-center"></div>
                   <div class="px-4 py-2 flex-[0.5] flex items-center">
@@ -1194,6 +1207,7 @@
 import { onMounted, onBeforeUnmount, ref } from "vue";
 import { useI18n } from "vue-i18n";
 import { useRouter } from "vue-router";
+import { useAuthStore } from "../stores/auth";
 import { dateStr, dateTimeStr, formatMoney } from "../lib/utils";
 import ConfirmDialog from "../components/ConfirmDialog.vue";
 import DateInput from "../components/DateInput.vue";
@@ -1205,6 +1219,7 @@ import { useBillAudit } from "../composables/useBillAudit";
 
 const { t } = useI18n();
 const router = useRouter();
+const authStore = useAuthStore();
 
 const showDatePicker = ref(false);
 const datePickerWrapperRef = ref<HTMLElement | null>(null);
@@ -1299,7 +1314,8 @@ const {
   editFee,
   editTotal,
   goBackToList,
-  saveBill,
+  saveSingleBill,
+  saveBatchBills,
   editBill,
 } = useBillForm(speciesList);
 
@@ -1361,7 +1377,11 @@ const goToImport = () => {
 
 const handleSaveBill = async () => {
   const prevTab = activeTab.value;
-  await saveBill(upsertBill);
+  if (bill.value.id) {
+    await saveSingleBill(upsertBill);
+  } else {
+    await saveBatchBills(upsertBill);
+  }
   if (prevTab !== "current") {
     activeTab.value = "current";
     fetchBills();

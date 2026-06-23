@@ -24,5 +24,11 @@ class SimpleCache:
         else:
             self._store.clear()
 
+    def invalidate_by_species(self, species_ids: list):
+        ids_set = set(str(sid) for sid in species_ids)
+        keys_to_remove = [k for k in self._store if any(f"_{sid}_" in f"_{k}_" or k.endswith(f"_{sid}") for sid in ids_set)]
+        for k in keys_to_remove:
+            self._store.pop(k, None)
+
 trends_cache = SimpleCache(ttl=300)
 species_cache = SimpleCache(ttl=300)

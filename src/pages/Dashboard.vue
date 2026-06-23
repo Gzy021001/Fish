@@ -5,9 +5,7 @@
     >
       <div class="flex items-center justify-between mb-6 flex-none">
         <div class="flex items-center gap-4">
-          <h3
-            class="text-2xl font-serif text-dunhuang-blue font-bold"
-          >
+          <h3 class="text-2xl font-serif text-dunhuang-blue font-bold">
             {{ t("dashboard.price_trend") }}
           </h3>
           <div class="relative">
@@ -23,10 +21,20 @@
                 stroke="currentColor"
                 stroke-width="2"
               >
-                <rect x="3" y="4" width="18" height="18" rx="2" ry="2" stroke-linejoin="round" />
+                <rect
+                  x="3"
+                  y="4"
+                  width="18"
+                  height="18"
+                  rx="2"
+                  ry="2"
+                  stroke-linejoin="round"
+                />
                 <path d="M16 2v4M8 2v4M3 10h18" />
               </svg>
-              <span class="text-sm font-bold text-dunhuang-blue tabular-nums">{{ selectedYear }} 年</span>
+              <span class="text-sm font-bold text-dunhuang-blue tabular-nums"
+                >{{ selectedYear }} 年</span
+              >
               <svg
                 class="w-3 h-3 text-dunhuang-blue/40 transition-transform duration-200"
                 :class="{ 'rotate-180': yearDropdownOpen }"
@@ -66,7 +74,7 @@
       <div class="relative flex-1" style="min-height: 500px">
         <Transition name="fade">
           <div
-            v-if="loading"
+            v-if="trendsLoading"
             class="absolute inset-0 flex items-center justify-center z-20 bg-white/50 backdrop-blur-sm rounded-xl"
           >
             <div
@@ -76,7 +84,7 @@
         </Transition>
         <Transition name="fade">
           <div
-            v-if="!loading && !hasTrendData && !trendErrorMsg"
+            v-if="!trendsLoading && !hasTrendData && !trendErrorMsg"
             class="absolute inset-0 flex items-center justify-center text-dunhuang-text/50"
           >
             最近暂无价格走势数据
@@ -84,7 +92,7 @@
         </Transition>
         <Transition name="fade">
           <div
-            v-if="!loading && trendErrorMsg"
+            v-if="!trendsLoading && trendErrorMsg"
             class="absolute inset-0 flex items-center justify-center text-dunhuang-red"
           >
             {{ trendErrorMsg }}
@@ -108,7 +116,9 @@
                   item.change > 0 ? 'border-red-200/50' : 'border-green-200/50'
                 "
               >
-                <div class="px-4 pt-3 pb-2 border-b border-dunhuang-yellow/10 rounded-t-xl overflow-hidden">
+                <div
+                  class="px-4 pt-3 pb-2 border-b border-dunhuang-yellow/10 rounded-t-xl overflow-hidden"
+                >
                   <div class="flex items-center justify-between">
                     <span
                       class="text-sm font-bold text-dunhuang-text truncate"
@@ -131,10 +141,18 @@
                       >{{ dayLabel(item.dates[0]) }} ~
                       {{ dayLabel(item.dates[item.dates.length - 1]) }}</span
                     >
-                    <span class="tabular-nums"
-                      >{{ formatPrice(item.startPrice) }} →
-                      {{ formatPrice(item.currentPrice) }}</span
+                    <span class="tabular-nums">
+                      最低{{ formatPrice(item.minPrice) }} ~ 最高{{
+                        formatPrice(item.maxPrice)
+                      }}
+                    </span>
+                  </div>
+                  <div class="flex justify-end mt-0.5">
+                    <span
+                      class="text-[10px] tabular-nums font-bold text-dunhuang-yellow"
                     >
+                      浮动 ¥{{ formatPrice(item.fluctuation) }}
+                    </span>
                   </div>
                 </div>
                 <div
@@ -211,7 +229,9 @@
             <span class="w-28 text-right font-medium">总金额(元)</span>
           </div>
           <div class="flex items-baseline py-0.5">
-            <span class="text-xs text-gray-600 w-12 shrink-0 font-medium">上半年</span>
+            <span class="text-xs text-gray-600 w-12 shrink-0 font-medium"
+              >上半年</span
+            >
             <span
               class="flex-1 text-right text-base font-bold text-gray-800 tabular-nums"
               >{{ formatPrice(halfYearStats.h1Weight) }}</span
@@ -224,7 +244,9 @@
           <div
             class="flex items-baseline py-0.5 mt-1 border-t border-gray-200/80 pt-1.5"
           >
-            <span class="text-xs text-gray-600 w-12 shrink-0 font-medium">下半年</span>
+            <span class="text-xs text-gray-600 w-12 shrink-0 font-medium"
+              >下半年</span
+            >
             <span
               class="flex-1 text-right text-base font-bold text-gray-800 tabular-nums"
               >{{ formatPrice(halfYearStats.h2Weight) }}</span
@@ -241,7 +263,7 @@
         <div class="relative" style="flex: 0 0 58%">
           <Transition name="fade">
             <div
-              v-if="loading"
+              v-if="billsLoading"
               class="absolute inset-0 flex items-center justify-center z-20 bg-white/50 backdrop-blur-sm rounded-xl"
             >
               <div
@@ -251,7 +273,7 @@
           </Transition>
           <Transition name="fade">
             <div
-              v-if="!loading && !hasBillData && !billsErrorMsg"
+              v-if="!billsLoading && !hasBillData && !billsErrorMsg"
               class="absolute inset-0 flex items-center justify-center text-dunhuang-text/50"
             >
               暂无放生统计数据
@@ -259,7 +281,7 @@
           </Transition>
           <Transition name="fade">
             <div
-              v-if="!loading && billsErrorMsg"
+              v-if="!billsLoading && billsErrorMsg"
               class="absolute inset-0 flex items-center justify-center text-dunhuang-red"
             >
               {{ billsErrorMsg }}
@@ -283,7 +305,7 @@
       <div class="relative" style="height: 480px">
         <Transition name="fade">
           <div
-            v-if="loading"
+            v-if="speciesWeightLoading"
             class="absolute inset-0 flex items-center justify-center z-20 bg-white/50 backdrop-blur-sm rounded-xl"
           >
             <div
@@ -293,7 +315,9 @@
         </Transition>
         <Transition name="fade">
           <div
-            v-if="!loading && !hasSpeciesWeightData && !billsErrorMsg"
+            v-if="
+              !speciesWeightLoading && !hasSpeciesWeightData && !billsErrorMsg
+            "
             class="absolute inset-0 flex items-center justify-center text-dunhuang-text/50"
           >
             暂无物命重量数据
@@ -301,7 +325,7 @@
         </Transition>
         <Transition name="fade">
           <div
-            v-if="!loading && billsErrorMsg"
+            v-if="!speciesWeightLoading && billsErrorMsg"
             class="absolute inset-0 flex items-center justify-center text-dunhuang-red"
           >
             {{ billsErrorMsg }}
@@ -318,7 +342,15 @@
 </template>
 
 <script setup lang="ts">
-import { ref, shallowRef, onMounted, onUnmounted, computed, nextTick, watch } from "vue";
+import {
+  ref,
+  shallowRef,
+  onMounted,
+  onUnmounted,
+  computed,
+  nextTick,
+  watch,
+} from "vue";
 import { useI18n } from "vue-i18n";
 import * as echarts from "echarts/core";
 import { BarChart, LineChart, PieChart } from "echarts/charts";
@@ -332,7 +364,12 @@ import {
 import { CanvasRenderer } from "echarts/renderers";
 import api from "../api";
 import { isAuthError, apiErrorMessage } from "../lib/error";
-import { isPackagingItem, formatMoney, getSpeciesCategory, dayLabel } from "../lib/utils";
+import {
+  isPackagingItem,
+  formatMoney,
+  getSpeciesCategory,
+  dayLabel,
+} from "../lib/utils";
 
 echarts.use([
   TitleComponent,
@@ -356,9 +393,20 @@ const billWeekMap = shallowRef<
 const speciesWeekWeightMap = shallowRef<Map<string, Map<number, number>>>(
   new Map(),
 );
-const loading = ref(false);
+const trendsLoading = ref(false);
+const billsLoading = ref(false);
+const speciesWeightLoading = ref(false);
 const trendErrorMsg = ref("");
 const billsErrorMsg = ref("");
+
+let fetchGeneration = 0;
+const billsCache = new Map<
+  number,
+  {
+    billWeekMap: Map<string, { total_amount: number; total_weight: number }>;
+    speciesWeekWeightMap: Map<string, Map<number, number>>;
+  }
+>();
 
 const currentYear = new Date().getFullYear();
 const selectedYear = ref(currentYear);
@@ -472,10 +520,11 @@ const priceTrendGrouped = computed(() => {
   const up: {
     speciesId: number;
     name: string;
-    currentPrice: number;
-    startPrice: number;
+    minPrice: number;
+    maxPrice: number;
     change: number;
     changePercent: number;
+    fluctuation: number;
     dates: string[];
     prices: number[];
     directions: ("up" | "down" | "flat")[];
@@ -484,10 +533,11 @@ const priceTrendGrouped = computed(() => {
   const down: {
     speciesId: number;
     name: string;
-    currentPrice: number;
-    startPrice: number;
+    minPrice: number;
+    maxPrice: number;
     change: number;
     changePercent: number;
+    fluctuation: number;
     dates: string[];
     prices: number[];
     directions: ("up" | "down" | "flat")[];
@@ -505,31 +555,19 @@ const priceTrendGrouped = computed(() => {
       .sort((a: any, b: any) => a.date.localeCompare(b.date));
     if (sorted.length < 2) continue;
 
-    const half = Math.ceil(sorted.length / 2);
-    const firstHalf = sorted.slice(0, half);
-    const secondHalf = sorted.slice(half);
-
-    const firstAvg =
-      firstHalf.reduce((s: number, i: any) => s + Number(i.avg_price), 0) /
-      firstHalf.length;
-    const secondAvg =
-      secondHalf.reduce((s: number, i: any) => s + Number(i.avg_price), 0) /
-      secondHalf.length;
-
-    const startPrice = Number(
-      firstHalf[firstHalf.length - 1].avg_price,
-    ).toFixed(2);
-    const currentPrice = Number(
-      secondHalf[secondHalf.length - 1].avg_price,
-    ).toFixed(2);
-    const change = Number(
-      (Number(currentPrice) - Number(startPrice)).toFixed(2),
-    );
-    const changePercent = Number(
-      ((change / Number(startPrice)) * 100).toFixed(1),
-    );
     const dates = sorted.map((i: any) => i.date);
     const prices = sorted.map((i: any) => Number(i.avg_price));
+
+    const minPrice = Number(Math.min(...prices).toFixed(2));
+    const maxPrice = Number(Math.max(...prices).toFixed(2));
+    const earliestPrice = Number(prices[0].toFixed(2));
+    const latestPrice = Number(prices[prices.length - 1].toFixed(2));
+
+    // 涨跌幅度 = 最高 - 最低，方向由整体趋势（最新 vs 最早）决定
+    const range = Number((maxPrice - minPrice).toFixed(2));
+    const direction = latestPrice >= earliestPrice ? 1 : -1;
+    const change = Number((range * direction).toFixed(2));
+    const changePercent = Number(((range / minPrice) * 100).toFixed(1));
 
     const directions: ("up" | "down" | "flat")[] = [];
     const diffs: number[] = [];
@@ -550,10 +588,11 @@ const priceTrendGrouped = computed(() => {
     const item = {
       speciesId: spId,
       name: sp.name_zh,
-      currentPrice: Number(currentPrice),
-      startPrice: Number(startPrice),
+      minPrice,
+      maxPrice,
       change,
       changePercent,
+      fluctuation: range,
       dates,
       prices,
       directions,
@@ -640,12 +679,27 @@ const renderTrendMiniCharts = () => {
       ? ["rgba(239,68,68,0.12)", "rgba(239,68,68,0)"]
       : ["rgba(22,163,74,0.12)", "rgba(22,163,74,0)"];
 
+    let minPrice = prices[0];
+    let maxPrice = prices[0];
+    let minIdx = 0;
+    let maxIdx = 0;
+    prices.forEach((p, i) => {
+      if (p < minPrice) {
+        minPrice = p;
+        minIdx = i;
+      }
+      if (p > maxPrice) {
+        maxPrice = p;
+        maxIdx = i;
+      }
+    });
+
     chart.setOption({
       grid: { left: 28, right: 28, top: 20, bottom: 8 },
       xAxis: { type: "category", data: prices.map((_, i) => i), show: false },
       yAxis: { type: "value", show: false, scale: true },
       tooltip: {
-        trigger: "axis",
+        trigger: "item",
         appendToBody: true,
         backgroundColor: "#ffffff",
         borderColor: "#e5e7eb",
@@ -653,10 +707,9 @@ const renderTrendMiniCharts = () => {
         padding: [6, 10],
         textStyle: { color: "#374151", fontSize: 11 },
         formatter: (params: any) => {
-          const p = Array.isArray(params) ? params[0] : params;
-          if (!p || p.value == null) return "";
-          const idx = p.dataIndex;
-          return `<div style="font-weight:bold;margin-bottom:2px;color:${color};">${dayLabel(dates[idx])}</div>¥${formatPrice(p.value)}`;
+          if (!params || params.value == null) return "";
+          const idx = params.dataIndex;
+          return `<div style="font-weight:bold;margin-bottom:2px;color:${color};">${dayLabel(dates[idx])}</div>¥${formatPrice(params.value)}`;
         },
       },
       series: [
@@ -665,21 +718,53 @@ const renderTrendMiniCharts = () => {
           data: prices,
           smooth: true,
           symbol: "circle",
-          symbolSize: 4,
+          symbolSize: 5,
           lineStyle: { width: 1.5, color },
           itemStyle: { color },
           emphasis: {
-            itemStyle: { borderColor: color, borderWidth: 2 },
-            symbolSize: 7,
+            scale: 1.8,
+            itemStyle: {
+              borderColor: color,
+              borderWidth: 2,
+              shadowBlur: 6,
+              shadowColor: color,
+            },
           },
           areaStyle: {
             color: {
-              type: "linear", x: 0, y: 0, x2: 0, y2: 1,
+              type: "linear",
+              x: 0,
+              y: 0,
+              x2: 0,
+              y2: 1,
               colorStops: [
                 { offset: 0, color: areaColor[0] },
                 { offset: 1, color: areaColor[1] },
               ],
             },
+          },
+          markPoint: {
+            silent: true,
+            symbolSize: 32,
+            data: [
+              {
+                name: "最低",
+                coord: [minIdx, minPrice],
+                value: `¥${formatPrice(minPrice)}`,
+                symbol: "pin",
+                symbolRotate: 180,
+                itemStyle: { color: "#3b82f6" },
+                label: { fontSize: 9, color: "#fff", fontWeight: "bold" },
+              },
+              {
+                name: "最高",
+                coord: [maxIdx, maxPrice],
+                value: `¥${formatPrice(maxPrice)}`,
+                symbol: "pin",
+                itemStyle: { color: "#ef4444" },
+                label: { fontSize: 9, color: "#fff", fontWeight: "bold" },
+              },
+            ],
           },
           label: {
             show: true,
@@ -697,7 +782,9 @@ const renderTrendMiniCharts = () => {
 // ---- 数据获取 ----
 
 const fetchSpecies = async () => {
-  loading.value = true;
+  trendsLoading.value = true;
+  billsLoading.value = true;
+  speciesWeightLoading.value = true;
   try {
     trendErrorMsg.value = "";
     billsErrorMsg.value = "";
@@ -715,25 +802,29 @@ const fetchSpecies = async () => {
     if (isAuthError(error)) return;
     trendErrorMsg.value = apiErrorMessage(error, "获取品种数据");
   } finally {
-    loading.value = false;
+    trendsLoading.value = false;
+    billsLoading.value = false;
+    speciesWeightLoading.value = false;
   }
 };
 
-const fetchAllTrends = async () => {
+const fetchAllTrends = async (gen?: number) => {
   if (!Array.isArray(speciesList.value) || speciesList.value.length === 0) {
     trendDataMap.value = {};
     return;
   }
 
+  trendsLoading.value = true;
   try {
     const ids = speciesList.value.map((sp) => sp.id).join(",");
     const res = await api.get(
       `/stats/price-trend-batch?species_ids=${ids}&year=${selectedYear.value}`,
     );
 
+    if (gen !== undefined && gen !== fetchGeneration) return;
+
     const newTrendDataMap: Record<number, any[]> = {};
     if (res.data) {
-      // res.data is Record<string, any[]> where keys are species IDs
       Object.entries(res.data).forEach(([id, data]) => {
         newTrendDataMap[Number(id)] = data as any[];
       });
@@ -742,13 +833,20 @@ const fetchAllTrends = async () => {
   } catch (error: any) {
     console.error("Failed to fetch trends", error);
     if (!isAuthError(error)) {
+      if (gen !== undefined && gen !== fetchGeneration) return;
       trendErrorMsg.value = "获取价格走势失败。";
       trendDataMap.value = {};
+    }
+  } finally {
+    if (gen === undefined || gen === fetchGeneration) {
+      trendsLoading.value = false;
     }
   }
 };
 
-const fetchBills = async () => {
+const fetchBills = async (gen?: number) => {
+  billsLoading.value = true;
+  speciesWeightLoading.value = true;
   try {
     const dateFrom = `${selectedYear.value}-01-01`;
     const dateTo = `${selectedYear.value}-12-31`;
@@ -761,6 +859,9 @@ const fetchBills = async () => {
     } else {
       bills = Array.isArray(res.data) ? res.data : [];
     }
+
+    if (gen !== undefined && gen !== fetchGeneration) return;
+
     const map = new Map<
       string,
       { total_amount: number; total_weight: number }
@@ -783,7 +884,13 @@ const fetchBills = async () => {
     speciesWeekWeightMap.value = spWeightMap;
   } catch (error: any) {
     if (!isAuthError(error)) {
+      if (gen !== undefined && gen !== fetchGeneration) return;
       billsErrorMsg.value = "获取放生数据失败。";
+    }
+  } finally {
+    if (gen === undefined || gen === fetchGeneration) {
+      billsLoading.value = false;
+      speciesWeightLoading.value = false;
     }
   }
 };
@@ -799,14 +906,27 @@ const selectYear = async (y: number) => {
 
 const onYearChange = async () => {
   if (speciesList.value.length === 0) return;
+  const gen = ++fetchGeneration;
   trendErrorMsg.value = "";
   billsErrorMsg.value = "";
-  loading.value = true;
-  try {
-    await Promise.all([fetchAllTrends(), fetchBills()]);
-  } finally {
-    loading.value = false;
+
+  const cached = billsCache.get(selectedYear.value);
+  if (cached) {
+    billWeekMap.value = cached.billWeekMap;
+    speciesWeekWeightMap.value = cached.speciesWeekWeightMap;
+    billsLoading.value = false;
+    speciesWeightLoading.value = false;
+    await fetchAllTrends(gen);
+  } else {
+    await Promise.all([fetchAllTrends(gen), fetchBills(gen)]);
+    if (gen === fetchGeneration) {
+      billsCache.set(selectedYear.value, {
+        billWeekMap: billWeekMap.value,
+        speciesWeekWeightMap: speciesWeekWeightMap.value,
+      });
+    }
   }
+
   if (hasBillData.value) {
     renderBillsChart();
     renderPieChart();
@@ -838,473 +958,210 @@ const renderFluctuationChart = () => {
 
     fluctuationChartInstance = echarts.init(fluctuationChartRef.value);
 
-  fluctuationChartInstance.setOption({
-    grid: { left: 4, right: 52, top: 4, bottom: 2, containLabel: true },
-    xAxis: {
-      type: "value",
-      axisLabel: { show: false },
-      splitLine: { show: false },
-      axisLine: { show: false },
-      axisTick: { show: false },
-    },
-    yAxis: {
-      type: "category",
-      data: names,
-      axisLabel: {
-        fontSize: 10,
-        color: "#374151",
-        fontWeight: "bold",
-        width: 72,
-        overflow: "truncate",
-      },
-      axisLine: { show: false },
-      axisTick: { show: false },
-      inverse: true,
-    },
-    series: [
-      {
-        type: "bar",
-        data: maxVals.map((max, i) => ({
-          value: max,
-          minPrice: minVals[i],
-          maxPrice: maxVals[i],
-        })),
-        itemStyle: {
-          color: {
-            type: "linear", x: 0, y: 0, x2: 1, y2: 0,
-            colorStops: [
-              { offset: 0, color: "rgba(196,155,74,0.25)" },
-              { offset: 1, color: "#c49b4a" },
-            ],
-          },
-          borderRadius: [0, 4, 4, 0],
-        },
-        barWidth: "60%",
-        emphasis: {
-          itemStyle: {
-            color: {
-              type: "linear", x: 0, y: 0, x2: 1, y2: 0,
-              colorStops: [
-                { offset: 0, color: "rgba(196,155,74,0.45)" },
-                { offset: 1, color: "#e0b860" },
-              ],
-            },
-          },
-        },
-        label: {
-          show: true,
-          position: "right",
-          distance: 4,
-          color: "#5c4033",
-          fontSize: 10,
-          fontWeight: "bold",
-          formatter: (p: any) => `¥${formatPrice(p.data.maxPrice)}`,
-        },
-      },
-    ],
-    tooltip: {
-      trigger: "axis",
-      appendToBody: true,
-      backgroundColor: "#ffffff",
-      borderColor: "#e5e7eb",
-      borderWidth: 1,
-      padding: [8, 12],
-      textStyle: { color: "#374151", fontSize: 11 },
-      formatter: (params: any) => {
-        const p = Array.isArray(params) ? params[0] : params;
-        if (!p || !p.data) return "";
-        return `<div style="font-weight:bold;margin-bottom:3px;">${p.name}</div>`
-          + `<div>最低：<b>¥${formatPrice(p.data.minPrice)}</b></div>`
-          + `<div>最高：<b>¥${formatPrice(p.data.maxPrice)}</b></div>`;
-      },
-    },
-  });
-  });
-};
-
-// ---- 图表2: 每周放生统计 ----
-
-const renderBillsChart = () => {
-  setTimeout(() => {
-    if (!billsChartRef.value) return;
-    if (billsChartInstance) billsChartInstance.dispose();
-
-    billsChartInstance = echarts.init(billsChartRef.value);
-
-    const allDaySet = new Set<string>();
-    billWeekMap.value.forEach((_, k) => allDaySet.add(k));
-
-    const dayKeys = Array.from(allDaySet).sort();
-    if (dayKeys.length === 0) {
-      return;
-    }
-
-    const dayLabels = dayKeys.map((k) => dayLabel(k));
-
-    const weightData = dayKeys.map((dk) => {
-      const b = billWeekMap.value.get(dk);
-      return b ? Number(b.total_weight.toFixed(2)) : 0;
-    });
-
-    const amountData = dayKeys.map((dk) => {
-      const b = billWeekMap.value.get(dk);
-      return b ? Number(b.total_amount.toFixed(2)) : 0;
-    });
-
-    const labelOverflow2 = dayLabels.length > 20;
-    const xDataCount = dayLabels.length;
-    const showDataZoom = xDataCount > 25;
-    // 自适应柱宽：数据越少柱子越宽
-    const barWidth =
-      xDataCount <= 7
-        ? "30%"
-        : xDataCount <= 15
-          ? "18%"
-          : xDataCount <= 30
-            ? "10%"
-            : "6%";
-    // dataZoom slider 出现时 legend 上移避免重叠，grid bottom 预留空间
-    const legendBottom = showDataZoom ? 24 : 0;
-    const gridBottom = showDataZoom ? "24%" : labelOverflow2 ? "22%" : "15%";
-    const option: any = {
-      labelLayout: { hideOverlap: true },
-      legend: {
-        data: ["总重量", "总金额"],
-        bottom: legendBottom,
-        textStyle: { color: "#6b7280", fontSize: 11 },
-        icon: "roundRect",
-        itemWidth: 12,
-        itemHeight: 4,
-      },
-      tooltip: {
-        trigger: "axis",
-        axisPointer: {
-          type: "cross",
-          crossStyle: { color: "#9ca3af" },
-          label: {
-            backgroundColor: "#5c4033",
-            color: "#fff",
-          },
-        },
-        backgroundColor: "#ffffff",
-        borderColor: "#e5e7eb",
-        borderWidth: 1,
-        padding: [10, 14],
-        textStyle: { color: "#374151", fontSize: 13 },
-        formatter: (params: any) => {
-          if (!Array.isArray(params) || params.length === 0) return "";
-          const weight = params.find((p: any) => p.seriesName === "总重量");
-          const amount = params.find((p: any) => p.seriesName === "总金额");
-          let html = `<div style="font-weight:bold;margin-bottom:5px;color:#374151;">${params[0].axisValue}</div>`;
-          if (weight && weight.value != null) {
-            html += `<div>${weight.marker} 总重量：<b>${formatPrice(weight.value)}</b> 公斤</div>`;
-          }
-          if (amount && amount.value != null) {
-            html += `<div>${amount.marker} 总金额：<b>${fmtYuan(amount.value)}</b></div>`;
-          }
-          return html;
-        },
-      },
-      grid: {
-        left: "4%",
-        right: "6%",
-        bottom: gridBottom,
-        top: "14%",
-        containLabel: true,
-      },
+    fluctuationChartInstance.setOption({
+      grid: { left: 4, right: 52, top: 4, bottom: 2, containLabel: true },
       xAxis: {
-        type: "category",
-        boundaryGap: true,
-        data: dayLabels,
-        axisLine: { lineStyle: { color: "#d1d5db" } },
-        axisLabel: {
-          color: "#9ca3af",
-          fontSize: 10,
-          rotate: labelOverflow2 ? 35 : 0,
-          interval: labelOverflow2
-            ? Math.ceil(dayLabels.length / 20) - 1
-            : "auto",
-        },
+        type: "value",
+        axisLabel: { show: false },
+        splitLine: { show: false },
+        axisLine: { show: false },
         axisTick: { show: false },
       },
-      yAxis: [
-        {
-          type: "value",
-          name: "总重量 (公斤)",
-          boundaryGap: [0, 0.08],
-          nameTextStyle: { color: "#9ca3af", fontSize: 10 },
-          axisLine: { show: true, lineStyle: { color: "#d1d5db" } },
-          axisLabel: {
-            color: "#9ca3af",
-            formatter: (v: number) => v.toFixed(1),
-            fontSize: 10,
-          },
-          splitLine: {
-            lineStyle: { color: "#e5e7eb", type: "solid" },
-          },
+      yAxis: {
+        type: "category",
+        data: names,
+        axisLabel: {
+          fontSize: 10,
+          color: "#374151",
+          fontWeight: "bold",
+          width: 72,
+          overflow: "truncate",
         },
-        {
-          type: "value",
-          name: "总金额 (元)",
-          scale: true,
-          boundaryGap: [0, 0.08],
-          nameTextStyle: { color: "#9ca3af", fontSize: 10 },
-          axisLine: { show: true, lineStyle: { color: "#d1d5db" } },
-          axisLabel: {
-            color: "#9ca3af",
-            formatter: (v: number) => fmtYuan(v),
-            fontSize: 10,
-          },
-          splitLine: { show: false },
-        },
-      ],
+        axisLine: { show: false },
+        axisTick: { show: false },
+        inverse: true,
+      },
       series: [
         {
-          name: "总重量",
           type: "bar",
-          yAxisIndex: 0,
-          barWidth,
-          z: 2,
+          data: maxVals.map((max, i) => ({
+            value: max,
+            minPrice: minVals[i],
+            maxPrice: maxVals[i],
+          })),
           itemStyle: {
             color: {
               type: "linear",
               x: 0,
               y: 0,
-              x2: 0,
-              y2: 1,
+              x2: 1,
+              y2: 0,
               colorStops: [
-                { offset: 0, color: "#7a5544" },
-                { offset: 1, color: "#4a2c1e" },
+                { offset: 0, color: "rgba(196,155,74,0.25)" },
+                { offset: 1, color: "#c49b4a" },
               ],
             },
-            borderRadius: [4, 4, 0, 0],
+            borderRadius: [0, 4, 4, 0],
           },
+          barWidth: "60%",
           emphasis: {
             itemStyle: {
               color: {
                 type: "linear",
                 x: 0,
                 y: 0,
-                x2: 0,
-                y2: 1,
+                x2: 1,
+                y2: 0,
                 colorStops: [
-                  { offset: 0, color: "#8b6248" },
-                  { offset: 1, color: "#5c4033" },
+                  { offset: 0, color: "rgba(196,155,74,0.45)" },
+                  { offset: 1, color: "#e0b860" },
                 ],
               },
             },
           },
           label: {
             show: true,
-            position: "top",
+            position: "right",
             distance: 4,
-            color: "#4a2c1e",
+            color: "#5c4033",
             fontSize: 10,
             fontWeight: "bold",
-            formatter: (p: any) =>
-              p.value > 0 ? formatPrice(p.value) : "",
+            formatter: (p: any) => `¥${formatPrice(p.data.maxPrice)}`,
           },
-          data: weightData,
-        },
-        {
-          name: "总金额",
-          type: "line",
-          yAxisIndex: 1,
-          z: 1,
-          smooth: true,
-          connectNulls: true,
-          symbol: "emptyCircle",
-          symbolSize: 6,
-          itemStyle: {
-            color: "#c49b4a",
-            borderColor: "#c49b4a",
-            borderWidth: 2,
-          },
-          lineStyle: { width: 2.5, color: "#c49b4a" },
-          emphasis: {
-            focus: "series",
-            itemStyle: {
-              color: "#e0b860",
-              borderColor: "#e0b860",
-              borderWidth: 3,
-            },
-            lineStyle: { width: 3.5, color: "#e0b860" },
-            areaStyle: {
-              color: {
-                type: "linear",
-                x: 0,
-                y: 0,
-                x2: 0,
-                y2: 1,
-                colorStops: [
-                  { offset: 0, color: "rgba(224,184,96,0.25)" },
-                  { offset: 1, color: "rgba(224,184,96,0.03)" },
-                ],
-              },
-            },
-          },
-          areaStyle: {
-            color: {
-              type: "linear",
-              x: 0,
-              y: 0,
-              x2: 0,
-              y2: 1,
-              colorStops: [
-                { offset: 0, color: "rgba(196,155,74,0.15)" },
-                { offset: 1, color: "rgba(196,155,74,0.01)" },
-              ],
-            },
-          },
-          data: amountData,
         },
       ],
-      dataZoom: showDataZoom
-        ? [
-            {
-              type: "slider",
-              bottom: 0,
-              height: 24,
-              borderColor: "#d1d5db40",
-              fillerColor: "#d1d5db20",
-              handleStyle: { color: "#d1d5db" },
-              textStyle: { color: "#9ca3af", fontSize: 10 },
-            },
-          ]
-        : [],
-    };
-
-    billsChartInstance.setOption(option);
-  }, 100);
-};
-
-const renderSpeciesWeightChart = () => {
-  setTimeout(() => {
-    if (!speciesWeightChartRef.value) return;
-    if (speciesWeightChartInstance) speciesWeightChartInstance.dispose();
-
-    speciesWeightChartInstance = echarts.init(speciesWeightChartRef.value);
-
-    const allDaySet = new Set<string>();
-    speciesWeekWeightMap.value.forEach((_, k) => allDaySet.add(k));
-
-    const dayKeys = Array.from(allDaySet).sort();
-    if (dayKeys.length === 0) return;
-
-    const dayLabels = dayKeys.map((k) => dayLabel(k));
-
-    const cats = categoryDefs.map((d) => ({
-      key: d.key,
-      label: d.label,
-      color: d.color,
-      data: dayKeys.map(() => 0),
-    }));
-
-    const spIdCatKeyMap = new Map<number, string>();
-    speciesWeekWeightMap.value.forEach((spMap) => {
-      spMap.forEach((_, spId) => {
-        if (spIdCatKeyMap.has(spId)) return;
-        const sp = speciesList.value.find((s: any) => s.id === spId);
-        if (!sp) return;
-        spIdCatKeyMap.set(spId, getSpeciesCategory(sp.name_zh));
-      });
-    });
-
-    dayKeys.forEach((dk, di) => {
-      const spMap = speciesWeekWeightMap.value.get(dk);
-      if (!spMap) return;
-      spMap.forEach((weight, spId) => {
-        const cat = spIdCatKeyMap.get(spId);
-        if (!cat) return;
-        const c = cats.find((c) => c.key === cat);
-        if (c) c.data[di] += weight;
-      });
-    });
-
-    cats.forEach((c) => {
-      c.data = c.data.map((v) => Number(v.toFixed(2)));
-    });
-
-    // 过滤掉全为 0 的分类（避免图例和折线冗余）
-    const activeCats = cats.filter((c) => c.key !== "其他" && c.data.some((v) => v > 0));
-
-    const series: any[] = activeCats.map((c) => ({
-      name: c.label,
-      type: "line",
-      smooth: true,
-      connectNulls: true,
-      symbol: "circle",
-      symbolSize: 4,
-      lineStyle: { width: 2, color: catLineColors[c.key] || c.color },
-      itemStyle: { color: catLineColors[c.key] || c.color },
-      emphasis: { focus: "series" },
-      data: c.data,
-    }));
-
-    const labelOverflow3 = dayLabels.length > 20;
-    const legendNames = activeCats.map((c) => c.label);
-
-    const option: any = {
-      legend: {
-        orient: "horizontal",
-        bottom: 0,
-        left: "center",
-        itemGap: 14,
-        itemWidth: 20,
-        itemHeight: 3,
-        icon: "roundRect",
-        textStyle: { color: "#6b7280", fontSize: 11 },
-        data: legendNames,
-      },
       tooltip: {
         trigger: "axis",
+        appendToBody: true,
         backgroundColor: "#ffffff",
         borderColor: "#e5e7eb",
         borderWidth: 1,
-        padding: [10, 14],
-        textStyle: { color: "#374151", fontSize: 12 },
+        padding: [8, 12],
+        textStyle: { color: "#374151", fontSize: 11 },
         formatter: (params: any) => {
-          if (!Array.isArray(params) || params.length === 0) return "";
-          const items = params
-            .filter((p: any) => p.value != null && p.value > 0)
-            .sort((a: any, b: any) => b.value - a.value);
-          if (items.length === 0) return "";
-          let html = `<div style="font-weight:bold;margin-bottom:5px;color:#5c4033;">${items[0].axisValue}</div>`;
-          let total = 0;
-          for (const p of items) {
-            total += Number(p.value);
-            html += `<div style="display:flex;justify-content:space-between;gap:24px;"><span>${p.marker} ${p.seriesName}</span><b style="color:#374151;">${formatPrice(p.value)} 公斤</b></div>`;
-          }
-          html += `<div style="margin-top:4px;padding-top:4px;border-top:1px solid #e5e7eb;display:flex;justify-content:space-between;"><span style="color:#9ca3af;">合计</span><b style="color:#374151;">${formatPrice(Number(total.toFixed(2)))} 公斤</b></div>`;
-          return html;
+          const p = Array.isArray(params) ? params[0] : params;
+          if (!p || !p.data) return "";
+          return (
+            `<div style="font-weight:bold;margin-bottom:3px;">${p.name}</div>` +
+            `<div>最低：<b>¥${formatPrice(p.data.minPrice)}</b></div>` +
+            `<div>最高：<b>¥${formatPrice(p.data.maxPrice)}</b></div>`
+          );
         },
       },
-      grid: {
-        left: 45,
-        right: 10,
-        bottom: labelOverflow3 ? 44 : 28,
-        top: 10,
-        containLabel: false,
-      },
-      xAxis: {
-        type: "category",
-        boundaryGap: false,
-        data: dayLabels,
-        axisLine: { lineStyle: { color: "#d1d5db" } },
-        axisLabel: {
-          color: "#9ca3af",
-          fontSize: 10,
-          rotate: labelOverflow3 ? 35 : 0,
-          interval: labelOverflow3
-            ? Math.ceil(dayLabels.length / 20) - 1
-            : "auto",
+    });
+  });
+};
+
+// ---- 图表2: 每周放生统计 ----
+
+const renderBillsChart = async () => {
+  await nextTick();
+  if (!billsChartRef.value) return;
+  if (billsChartInstance) billsChartInstance.dispose();
+
+  billsChartInstance = echarts.init(billsChartRef.value);
+
+  const allDaySet = new Set<string>();
+  billWeekMap.value.forEach((_, k) => allDaySet.add(k));
+
+  const dayKeys = Array.from(allDaySet).sort();
+  if (dayKeys.length === 0) {
+    return;
+  }
+
+  const dayLabels = dayKeys.map((k) => dayLabel(k));
+
+  const weightData = dayKeys.map((dk) => {
+    const b = billWeekMap.value.get(dk);
+    return b ? Number(b.total_weight.toFixed(2)) : 0;
+  });
+
+  const amountData = dayKeys.map((dk) => {
+    const b = billWeekMap.value.get(dk);
+    return b ? Number(b.total_amount.toFixed(2)) : 0;
+  });
+
+  const labelOverflow2 = dayLabels.length > 20;
+  const xDataCount = dayLabels.length;
+  const showDataZoom = xDataCount > 25;
+  // 自适应柱宽：数据越少柱子越宽
+  const barWidth =
+    xDataCount <= 7
+      ? "30%"
+      : xDataCount <= 15
+        ? "18%"
+        : xDataCount <= 30
+          ? "10%"
+          : "6%";
+  // dataZoom slider 出现时 legend 上移避免重叠，grid bottom 预留空间
+  const legendBottom = showDataZoom ? 24 : 0;
+  const gridBottom = showDataZoom ? "24%" : labelOverflow2 ? "22%" : "15%";
+  const option: any = {
+    labelLayout: { hideOverlap: true },
+    legend: {
+      data: ["总重量", "总金额"],
+      bottom: legendBottom,
+      textStyle: { color: "#6b7280", fontSize: 11 },
+      icon: "roundRect",
+      itemWidth: 12,
+      itemHeight: 4,
+    },
+    tooltip: {
+      trigger: "axis",
+      axisPointer: {
+        type: "cross",
+        crossStyle: { color: "#9ca3af" },
+        label: {
+          backgroundColor: "#5c4033",
+          color: "#fff",
         },
-        axisTick: { show: false },
       },
-      yAxis: {
+      backgroundColor: "#ffffff",
+      borderColor: "#e5e7eb",
+      borderWidth: 1,
+      padding: [10, 14],
+      textStyle: { color: "#374151", fontSize: 13 },
+      formatter: (params: any) => {
+        if (!Array.isArray(params) || params.length === 0) return "";
+        const weight = params.find((p: any) => p.seriesName === "总重量");
+        const amount = params.find((p: any) => p.seriesName === "总金额");
+        let html = `<div style="font-weight:bold;margin-bottom:5px;color:#374151;">${params[0].axisValue}</div>`;
+        if (weight && weight.value != null) {
+          html += `<div>${weight.marker} 总重量：<b>${formatPrice(weight.value)}</b> 公斤</div>`;
+        }
+        if (amount && amount.value != null) {
+          html += `<div>${amount.marker} 总金额：<b>${fmtYuan(amount.value)}</b></div>`;
+        }
+        return html;
+      },
+    },
+    grid: {
+      left: "4%",
+      right: "6%",
+      bottom: gridBottom,
+      top: "14%",
+      containLabel: true,
+    },
+    xAxis: {
+      type: "category",
+      boundaryGap: true,
+      data: dayLabels,
+      axisLine: { lineStyle: { color: "#d1d5db" } },
+      axisLabel: {
+        color: "#9ca3af",
+        fontSize: 10,
+        rotate: labelOverflow2 ? 35 : 0,
+        interval: labelOverflow2
+          ? Math.ceil(dayLabels.length / 20) - 1
+          : "auto",
+      },
+      axisTick: { show: false },
+    },
+    yAxis: [
+      {
         type: "value",
-        scale: true,
-        name: "重量 (公斤)",
+        name: "总重量 (公斤)",
+        boundaryGap: [0, 0.08],
         nameTextStyle: { color: "#9ca3af", fontSize: 10 },
         axisLine: { show: true, lineStyle: { color: "#d1d5db" } },
         axisLabel: {
@@ -1316,164 +1173,478 @@ const renderSpeciesWeightChart = () => {
           lineStyle: { color: "#e5e7eb", type: "solid" },
         },
       },
-      series,
-    };
+      {
+        type: "value",
+        name: "总金额 (元)",
+        scale: true,
+        boundaryGap: [0, 0.08],
+        nameTextStyle: { color: "#9ca3af", fontSize: 10 },
+        axisLine: { show: true, lineStyle: { color: "#d1d5db" } },
+        axisLabel: {
+          color: "#9ca3af",
+          formatter: (v: number) => fmtYuan(v),
+          fontSize: 10,
+        },
+        splitLine: { show: false },
+      },
+    ],
+    series: [
+      {
+        name: "总重量",
+        type: "bar",
+        yAxisIndex: 0,
+        barWidth,
+        z: 2,
+        itemStyle: {
+          color: {
+            type: "linear",
+            x: 0,
+            y: 0,
+            x2: 0,
+            y2: 1,
+            colorStops: [
+              { offset: 0, color: "#7a5544" },
+              { offset: 1, color: "#4a2c1e" },
+            ],
+          },
+          borderRadius: [4, 4, 0, 0],
+        },
+        emphasis: {
+          itemStyle: {
+            color: {
+              type: "linear",
+              x: 0,
+              y: 0,
+              x2: 0,
+              y2: 1,
+              colorStops: [
+                { offset: 0, color: "#8b6248" },
+                { offset: 1, color: "#5c4033" },
+              ],
+            },
+          },
+        },
+        label: {
+          show: true,
+          position: "top",
+          distance: 4,
+          color: "#4a2c1e",
+          fontSize: 10,
+          fontWeight: "bold",
+          formatter: (p: any) => (p.value > 0 ? formatPrice(p.value) : ""),
+        },
+        data: weightData,
+      },
+      {
+        name: "总金额",
+        type: "line",
+        yAxisIndex: 1,
+        z: 1,
+        smooth: true,
+        connectNulls: true,
+        symbol: "emptyCircle",
+        symbolSize: 6,
+        itemStyle: {
+          color: "#c49b4a",
+          borderColor: "#c49b4a",
+          borderWidth: 2,
+        },
+        lineStyle: { width: 2.5, color: "#c49b4a" },
+        emphasis: {
+          focus: "series",
+          itemStyle: {
+            color: "#e0b860",
+            borderColor: "#e0b860",
+            borderWidth: 3,
+          },
+          lineStyle: { width: 3.5, color: "#e0b860" },
+          areaStyle: {
+            color: {
+              type: "linear",
+              x: 0,
+              y: 0,
+              x2: 0,
+              y2: 1,
+              colorStops: [
+                { offset: 0, color: "rgba(224,184,96,0.25)" },
+                { offset: 1, color: "rgba(224,184,96,0.03)" },
+              ],
+            },
+          },
+        },
+        areaStyle: {
+          color: {
+            type: "linear",
+            x: 0,
+            y: 0,
+            x2: 0,
+            y2: 1,
+            colorStops: [
+              { offset: 0, color: "rgba(196,155,74,0.15)" },
+              { offset: 1, color: "rgba(196,155,74,0.01)" },
+            ],
+          },
+        },
+        data: amountData,
+      },
+    ],
+    dataZoom: showDataZoom
+      ? [
+          {
+            type: "slider",
+            bottom: 0,
+            height: 24,
+            borderColor: "#d1d5db40",
+            fillerColor: "#d1d5db20",
+            handleStyle: { color: "#d1d5db" },
+            textStyle: { color: "#9ca3af", fontSize: 10 },
+          },
+        ]
+      : [],
+  };
 
-    speciesWeightChartInstance.setOption(option);
-  }, 100);
+  billsChartInstance.setOption(option);
 };
 
-const renderPieChart = () => {
-  setTimeout(() => {
-    if (!pieChart.value) return;
-    if (pieChartInstance) pieChartInstance.dispose();
-    pieChartInstance = echarts.init(pieChart.value);
+const renderSpeciesWeightChart = async () => {
+  await nextTick();
+  if (!speciesWeightChartRef.value) return;
+  if (speciesWeightChartInstance) speciesWeightChartInstance.dispose();
 
-    const speciesTotalWeight = new Map<number, number>();
-    speciesWeekWeightMap.value.forEach((spMap) => {
-      spMap.forEach((weight, spId) => {
-        speciesTotalWeight.set(
-          spId,
-          (speciesTotalWeight.get(spId) || 0) + weight,
-        );
-      });
-    });
+  speciesWeightChartInstance = echarts.init(speciesWeightChartRef.value);
 
-    if (speciesTotalWeight.size === 0 || !Array.isArray(speciesList.value))
-      return;
+  const allDaySet = new Set<string>();
+  speciesWeekWeightMap.value.forEach((_, k) => allDaySet.add(k));
 
-    // 按分类汇总重量
-    const categoryWeight = new Map<string, number>();
-    let totalWeight = 0;
-    speciesTotalWeight.forEach((weight, spId) => {
+  const dayKeys = Array.from(allDaySet).sort();
+  if (dayKeys.length === 0) return;
+
+  const dayLabels = dayKeys.map((k) => dayLabel(k));
+
+  const cats = categoryDefs.map((d) => ({
+    key: d.key,
+    label: d.label,
+    color: d.color,
+    data: dayKeys.map(() => 0),
+  }));
+
+  const spIdCatKeyMap = new Map<number, string>();
+  speciesWeekWeightMap.value.forEach((spMap) => {
+    spMap.forEach((_, spId) => {
+      if (spIdCatKeyMap.has(spId)) return;
       const sp = speciesList.value.find((s: any) => s.id === spId);
       if (!sp) return;
-      const cat = getSpeciesCategory(sp.name_zh);
-      if (cat === "其他") return;
-      const w = Number(weight.toFixed(2));
-      categoryWeight.set(cat, (categoryWeight.get(cat) || 0) + w);
-      totalWeight += w;
+      spIdCatKeyMap.set(spId, getSpeciesCategory(sp.name_zh));
     });
+  });
 
-    const pieData = categoryDefs
-      .filter((def) => categoryWeight.has(def.key))
-      .map((def) => ({
-        name: def.label,
-        value: categoryWeight.get(def.key) || 0,
-        itemStyle: { color: def.color },
-      }))
-      .filter((d) => d.value > 0)
-      .sort((a, b) => b.value - a.value);
+  dayKeys.forEach((dk, di) => {
+    const spMap = speciesWeekWeightMap.value.get(dk);
+    if (!spMap) return;
+    spMap.forEach((weight, spId) => {
+      const cat = spIdCatKeyMap.get(spId);
+      if (!cat) return;
+      const c = cats.find((c) => c.key === cat);
+      if (c) c.data[di] += weight;
+    });
+  });
 
-    if (pieData.length === 0) return;
+  cats.forEach((c) => {
+    c.data = c.data.map((v) => Number(v.toFixed(2)));
+  });
 
-    const option: any = {
-      // 中心文字：总重量
-      graphic: [
-        {
-          type: "text",
-          left: "center",
-          top: "38%",
-          style: {
-            text: formatPrice(totalWeight),
-            textAlign: "center",
-            fill: "#374151",
-            fontSize: 20,
-            fontWeight: "bold",
-            fontFamily:
-              "ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, monospace",
-          },
-        },
-        {
-          type: "text",
-          left: "center",
-          top: "52%",
-          style: {
-            text: "公斤",
-            textAlign: "center",
-            fill: "#9ca3af",
-            fontSize: 12,
-          },
-        },
-      ],
-      legend: {
-        orient: "horizontal",
-        bottom: 0,
-        left: "center",
-        itemGap: 14,
-        itemWidth: 8,
-        itemHeight: 8,
-        borderRadius: 4,
-        textStyle: {
-          color: "#6b7280",
-          fontSize: 11,
+  // 过滤掉全为 0 的分类（避免图例和折线冗余）
+  const activeCats = cats.filter(
+    (c) => c.key !== "其他" && c.data.some((v) => v > 0),
+  );
+
+  const series: any[] = activeCats.map((c) => ({
+    name: c.label,
+    type: "line",
+    smooth: true,
+    connectNulls: true,
+    symbol: "circle",
+    symbolSize: 4,
+    lineStyle: { width: 2, color: catLineColors[c.key] || c.color },
+    itemStyle: { color: catLineColors[c.key] || c.color },
+    emphasis: { focus: "series" },
+    data: c.data,
+  }));
+
+  const labelOverflow3 = dayLabels.length > 20;
+  const legendNames = activeCats.map((c) => c.label);
+
+  const option: any = {
+    legend: {
+      orient: "horizontal",
+      bottom: 0,
+      left: "center",
+      itemGap: 14,
+      itemWidth: 20,
+      itemHeight: 3,
+      icon: "roundRect",
+      textStyle: { color: "#6b7280", fontSize: 11 },
+      data: legendNames,
+    },
+    tooltip: {
+      trigger: "axis",
+      backgroundColor: "#ffffff",
+      borderColor: "#e5e7eb",
+      borderWidth: 1,
+      padding: [10, 14],
+      textStyle: { color: "#374151", fontSize: 12 },
+      formatter: (params: any) => {
+        if (!Array.isArray(params) || params.length === 0) return "";
+        const items = params
+          .filter((p: any) => p.value != null && p.value > 0)
+          .sort((a: any, b: any) => b.value - a.value);
+        if (items.length === 0) return "";
+        let html = `<div style="font-weight:bold;margin-bottom:5px;color:#5c4033;">${items[0].axisValue}</div>`;
+        let total = 0;
+        for (const p of items) {
+          total += Number(p.value);
+          html += `<div style="display:flex;justify-content:space-between;gap:24px;"><span>${p.marker} ${p.seriesName}</span><b style="color:#374151;">${formatPrice(p.value)} 公斤</b></div>`;
+        }
+        html += `<div style="margin-top:4px;padding-top:4px;border-top:1px solid #e5e7eb;display:flex;justify-content:space-between;"><span style="color:#9ca3af;">合计</span><b style="color:#374151;">${formatPrice(Number(total.toFixed(2)))} 公斤</b></div>`;
+        return html;
+      },
+    },
+    grid: {
+      left: 45,
+      right: 10,
+      bottom: labelOverflow3 ? 44 : 28,
+      top: 10,
+      containLabel: false,
+    },
+    xAxis: {
+      type: "category",
+      boundaryGap: false,
+      data: dayLabels,
+      axisLine: { lineStyle: { color: "#d1d5db" } },
+      axisLabel: {
+        color: "#9ca3af",
+        fontSize: 10,
+        rotate: labelOverflow3 ? 35 : 0,
+        interval: labelOverflow3
+          ? Math.ceil(dayLabels.length / 20) - 1
+          : "auto",
+      },
+      axisTick: { show: false },
+    },
+    yAxis: {
+      type: "value",
+      scale: true,
+      name: "重量 (公斤)",
+      nameTextStyle: { color: "#9ca3af", fontSize: 10 },
+      axisLine: { show: true, lineStyle: { color: "#d1d5db" } },
+      axisLabel: {
+        color: "#9ca3af",
+        formatter: (v: number) => v.toFixed(1),
+        fontSize: 10,
+      },
+      splitLine: {
+        lineStyle: { color: "#e5e7eb", type: "solid" },
+      },
+    },
+    series,
+  };
+
+  speciesWeightChartInstance.setOption(option);
+};
+
+const renderPieChart = async () => {
+  await nextTick();
+  if (!pieChart.value) return;
+  if (pieChartInstance) pieChartInstance.dispose();
+  pieChartInstance = echarts.init(pieChart.value);
+
+  const speciesTotalWeight = new Map<number, number>();
+  speciesWeekWeightMap.value.forEach((spMap) => {
+    spMap.forEach((weight, spId) => {
+      speciesTotalWeight.set(
+        spId,
+        (speciesTotalWeight.get(spId) || 0) + weight,
+      );
+    });
+  });
+
+  if (speciesTotalWeight.size === 0 || !Array.isArray(speciesList.value))
+    return;
+
+  // 按分类汇总重量
+  const categoryWeight = new Map<string, number>();
+  let totalWeight = 0;
+  speciesTotalWeight.forEach((weight, spId) => {
+    const sp = speciesList.value.find((s: any) => s.id === spId);
+    if (!sp) return;
+    const cat = getSpeciesCategory(sp.name_zh);
+    if (cat === "其他") return;
+    const w = Number(weight.toFixed(2));
+    categoryWeight.set(cat, (categoryWeight.get(cat) || 0) + w);
+    totalWeight += w;
+  });
+
+  const pieData = categoryDefs
+    .filter((def) => categoryWeight.has(def.key))
+    .map((def) => ({
+      name: def.label,
+      value: categoryWeight.get(def.key) || 0,
+      itemStyle: { color: def.color },
+    }))
+    .filter((d) => d.value > 0)
+    .sort((a, b) => b.value - a.value);
+
+  if (pieData.length === 0) return;
+
+  const totalPct = pieData.reduce((s, d) => s + d.value, 0);
+  const option: any = {
+    graphic: [
+      {
+        type: "text",
+        left: "42%",
+        top: "center",
+        style: {
+          text: "放生总重",
+          textAlign: "center",
+          fill: "#9ca3af",
+          fontSize: 12,
+          lineHeight: 18,
         },
       },
-      tooltip: {
-        trigger: "item",
-        backgroundColor: "#ffffff",
-        borderColor: "#e5e7eb",
-        borderWidth: 1,
-        padding: [10, 14],
-        textStyle: { color: "#374151", fontSize: 13 },
-        formatter: (params: any) => {
-          return `<div style="font-size:14px;font-weight:bold;margin-bottom:5px;">${params.marker} ${params.name}</div>
+      {
+        type: "text",
+        left: "42%",
+        top: "center",
+        style: {
+          text: formatPrice(totalWeight),
+          textAlign: "center",
+          fill: "#374151",
+          fontSize: 24,
+          fontWeight: "bold",
+          lineHeight: 28,
+          fontFamily:
+            "ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, monospace",
+          y: 20,
+        },
+      },
+      {
+        type: "text",
+        left: "42%",
+        top: "center",
+        style: {
+          text: "公斤",
+          textAlign: "center",
+          fill: "#9ca3af",
+          fontSize: 11,
+          lineHeight: 16,
+          y: 48,
+        },
+      },
+    ],
+    legend: {
+      orient: "vertical",
+      right: "4%",
+      top: "center",
+      itemGap: 10,
+      itemWidth: 10,
+      itemHeight: 10,
+      borderRadius: 5,
+      textStyle: {
+        color: "#374151",
+        fontSize: 11,
+        fontWeight: 500,
+        rich: {
+          name: { color: "#374151", fontSize: 11, fontWeight: 500, width: 66 },
+          pct: {
+            color: "#6b7280",
+            fontSize: 11,
+            fontWeight: 600,
+            width: 48,
+            align: "right",
+          },
+        },
+      },
+      formatter: (name: string) => {
+        const d = pieData.find((p: any) => p.name === name);
+        if (!d || totalPct === 0) return name;
+        const pct = Math.round((d.value / totalPct) * 1000) / 10;
+        return `{name|${name}}  {pct|${pct}%}`;
+      },
+    },
+    tooltip: {
+      trigger: "item",
+      appendToBody: true,
+      backgroundColor: "#ffffff",
+      borderColor: "#e5e7eb",
+      borderWidth: 1,
+      padding: [10, 14],
+      textStyle: { color: "#374151", fontSize: 13 },
+      formatter: (params: any) => {
+        return `<div style="font-size:14px;font-weight:bold;margin-bottom:5px;">${params.marker} ${params.name}</div>
                   <div style="color:#6b7280;">放生重量：<b style="color:#374151;">${formatPrice(params.value)}</b> 公斤</div>
                   <div style="color:#6b7280;">占比：<b style="color:#374151;">${params.percent}%</b></div>`;
-        },
       },
-      series: [
-        {
-          type: "pie",
-          radius: ["50%", "78%"],
-          center: ["50%", "45%"],
-          avoidLabelOverlap: false,
+    },
+    series: [
+      {
+        type: "pie",
+        radius: ["46%", "76%"],
+        center: ["42%", "50%"],
+        avoidLabelOverlap: true,
+        itemStyle: {
+          borderRadius: 4,
+          borderColor: "#fff",
+          borderWidth: 2,
+        },
+        label: {
+          show: true,
+          position: "outside",
+          formatter: (p: any) => {
+            return `{name|${p.name}}\n{pct|${p.percent}%}`;
+          },
+          rich: {
+            name: {
+              fontSize: 10,
+              fontWeight: 600,
+              color: "#374151",
+              lineHeight: 16,
+            },
+            pct: {
+              fontSize: 9,
+              color: "#6b7280",
+              lineHeight: 14,
+            },
+          },
+        },
+        labelLine: {
+          show: true,
+          length: 18,
+          length2: 14,
+          lineStyle: { color: "#cbd5e1", width: 1 },
+        },
+        emphasis: {
+          scaleSize: 8,
           itemStyle: {
-            borderRadius: 6,
-            borderColor: "#fff",
-            borderWidth: 3,
+            shadowBlur: 24,
+            shadowOffsetX: 0,
+            shadowOffsetY: 8,
+            shadowColor: "rgba(0,0,0,0.12)",
           },
           label: {
             show: true,
-            position: "inside",
-            formatter: (p: any) => {
-              if (p.percent < 6) return "";
-              return `{pct|${p.percent}%}`;
-            },
-            rich: {
-              pct: {
-                fontSize: 14,
-                fontWeight: "bold",
-                color: "#ffffff",
-                textShadowColor: "rgba(0,0,0,0.3)",
-                textShadowBlur: 4,
-              },
-            },
+            fontSize: 12,
+            fontWeight: "bold",
           },
-          emphasis: {
-            scaleSize: 6,
-            itemStyle: {
-              shadowBlur: 20,
-              shadowOffsetX: 0,
-              shadowOffsetY: 6,
-              shadowColor: "rgba(0,0,0,0.15)",
-            },
-            label: {
-              show: true,
-              fontSize: 16,
-              fontWeight: "bold",
-            },
-          },
-          data: pieData,
-          animationType: "scale",
-          animationEasing: "elasticOut",
-          animationDelay: (idx: number) => idx * 120,
         },
-      ],
-    };
+        data: pieData,
+        animationType: "scale",
+        animationEasing: "cubicOut",
+        animationDelay: (idx: number) => idx * 120,
+      },
+    ],
+  };
 
-    pieChartInstance.setOption(option);
-  }, 100);
+  pieChartInstance.setOption(option);
 };
 
 const handleResize = () => {

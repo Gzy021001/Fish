@@ -467,7 +467,7 @@
 
 <script setup lang="ts">
 import { computed, onMounted, reactive, ref, watch } from "vue";
-import { useRoute, useRouter } from "vue-router";
+import { onBeforeRouteLeave, useRoute, useRouter } from "vue-router";
 import api from "../api";
 import { apiErrorMessage, isAuthError } from "../lib/error";
 import {
@@ -563,6 +563,14 @@ const saveEdit = async () => {
   errorMsg.value = "";
   saveSuccess.value = false;
   try {
+    if (selectedFile.value) {
+      const formData = new FormData();
+      formData.append("image", selectedFile.value);
+      await api.post(`/species/${speciesId()}/image`, formData, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
+    }
+
     const res = await api.put(`/species/${speciesId()}`, {
       name_zh: editForm.name_zh.trim(),
       default_price: Number(editForm.default_price),
@@ -586,18 +594,12 @@ const saveEdit = async () => {
         res.data.release_date ?? species.value.release_date;
     }
 
-    if (selectedFile.value) {
-      const formData = new FormData();
-      formData.append("image", selectedFile.value);
-      await api.post(`/species/${speciesId()}/image`, formData, {
-        headers: { "Content-Type": "multipart/form-data" },
-      });
-    }
-
     saveSuccess.value = true;
-    setTimeout(() => {
-      router.replace("/species");
-    }, 600);
+    await new Promise<void>((resolve) => {
+      const timer = setTimeout(resolve, 600);
+      onBeforeRouteLeave(() => { clearTimeout(timer); resolve(); });
+    });
+    router.replace("/species");
   } catch (error: any) {
     if (isAuthError(error)) return;
     errorMsg.value = apiErrorMessage(error, "保存品种");
@@ -641,10 +643,11 @@ const fetchSpeciesDetail = async () => {
   loading.value = true;
   errorMsg.value = "";
   try {
-    const res = await api.get(`/species/${speciesId()}`);
+    const [res, logsRes] = await Promise.all([
+      api.get(`/species/${speciesId()}`),
+      api.get(`/logs/species/${speciesId()}`),
+    ]);
     species.value = res.data;
-
-    const logsRes = await api.get(`/logs/species/${speciesId()}`);
     logs.value = Array.isArray(logsRes.data) ? logsRes.data : [];
   } catch (error: any) {
     if (isAuthError(error)) return;

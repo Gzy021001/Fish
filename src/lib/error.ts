@@ -27,7 +27,7 @@ export function apiErrorMessage(error: any, context: string): string {
   if (error.code === 'ECONNABORTED' || error.message?.includes('timeout')) {
     return `${context}超时，服务器正在唤醒或响应过慢，请稍后重试`
   }
-  return `${context}失败：无法连接到服务器。如果这是部署后首次访问，请稍等 10-20 秒待后端冷启动完成。`
+  return `${context}失败：无法连接到服务器，已自动重试。如果问题持续，请稍后刷新页面。`
 }
 
 export function isAuthError(error: any): boolean {

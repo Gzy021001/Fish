@@ -8,8 +8,13 @@
       <Transition name="modal" appear>
         <div
           v-if="show"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="confirm-dialog-title"
           class="bg-white rounded-2xl shadow-2xl border-t-4 border-t-dunhuang-red border-dunhuang-yellow w-full max-w-sm p-6 relative overflow-hidden"
           @click.stop
+          @keydown.escape="$emit('cancel')"
+          @keydown.enter="$emit('confirm')"
         >
           <div class="flex items-center gap-3 mb-4">
             <div
@@ -29,7 +34,7 @@
                 />
               </svg>
             </div>
-            <h3 class="text-lg font-serif text-dunhuang-blue font-bold">
+            <h3 id="confirm-dialog-title" class="text-lg font-serif text-dunhuang-blue font-bold">
               {{ title }}
             </h3>
           </div>
@@ -57,13 +62,23 @@
 </template>
 
 <script setup lang="ts">
-defineProps<{
+import { watch, nextTick } from "vue";
+
+const props = defineProps<{
   show: boolean;
   title?: string;
 }>();
 
-defineEmits<{
+const emit = defineEmits<{
   confirm: [];
   cancel: [];
 }>();
+
+watch(() => props.show, async (val) => {
+  if (val) {
+    await nextTick();
+    const el = document.querySelector<HTMLElement>('[role="dialog"]');
+    el?.focus();
+  }
+});
 </script>

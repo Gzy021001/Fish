@@ -1,75 +1,80 @@
 import logging
 import traceback
 import os
-from fastapi import FastAPI, Request, Depends
+import time
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import JSONResponse
-from sqlalchemy.orm import Session
-from sqlalchemy import text
 
-from database import engine, Base, get_db
+from database import engine, Base
 import bootstrap
 
 from routers import auth, species, bills, logs, stats
 from services.image_storage import get_uploads_dir
 
-# 配置日志
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# 启动初始化标记
 _initialized = False
+_init_error = None
+
 
 def init_app():
-    global _initialized
+    global _initialized, _init_error
     if _initialized:
         return
-    
+
     logger.info("Initializing application...")
     try:
-        # 优化 Vercel 冷启动：如果表已存在，跳过耗时的 create_all 和 bootstrap
         if os.getenv("VERCEL"):
             try:
                 with engine.connect() as conn:
+                    from sqlalchemy import text
+
                     conn.execute(text("SELECT 1 FROM users LIMIT 1"))
                 _initialized = True
-                logger.info("Database already initialized, skipping create_all to save cold start time.")
+                logger.info(
+                    "Database already initialized, skipping create_all for cold start."
+                )
                 return
             except Exception:
-                pass  # 表不存在，继续执行初始化
+                pass
 
         if os.getenv("RESET_DATABASE") == "true":
-            logger.warning("RESET_DATABASE is true. Dropping all tables...")
+            logger.warning("RESET_DATABASE=true, dropping all tables...")
             Base.metadata.drop_all(bind=engine)
-            logger.warning("All tables dropped.")
-            
+
         Base.metadata.create_all(bind=engine)
         bootstrap.run()
         _initialized = True
+        _init_error = None
         logger.info("Application initialized successfully.")
-    except Exception as e:
-        error_msg = str(e)
-        logger.error(f"Initialization failed: {error_msg}")
+    except Exception as exc:
+        _init_error = str(exc)
+        logger.error("Initialization failed: %s", _init_error)
         logger.error(traceback.format_exc())
-        
-        # 针对常见的 Supabase 连接错误提供友好的提示
-        if "tenant/user" in error_msg and "not found" in error_msg:
-            friendly_error = "数据库连接失败：Supabase 项目 ID 或区域配置错误。请检查 Vercel 中的 DATABASE_URL 是否使用了正确的项目专属地址（建议使用 5432 端口的直连地址）。"
-            raise Exception(friendly_error)
-        elif "password authentication failed" in error_msg:
-            raise Exception("数据库连接失败：密码错误，请检查 Vercel 中的 DATABASE_URL 配置。")
-        
-        raise e # 抛出原异常或处理后的异常
+
+        if "tenant/user" in _init_error and "not found" in _init_error:
+            raise Exception(
+                "数据库连接失败：Supabase 项目 ID 或区域配置错误。"
+                "请检查 Vercel DATABASE_URL。"
+            )
+        if "password authentication failed" in _init_error:
+            raise Exception(
+                "数据库连接失败：密码错误，请检查 Vercel DATABASE_URL。"
+            )
+        raise
+
 
 def create_app() -> FastAPI:
     app = FastAPI(title="Fish Price Platform API")
     uploads_dir = get_uploads_dir()
 
-    # Add GZip Middleware to compress large payloads (like base64 images)
-    app.add_middleware(GZipMiddleware, minimum_size=1000)
+    init_app()
 
+    app.add_middleware(GZipMiddleware, minimum_size=1000)
     app.add_middleware(
         CORSMiddleware,
         allow_origins=["*"],
@@ -77,7 +82,11 @@ def create_app() -> FastAPI:
         allow_headers=["*"],
     )
 
-    app.mount("/uploads", StaticFiles(directory=str(uploads_dir), check_dir=False), name="uploads")
+    app.mount(
+        "/uploads",
+        StaticFiles(directory=str(uploads_dir), check_dir=False),
+        name="uploads",
+    )
 
     app.include_router(auth.router)
     app.include_router(species.router)
@@ -86,60 +95,54 @@ def create_app() -> FastAPI:
     app.include_router(stats.router)
 
     @app.middleware("http")
-    async def performance_monitoring_middleware(request: Request, call_next):
-        import time
-        start_time = time.time()
-        
-        response = await call_next(request)
-        
-        process_time = (time.time() - start_time) * 1000  # 转换为毫秒
-        formatted_process_time = '{0:.2f}'.format(process_time)
-        
-        # 记录请求信息和耗时
-        logger.info(f"[{request.method}] {request.url.path} - {response.status_code} - {formatted_process_time}ms")
-        
-        # 对于耗时超过 500ms 的请求，打印警告级别的慢查询日志
-        if process_time > 500:
-            logger.warning(f"SLOW REQUEST DETECTED: [{request.method}] {request.url.path} took {formatted_process_time}ms")
-            
+    async def app_middleware(request: Request, call_next):
+        start = time.time()
+
+        if request.url.path.startswith("/api/health"):
+            response = await call_next(request)
+        elif not _initialized:
+            response = JSONResponse(
+                status_code=503,
+                content={
+                    "detail": "服务器正在启动，请稍后重试",
+                    "error": _init_error if _init_error else None,
+                },
+            )
+        else:
+            response = await call_next(request)
+
+        elapsed = (time.time() - start) * 1000
+        logger.info(
+            "[%s] %s - %s - %.2fms",
+            request.method,
+            request.url.path,
+            response.status_code,
+            elapsed,
+        )
+        if elapsed > 500:
+            logger.warning(
+                "SLOW %s %s took %.2fms",
+                request.method,
+                request.url.path,
+                elapsed,
+            )
         return response
 
-    @app.middleware("http")
-    async def ensure_initialized(request: Request, call_next):
-        # 在处理请求前确保已初始化（针对 Vercel 等 Serverless 环境优化）
-        if not _initialized and not request.url.path.startswith("/api/health"):
-            try:
-                init_app()
-            except Exception as e:
-                # 如果初始化失败，直接返回 500
-                return JSONResponse(
-                    status_code=500,
-                    content={"detail": "服务器初始化失败", "error": str(e)},
-                )
-        return await call_next(request)
-
     @app.get("/api/health")
-    def health_check(db: Session = Depends(get_db)):
-        try:
-            # 检查数据库连接
-            db.execute(text("SELECT 1"))
-            db_status = "connected"
-        except Exception as e:
-            db_status = f"error: {str(e)}"
-            
+    def health_check():
         return {
-            "status": "ok", 
+            "status": "ok" if _initialized else ("error" if _init_error else "warming_up"),
             "initialized": _initialized,
-            "database": db_status
+            "error": _init_error,
         }
 
     @app.exception_handler(Exception)
-    async def global_exception_handler(request: Request, exc: Exception):
-        logger.error(f"Global exception: {exc}")
+    async def global_exception_handler(_request: Request, exc: Exception):
+        logger.error("Global exception: %s", exc)
         logger.error(traceback.format_exc())
         return JSONResponse(
             status_code=500,
-            content={"detail": "服务器内部错误，请稍后重试", "error": str(exc)},
+            content={"detail": "服务器内部错误，请稍后重试"},
         )
 
     return app

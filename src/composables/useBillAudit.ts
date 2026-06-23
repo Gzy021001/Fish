@@ -7,6 +7,7 @@ export function useBillAudit(speciesList: Ref<any[]>) {
   const showViewModal = ref(false)
   const viewingBill = ref<any>(null)
   const viewingBillLogs = ref<any[]>([])
+  const loadingLogs = ref(false)
 
   const getSpeciesName = (id: number) => {
     const sp = speciesList.value.find((s) => s.id === id)
@@ -29,8 +30,6 @@ export function useBillAudit(speciesList: Ref<any[]>) {
   ) => {
     if (!oldDataStr || !newDataStr) return []
     try {
-      const oldD = JSON.parse(oldDataStr)
-      const newD = JSON.parse(newDataStr)
       const result = diffFields(oldDataStr, newDataStr, [
         {
           key: "species_id",
@@ -42,6 +41,8 @@ export function useBillAudit(speciesList: Ref<any[]>) {
         { key: "release_date", label: "放生日期", format: (v) => v ? String(v).slice(0, 10) : "-" },
       ])
 
+      const oldD = JSON.parse(oldDataStr)
+      const newD = JSON.parse(newDataStr)
       if (oldD.fee_type !== newD.fee_type || oldD.fee_value !== newD.fee_value) {
         const oldFee = String(Number(oldD.fee_value || 0).toFixed(2))
         const newFee = String(Number(newD.fee_value || 0).toFixed(2))
@@ -64,12 +65,15 @@ export function useBillAudit(speciesList: Ref<any[]>) {
     viewingBill.value = b
     viewingBillLogs.value = []
     showViewModal.value = true
+    loadingLogs.value = true
     try {
       const res = await api.get(`/logs/bill/${b.id}`)
       viewingBillLogs.value = Array.isArray(res.data) ? res.data : []
     } catch (error: any) {
       if (isAuthError(error)) return
       console.error("Failed to fetch bill logs", error)
+    } finally {
+      loadingLogs.value = false
     }
   }
 
@@ -77,6 +81,7 @@ export function useBillAudit(speciesList: Ref<any[]>) {
     showViewModal,
     viewingBill,
     filteredViewingBillLogs,
+    loadingLogs,
     viewBill,
     formatAction,
     formatUpdateDiff,

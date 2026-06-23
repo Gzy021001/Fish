@@ -113,7 +113,11 @@ const handleLogin = async () => {
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
     })
 
-    authStore.login(response.data.access_token, username.value)
+    const token = response.data.access_token;
+    const payload = JSON.parse(atob(token.split('.')[1]));
+    const userRole = payload.role || 'operator';
+
+    authStore.login(token, username.value, userRole);
     router.push('/dashboard')
   } catch (error: any) {
     if (error.response && error.response.status === 404) {

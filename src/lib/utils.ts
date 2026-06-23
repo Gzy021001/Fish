@@ -83,7 +83,7 @@ export function diffFields(
  */
 /** 判断品种是否为打包耗材/冰块等非物命品种 */
 export function isPackagingItem(name: string): boolean {
-  return name.includes("冰") || name.includes("打包") || name.includes("袋") || name.includes("蛙");
+  return name.includes("冰") || name.includes("打包") || name.includes("袋");
 }
 
 /** 将品种名称归类到物种大类 */

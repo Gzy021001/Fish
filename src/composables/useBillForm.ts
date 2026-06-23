@@ -29,6 +29,14 @@ export function useBillForm(speciesList: Ref<any[]>) {
   const showForm = ref(false)
   const saving = ref(false)
 
+  const speciesMap = computed(() => {
+    const map = new Map<number, any>()
+    for (const sp of speciesList.value) {
+      map.set(sp.id, sp)
+    }
+    return map
+  })
+
   const bill = ref<BillFormState>({
     id: null,
     species_id: "",
@@ -44,7 +52,7 @@ export function useBillForm(speciesList: Ref<any[]>) {
   const billEntries = ref<BillEntry[]>([])
 
   const newEntryDefaults = (speciesId: number): BillEntry => {
-    const sp = speciesList.value.find((s) => s.id === speciesId)
+    const sp = speciesMap.value.get(speciesId)
     return {
       species_id: speciesId,
       weight: "0.00",
@@ -71,7 +79,7 @@ export function useBillForm(speciesList: Ref<any[]>) {
   }
 
   const getEntrySpecies = (speciesId: number) =>
-    speciesList.value.find((s) => s.id === speciesId)
+    speciesMap.value.get(speciesId)
 
   const getEntryName = (speciesId: number) =>
     getEntrySpecies(speciesId)?.name_zh ?? ""
@@ -80,7 +88,7 @@ export function useBillForm(speciesList: Ref<any[]>) {
     getEntrySpecies(speciesId)?.default_unit ?? ""
 
   const editingSpecies = computed(
-    () => speciesList.value.find((s) => s.id == bill.value.species_id) || null,
+    () => speciesMap.value.get(Number(bill.value.species_id)) || null,
   )
 
   const initNewBill = () => {
@@ -122,41 +130,40 @@ export function useBillForm(speciesList: Ref<any[]>) {
     bill.value.weight = "0.00"
   }
 
-  const saveBill = async (onSaved?: (data: any) => void) => {
-    if (bill.value.id) {
-      if (!Number.isFinite(+bill.value.weight) || +bill.value.weight <= 0) {
-        toast.warning("重量必须大于0")
-        return
-      }
-      if (!Number.isFinite(+bill.value.unit_price) || +bill.value.unit_price <= 0) {
-        toast.warning("单价必须大于0")
-        return
-      }
-      saving.value = true
-      try {
-        const payload = {
-          ...bill.value,
-          species_id: Number(bill.value.species_id),
-          weight: Number(bill.value.weight),
-          fee_value: Number(bill.value.fee_value),
-          unit_price: Number(bill.value.unit_price),
-          status: "DRAFT",
-          release_date: bill.value.release_date || null,
-        }
-        const response = await api.put(`/bills/${bill.value.id}`, payload)
-        if (onSaved) onSaved(response.data)
-        toast.success("单据更新成功")
-        bill.value.id = null
-        showForm.value = false
-      } catch (error: any) {
-        if (isAuthError(error)) return
-        toast.error(apiErrorMessage(error, "保存单据"))
-      } finally {
-        saving.value = false
-      }
+  const saveSingleBill = async (onSaved?: (data: any) => void) => {
+    if (!Number.isFinite(+bill.value.weight) || +bill.value.weight <= 0) {
+      toast.warning("重量必须大于0")
       return
     }
+    if (!Number.isFinite(+bill.value.unit_price) || +bill.value.unit_price <= 0) {
+      toast.warning("单价必须大于0")
+      return
+    }
+    saving.value = true
+    try {
+      const payload = {
+        ...bill.value,
+        species_id: Number(bill.value.species_id),
+        weight: Number(bill.value.weight),
+        fee_value: Number(bill.value.fee_value),
+        unit_price: Number(bill.value.unit_price),
+        status: "DRAFT",
+        release_date: bill.value.release_date || null,
+      }
+      const response = await api.put(`/bills/${bill.value.id}`, payload)
+      if (onSaved) onSaved(response.data)
+      toast.success("单据更新成功")
+      bill.value.id = null
+      showForm.value = false
+    } catch (error: any) {
+      if (isAuthError(error)) return
+      toast.error(apiErrorMessage(error, "保存单据"))
+    } finally {
+      saving.value = false
+    }
+  }
 
+  const saveBatchBills = async (onSaved?: (data: any) => void) => {
     const validEntries = billEntries.value.filter(
       (e) => +e.weight > 0 && e.unit_price > 0,
     )
@@ -238,7 +245,8 @@ export function useBillForm(speciesList: Ref<any[]>) {
     editFee,
     editTotal,
     goBackToList,
-    saveBill,
+    saveSingleBill,
+    saveBatchBills,
     editBill,
   }
 }

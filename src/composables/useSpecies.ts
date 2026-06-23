@@ -6,9 +6,18 @@ const speciesList = shallowRef<any[]>([])
 let fetchPromise: Promise<void> | null = null
 
 const preloadImages = (list: any[]) => {
-  for (const sp of list) {
+  const batch = list.slice(0, 10)
+  for (const sp of batch) {
     if (sp.image_url) {
       const img = new Image()
+      img.src = sp.image_url
+    }
+  }
+  for (let i = 10; i < list.length; i++) {
+    const sp = list[i]
+    if (sp.image_url) {
+      const img = new Image()
+      img.loading = "lazy"
       img.src = sp.image_url
     }
   }

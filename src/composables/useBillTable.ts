@@ -20,30 +20,46 @@ export function useBillTable(speciesList: Ref<any[]>) {
     isBatch: false,
   })
 
-  // activeTab 的状态同步已在 switchTab 中手动处理，避免触发多余的 watcher
+  const speciesMap = computed(() => {
+    const map = new Map<number, any>()
+    for (const sp of speciesList.value) {
+      map.set(sp.id, sp)
+    }
+    return map
+  })
 
-  watch(billingSearch, () => {
+  function debounce(fn: Function, ms: number) {
+    let timer: ReturnType<typeof setTimeout> | null = null
+    return (...args: any[]) => {
+      if (timer) clearTimeout(timer)
+      timer = setTimeout(() => fn(...args), ms)
+    }
+  }
+
+  const debouncedSearchFetch = debounce(() => {
     if (currentPage.value !== 1) {
-      currentPage.value = 1 // 这会触发 currentPage 的 watcher 来请求数据
+      currentPage.value = 1
     } else {
       fetchBills()
     }
+  }, 300)
+
+  watch(billingSearch, () => {
+    debouncedSearchFetch()
   })
 
   const currentPage = ref(1)
   const pageSize = ref(10)
 
   watch(currentPage, () => {
-    // History tab uses client-side pagination - no need to refetch
     if (activeTab.value !== "history") {
       fetchBills()
     }
   })
 
   watch(pageSize, () => {
-    if (currentPage.value !== 1) {
-      currentPage.value = 1
-    } else if (activeTab.value !== "history") {
+    currentPage.value = 1
+    if (activeTab.value !== "history") {
       fetchBills()
     }
   })
@@ -95,7 +111,7 @@ export function useBillTable(speciesList: Ref<any[]>) {
   }
 
   const getSpeciesName = (id: number) => {
-    const sp = speciesList.value.find((s) => s.id === id)
+    const sp = speciesMap.value.get(id)
     return sp ? sp.name_zh : `未知品种(${id})`
   }
 
@@ -277,9 +293,7 @@ export function useBillTable(speciesList: Ref<any[]>) {
   const executeDeleteBill = async () => {
     if (deleteConfirm.value.isBatch) {
       try {
-        for (const id of selectedBillIds.value) {
-          await api.delete(`/bills/${id}`)
-        }
+        await Promise.all(selectedBillIds.value.map((id) => api.delete(`/bills/${id}`)))
         selectedBillIds.value = []
         deleteConfirm.value.show = false
         toast.success("批量删除成功！")

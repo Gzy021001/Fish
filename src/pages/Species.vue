@@ -28,6 +28,7 @@
           批量删除 ({{ selectedIds.length }})
         </button>
         <button
+          v-if="authStore.isAdmin"
           @click="showImportModal = true"
           class="bg-dunhuang-yellow hover:bg-dunhuang-yellow/80 text-dunhuang-blue px-3 py-1.5 rounded text-xs transition-colors"
         >
@@ -685,6 +686,7 @@ import ConfirmDialog from "../components/ConfirmDialog.vue";
 import DateInput from "../components/DateInput.vue";
 import Pagination from "../components/Pagination.vue";
 import SearchInput from "../components/SearchInput.vue";
+import { useAuthStore } from "../stores/auth";
 
 // ============================================================
 //  品种管理：列表 + 新增 + 批量删除 + 分页
@@ -701,6 +703,7 @@ interface SpeciesItem {
 }
 
 const router = useRouter();
+const authStore = useAuthStore();
 const toast = useToast();
 const { invalidateCache } = useSpecies();
 
