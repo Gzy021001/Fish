@@ -167,7 +167,7 @@ const handleFileUpload = (event) => {
   const reader = new FileReader();
   reader.onload = (e) => {
     try {
-      const wb = XLSX.read(new Uint8Array(e.target?.result), { type: "array" });
+      const wb = XLSX.read(new Uint8Array(e.target?.result as ArrayBuffer), { type: "array" });
       const allValid = []; let firstCols = null;
       for (const sn of wb.SheetNames) {
         const ws = wb.Sheets[sn]; if (!ws || !ws["!ref"]) continue;

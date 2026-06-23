@@ -673,7 +673,12 @@ import { useRouter } from "vue-router";
 import * as XLSX from "xlsx";
 import api from "../api";
 import { apiErrorMessage, isAuthError } from "../lib/error";
-import { formatMoney, dateStr, compressImage } from "../lib/utils";
+import {
+  formatMoney,
+  dateStr,
+  compressImage,
+  isPackagingItem,
+} from "../lib/utils";
 import { useToast } from "../composables/useToast";
 import { useSpecies } from "../composables/useSpecies";
 import ConfirmDialog from "../components/ConfirmDialog.vue";
@@ -709,13 +714,17 @@ const speciesSearchText = ref("");
 const currentPage = ref(1);
 const pageSize = ref(10);
 
-const totalItems = computed(() => species.value.length);
+const displaySpecies = computed(() => {
+  return species.value.filter((sp) => !isPackagingItem(sp.name_zh));
+});
+
+const totalItems = computed(() => displaySpecies.value.length);
 const totalPages = computed(() => Math.ceil(totalItems.value / pageSize.value));
 
 const paginatedSpecies = computed(() => {
   const start = (currentPage.value - 1) * pageSize.value;
   const end = start + pageSize.value;
-  return species.value.slice(start, end);
+  return displaySpecies.value.slice(start, end);
 });
 
 const deleteConfirm = ref({
@@ -738,15 +747,15 @@ const openImagePreview = (url: string) => {
 
 const isAllSelected = computed(() => {
   return (
-    species.value.length > 0 &&
-    selectedIds.value.length === species.value.length
+    displaySpecies.value.length > 0 &&
+    selectedIds.value.length === displaySpecies.value.length
   );
 });
 
 const toggleAll = (e: Event) => {
   const checked = (e.target as HTMLInputElement).checked;
   if (checked) {
-    selectedIds.value = species.value.map((sp) => sp.id);
+    selectedIds.value = displaySpecies.value.map((sp) => sp.id);
   } else {
     selectedIds.value = [];
   }

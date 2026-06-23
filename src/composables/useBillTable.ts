@@ -1,8 +1,8 @@
-﻿import { ref, shallowRef, computed, watch, type Ref } from "vue"
+import { ref, shallowRef, computed, watch, type Ref } from "vue"
 import * as XLSX from "xlsx"
 import api from "../api"
 import { apiErrorMessage, isAuthError } from "../lib/error"
-import { dateStr, dateTimeStr, formatMoney } from "../lib/utils"
+import { dateStr, dateTimeStr, formatMoney, isPackagingItem } from "../lib/utils"
 import { useToast } from "./useToast"
 
 export function useBillTable(speciesList: Ref<any[]>) {
@@ -34,13 +34,16 @@ export function useBillTable(speciesList: Ref<any[]>) {
   const pageSize = ref(10)
 
   watch(currentPage, () => {
-    fetchBills()
+    // History tab uses client-side pagination - no need to refetch
+    if (activeTab.value !== "history") {
+      fetchBills()
+    }
   })
 
   watch(pageSize, () => {
     if (currentPage.value !== 1) {
       currentPage.value = 1
-    } else {
+    } else if (activeTab.value !== "history") {
       fetchBills()
     }
   })
@@ -53,6 +56,10 @@ export function useBillTable(speciesList: Ref<any[]>) {
   const totalPages = computed(() => Math.ceil(totalItems.value / pageSize.value))
 
   const paginatedBills = computed(() => {
+    if (activeTab.value === "history") {
+      const start = (currentPage.value - 1) * pageSize.value
+      return bills.value.slice(start, start + pageSize.value)
+    }
     return bills.value
   })
 
@@ -117,9 +124,17 @@ export function useBillTable(speciesList: Ref<any[]>) {
     try {
       const params = new URLSearchParams()
       params.set("limit", "0") // Disable old limit
-      params.set("page", currentPage.value.toString())
-      params.set("page_size", pageSize.value.toString())
-      params.set("status", activeTab.value === "current" ? "DRAFT" : "COMPLETED")
+      if (activeTab.value === "history") {
+        params.set("page_size", "-1") // fetch all for client-side pagination + filtering
+      } else {
+        params.set("page", currentPage.value.toString())
+        params.set("page_size", pageSize.value.toString())
+      }
+      if (activeTab.value === "history") {
+        params.set("status", "COMPLETED")
+      } else {
+        params.set("status", "DRAFT")
+      }
 
       if (filterDateFrom.value) {
         params.set("date_from", filterDateFrom.value)
@@ -131,12 +146,18 @@ export function useBillTable(speciesList: Ref<any[]>) {
         params.set("q", billingSearch.value.trim())
       }
 
+      console.log("[fetchBills] 请求参数:", params.toString());
+
 
       const res = await api.get(`/bills?${params.toString()}`)
 
       if (res.data && typeof res.data.total === 'number') {
-        bills.value = res.data.items || []
-        totalItems.value = res.data.total
+        let items = res.data.items || []
+        if (activeTab.value === "history") {
+          items = items.filter((b: any) => !isPackagingItem(getSpeciesName(b.species_id)))
+        }
+        bills.value = items
+        totalItems.value = activeTab.value === "history" ? items.length : res.data.total
 
         tableSumWeight.value = res.data.sum_weight || 0
         tableSumSubtotal.value = res.data.sum_subtotal || 0
@@ -144,13 +165,18 @@ export function useBillTable(speciesList: Ref<any[]>) {
         tableSumFee.value = tableSumTotal.value - tableSumSubtotal.value
       } else {
         // Fallback
-        bills.value = Array.isArray(res.data) ? res.data : []
-        totalItems.value = bills.value.length
-
-        tableSumWeight.value = Number(bills.value.reduce((s, b) => s + (b.weight || 0), 0).toFixed(2))
-        tableSumSubtotal.value = Number(bills.value.reduce((s, b) => s + (b.subtotal || 0), 0).toFixed(2))
-        tableSumTotal.value = Number(bills.value.reduce((s, b) => s + (b.total_amount || 0), 0).toFixed(2))
+        const rawBills: any[] = Array.isArray(res.data) ? res.data : []
+        tableSumWeight.value = Number(rawBills.reduce((s, b) => s + (b.weight || 0), 0).toFixed(2))
+        tableSumSubtotal.value = Number(rawBills.reduce((s, b) => s + (b.subtotal || 0), 0).toFixed(2))
+        tableSumTotal.value = Number(rawBills.reduce((s, b) => s + (b.total_amount || 0), 0).toFixed(2))
         tableSumFee.value = tableSumTotal.value - tableSumSubtotal.value
+
+        if (activeTab.value === "history") {
+          bills.value = rawBills.filter((b: any) => !isPackagingItem(getSpeciesName(b.species_id)))
+        } else {
+          bills.value = rawBills
+        }
+        totalItems.value = bills.value.length
       }
     } catch (error: any) {
       if (isAuthError(error)) return
@@ -215,17 +241,19 @@ export function useBillTable(speciesList: Ref<any[]>) {
 
     const actualFee = (b: any) => ((b.total_amount || 0) - (b.subtotal || 0))
 
-    const exportData = source.map((b, i) => ({
-      序号: i + 1,
-      品种: getSpeciesName(b.species_id),
-      重量: b.weight.toFixed(2),
-      "单价（元）": formatNum(b.unit_price),
-      "小计（元）": formatNum(b.subtotal),
-      "服务费（元）": formatNum(actualFee(b)),
-      "总金额（元）": formatNum(b.total_amount),
-      放生日期: dateStr(b.release_date || b.created_at),
-      添加时间: dateTimeStr(b.created_at),
-    }))
+    const exportData = source
+      .filter((b: any) => !isPackagingItem(getSpeciesName(b.species_id)))
+      .map((b, i) => ({
+        序号: i + 1,
+        品种: getSpeciesName(b.species_id),
+        重量: b.weight.toFixed(2),
+        "单价（元）": formatNum(b.unit_price),
+        "小计（元）": formatNum(b.subtotal),
+        "服务费（元）": formatNum(actualFee(b)),
+        "总金额（元）": formatNum(b.total_amount),
+        放生日期: dateStr(b.release_date || b.species?.release_date),
+        添加时间: dateTimeStr(b.created_at),
+      }))
 
     const worksheet = XLSX.utils.json_to_sheet(exportData)
     const workbook = XLSX.utils.book_new()

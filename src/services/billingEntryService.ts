@@ -44,7 +44,7 @@ export function buildBillPayload(entry: BillEntryInput) {
     fee_type: "FIXED",
     fee_value: entry.fee_value,
     currency: "CNY",
-    status: "COMPLETED",
+    status: "DRAFT",
     release_date: entry.release_date || null,
   }
 }

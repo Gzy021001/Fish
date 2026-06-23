@@ -81,6 +81,29 @@ export function diffFields(
  * @param maxHeight 最大高度
  * @param quality 压缩质量 (0-1)
  */
+/** 判断品种是否为打包耗材/冰块等非物命品种 */
+export function isPackagingItem(name: string): boolean {
+  return name.includes("冰") || name.includes("打包") || name.includes("袋") || name.includes("蛙");
+}
+
+/** 将品种名称归类到物种大类 */
+export function getSpeciesCategory(name: string): string {
+  if (isPackagingItem(name)) return "其他";
+  if (name.includes("螺")) return "螺类";
+  if (/贝|蚌|蛏|蛤/.test(name) || name.endsWith("带子")) return "贝类";
+  if (["花甲", "沙甲", "肥甲"].some((k) => name.includes(k))) return "贝类";
+  if (name.includes("龟") || name.includes("甲鱼") || name.includes("水鱼")) return "龟鳖类";
+  if (name.includes("虾") || name.includes("蟹") || name.includes("蚧")) return "虾蟹类";
+  return "鱼类";
+}
+
+/** 将 YYYY-MM-DD 格式日期转为 "MM/DD" 短标签 */
+export function dayLabel(dateStr: string): string {
+  const parts = dateStr.split("-");
+  if (parts.length < 3) return dateStr;
+  return `${parseInt(parts[1])}/${parseInt(parts[2])}`;
+}
+
 export async function compressImage(
   file: File,
   maxWidth = 800,

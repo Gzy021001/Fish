@@ -140,7 +140,7 @@ export function useBillForm(speciesList: Ref<any[]>) {
           weight: Number(bill.value.weight),
           fee_value: Number(bill.value.fee_value),
           unit_price: Number(bill.value.unit_price),
-          status: "COMPLETED",
+          status: "DRAFT",
           release_date: bill.value.release_date || null,
         }
         const response = await api.put(`/bills/${bill.value.id}`, payload)

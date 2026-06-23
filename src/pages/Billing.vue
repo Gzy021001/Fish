@@ -91,7 +91,7 @@
                 <div>
                   <label
                     class="block text-sm font-medium text-dunhuang-text mb-2"
-                    >{{ t("billing.unit_price") }}（元）</label
+                    >{{ t("billing.unit_price") }}（元/公斤）</label
                   >
                   <input
                     type="text"
@@ -103,7 +103,8 @@
                 <div>
                   <label
                     class="block text-sm font-medium text-dunhuang-text mb-2"
-                    >重量 ({{ editingSpecies?.default_unit ?? "公斤" }})</label>
+                    >重量 ({{ editingSpecies?.default_unit ?? "公斤" }})</label
+                  >
                   <input
                     type="text"
                     inputmode="decimal"
@@ -560,33 +561,10 @@
                       >
                     </div>
 
-                    <!-- 快捷筛选 -->
-                    <div class="px-5 pb-4 border-b border-dunhuang-yellow/8">
+                    <!-- 自定义日期范围 -->
+                    <div class="px-5 pt-3 pb-4">
                       <label
                         class="block text-[11px] text-dunhuang-text/35 mb-2 tracking-wider"
-                        >快捷选择</label
-                      >
-                      <div class="grid grid-cols-4 gap-2">
-                        <button
-                          v-for="preset in datePresets"
-                          :key="preset.label"
-                          @click="applyDatePreset(preset)"
-                          :class="[
-                            'px-0 py-1.5 text-xs rounded-lg border transition-all duration-200 text-center',
-                            isPresetActive(preset)
-                              ? 'bg-dunhuang-yellow/15 text-dunhuang-blue border-dunhuang-yellow/40 shadow-sm font-medium'
-                              : 'bg-dunhuang-bg/50 text-dunhuang-text/60 border-dunhuang-yellow/10 hover:border-dunhuang-yellow/30 hover:text-dunhuang-blue hover:bg-dunhuang-yellow/8',
-                          ]"
-                        >
-                          {{ preset.label }}
-                        </button>
-                      </div>
-                    </div>
-
-                    <!-- 自定义日期范围 -->
-                    <div class="px-5 py-4">
-                      <label
-                        class="block text-[11px] text-dunhuang-text/35 mb-3 tracking-wider"
                         >自定义范围</label
                       >
                       <div
@@ -596,7 +574,6 @@
                           v-model="pickerFromDate"
                           placeholder="开始日期"
                           size="sm"
-                          :clearable="false"
                           variant="ghost"
                           class="flex-1 min-w-0"
                         />
@@ -608,7 +585,6 @@
                           v-model="pickerToDate"
                           placeholder="结束日期"
                           size="sm"
-                          :clearable="false"
                           variant="ghost"
                           class="flex-1 min-w-0"
                         />
@@ -617,32 +593,20 @@
 
                     <!-- 操作按钮 -->
                     <div
-                      class="flex justify-between items-center px-5 py-3 bg-dunhuang-bg/40 border-t border-dunhuang-yellow/8 rounded-b-2xl"
+                      class="flex justify-end items-center px-5 py-3 bg-dunhuang-bg/40 border-t border-dunhuang-yellow/8 rounded-b-2xl"
                     >
-                      <button
-                        v-if="filterDateFrom || filterDateTo"
-                        @click="
-                          clearDateFilter();
-                          showDatePicker = false;
-                        "
-                        class="text-xs text-dunhuang-text/40 hover:text-dunhuang-red transition-colors"
-                      >
-                        清除筛选
-                      </button>
-                      <span v-else></span>
                       <div class="flex gap-2">
                         <button
-                        <button
-                          @click="cancelDatePicker"
-                          class="px-4 py-1.5 rounded-lg text-xs text-dunhuang-text/50 hover:text-dunhuang-text/70 hover:bg-dunhuang-bg transition-colors"
-                        >
-                          取消
-                        </button>
-                        <button
-                          @click="dateApply"
+                          @click="handleSearchClick"
                           class="px-5 py-1.5 rounded-lg text-xs font-medium transition-all duration-200 bg-dunhuang-blue text-white hover:bg-dunhuang-blue/90 shadow-sm hover:shadow-md"
                         >
-                          确认
+                          搜索
+                        </button>
+                        <button
+                          @click="resetDateFilter"
+                          class="px-4 py-1.5 rounded-lg text-xs text-dunhuang-text/50 hover:text-dunhuang-text/70 hover:bg-dunhuang-bg transition-colors"
+                        >
+                          重置
                         </button>
                       </div>
                     </div>
@@ -782,7 +746,7 @@
                   </div>
                   <div
                     v-if="activeTab === 'current'"
-                    class="col-th flex items-center justify-center w-40 shrink-0 sticky right-0 bg-dunhuang-yellow/20 backdrop-blur z-30 sticky-col-right"
+                    class="col-th flex items-center justify-center w-40 shrink-0 sticky right-0 bg-dunhuang-yellow/20 z-30 sticky-col-right"
                   >
                     操作
                   </div>
@@ -827,14 +791,14 @@
                     {{ formatMoney(b.total_amount) }}
                   </div>
                   <div class="col-td flex-[0.7] flex items-center">
-                    {{ dateStr(b.release_date || b.created_at) }}
+                    {{ dateStr(b.release_date || b.species?.release_date) }}
                   </div>
                   <div class="col-td-time flex-[0.9] flex items-center">
                     {{ dateTimeStr(b.created_at) }}
                   </div>
                   <div
                     v-if="activeTab === 'current'"
-                    class="px-3 py-2 flex items-center justify-center w-40 shrink-0 sticky right-0 bg-white/60 backdrop-blur-md group-hover:bg-dunhuang-yellow/10 transition-colors sticky-col-right"
+                    class="px-3 py-2 flex items-center justify-center w-40 shrink-0 sticky right-0 bg-white group-hover:bg-dunhuang-yellow/10 transition-colors sticky-col-right"
                   >
                     <div class="flex items-center justify-center gap-1">
                       <button
@@ -859,7 +823,7 @@
                   </div>
                 </div>
                 <template
-                  v-for="i in Math.max(0, 10 - paginatedBills.length)"
+                  v-for="i in Math.max(0, pageSize - paginatedBills.length)"
                   :key="'placeholder-' + i"
                 >
                   <div
@@ -1257,39 +1221,8 @@ const handleDatePickerClickOutside = (e: MouseEvent) => {
 
 const now = new Date();
 const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
-const pickerFromDate = ref(todayStr);
-const pickerToDate = ref(todayStr);
-
-const firstDayOfMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-01`;
-
-const lastMonthFirst = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-const lastMonthFirstStr = `${lastMonthFirst.getFullYear()}-${String(lastMonthFirst.getMonth() + 1).padStart(2, "0")}-01`;
-const lastMonthLastStr = `${lastMonthFirst.getFullYear()}-${String(lastMonthFirst.getMonth() + 1).padStart(2, "0")}-${String(new Date(now.getFullYear(), now.getMonth(), 0).getDate()).padStart(2, "0")}`;
-
-const threeMonthsAgoFirst = new Date(now.getFullYear(), now.getMonth() - 2, 1);
-const threeMonthsAgoFirstStr = `${threeMonthsAgoFirst.getFullYear()}-${String(threeMonthsAgoFirst.getMonth() + 1).padStart(2, "0")}-01`;
-
-const datePresets = [
-  { label: "本月", from: firstDayOfMonth, to: todayStr },
-  { label: "上月", from: lastMonthFirstStr, to: lastMonthLastStr },
-  { label: "近三个月", from: threeMonthsAgoFirstStr, to: todayStr },
-  {
-    label: "本年",
-    from: `${now.getFullYear()}-01-01`,
-    to: `${now.getFullYear()}-12-31`,
-  },
-];
-
-const isPresetActive = (preset: { from: string; to: string }) => {
-  return (
-    pickerFromDate.value === preset.from && pickerToDate.value === preset.to
-  );
-};
-
-const applyDatePreset = (preset: { from: string; to: string }) => {
-  pickerFromDate.value = preset.from;
-  pickerToDate.value = preset.to;
-};
+const pickerFromDate = ref("");
+const pickerToDate = ref("");
 
 const openDatePicker = () => {
   if (filterDateFrom.value) {
@@ -1300,14 +1233,33 @@ const openDatePicker = () => {
   }
 };
 
+const handleSearchClick = () => {
+  console.error("[搜索按钮] 被点击了!");
+  dateApply();
+};
+
 const dateApply = async () => {
+  // 确保开始日期不晚于结束日期
+  let from = pickerFromDate.value || "";
+  let to = pickerToDate.value || "";
+  if (from && to && from > to) {
+    [from, to] = [to, from];
+  }
+  console.error("[dateApply] 设置筛选日期:", from, to);
+  filterDateFrom.value = from;
+  filterDateTo.value = to;
   showDatePicker.value = false;
-  filterDateFrom.value = pickerFromDate.value || "";
-  filterDateTo.value = pickerToDate.value || "";
   await fetchBills();
 };
 
 const cancelDatePicker = () => {
+  showDatePicker.value = false;
+};
+
+const resetDateFilter = () => {
+  pickerFromDate.value = "";
+  pickerToDate.value = "";
+  clearDateFilter();
   showDatePicker.value = false;
 };
 
@@ -1423,7 +1375,7 @@ onMounted(() => {
 });
 
 onBeforeUnmount(() => {
-  document.removeEventListener("click", handleDatePickerClickOutside);
+  document.removeEventListener("mousedown", handleDatePickerClickOutside);
 });
 </script>
 

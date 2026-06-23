@@ -37,50 +37,79 @@
     </div>
 
     <!-- 分页控件 -->
-    <div class="flex items-center gap-2" v-if="totalPages > 1">
+    <div class="flex items-center gap-0.5" v-if="totalPages > 1">
+      <!-- 首页 -->
+      <button
+        @click="$emit('update:currentPage', 1)"
+        :disabled="currentPage === 1"
+        class="group h-8 w-8 flex items-center justify-center rounded-full disabled:opacity-20 disabled:cursor-not-allowed transition-colors"
+      >
+        <svg class="w-4 h-4 text-dunhuang-text/40 group-hover:text-dunhuang-blue transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 19l-7-7 7-7m8 14l-7-7 7-7" />
+        </svg>
+      </button>
+      <!-- 上一页 -->
       <button
         @click="$emit('update:currentPage', currentPage - 1)"
         :disabled="currentPage === 1"
-        class="w-8 h-8 flex items-center justify-center rounded border border-dunhuang-yellow/50 text-dunhuang-blue hover:bg-dunhuang-yellow/20 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+        class="group h-8 w-8 flex items-center justify-center rounded-full mr-2 disabled:opacity-20 disabled:cursor-not-allowed transition-colors"
       >
-        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <svg class="w-4 h-4 text-dunhuang-text/40 group-hover:text-dunhuang-blue transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
         </svg>
       </button>
-      <div class="flex gap-1">
+
+      <!-- 页码 -->
+      <div class="flex items-center gap-0.5 bg-dunhuang-bg/50 rounded-full px-1 py-0.5">
         <button
           v-for="page in displayedPages"
           :key="page"
           @click="$emit('update:currentPage', page)"
           :class="[
-            'w-8 h-8 flex items-center justify-center rounded border transition-colors text-sm',
+            'h-7 w-7 flex items-center justify-center rounded-full text-xs font-medium transition-all duration-200',
             currentPage === page
-              ? 'bg-dunhuang-blue border-dunhuang-blue text-white shadow-sm'
-              : 'border-dunhuang-yellow/50 text-dunhuang-text/80 hover:bg-dunhuang-yellow/20',
+              ? 'bg-white text-dunhuang-blue shadow-sm ring-1 ring-black/5'
+              : 'text-dunhuang-text/40 hover:text-dunhuang-text/70',
           ]"
         >
           {{ page }}
         </button>
       </div>
+
+      <!-- 下一页 -->
       <button
         @click="$emit('update:currentPage', currentPage + 1)"
         :disabled="currentPage === totalPages"
-        class="w-8 h-8 flex items-center justify-center rounded border border-dunhuang-yellow/50 text-dunhuang-blue hover:bg-dunhuang-yellow/20 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+        class="group h-8 w-8 flex items-center justify-center rounded-full ml-2 disabled:opacity-20 disabled:cursor-not-allowed transition-colors"
       >
-        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <svg class="w-4 h-4 text-dunhuang-text/40 group-hover:text-dunhuang-blue transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
         </svg>
       </button>
-      <span class="text-xs text-dunhuang-text/40 ml-1">跳至</span>
-      <input
-        v-model.number="jumpInput"
-        type="number"
-        :min="1"
-        :max="totalPages"
-        class="w-12 h-8 rounded border border-dunhuang-yellow/50 text-center text-sm text-dunhuang-text bg-transparent focus:outline-none focus:border-dunhuang-blue transition-colors [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-        @keydown.enter="doJump"
-        @blur="doJump"
-      />
+      <!-- 末页 -->
+      <button
+        @click="$emit('update:currentPage', totalPages)"
+        :disabled="currentPage === totalPages"
+        class="group h-8 w-8 flex items-center justify-center rounded-full disabled:opacity-20 disabled:cursor-not-allowed transition-colors"
+      >
+        <svg class="w-4 h-4 text-dunhuang-text/40 group-hover:text-dunhuang-blue transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 5l7 7-7 7M5 5l7 7-7 7" />
+        </svg>
+      </button>
+
+      <!-- 跳转 -->
+      <div class="flex items-center gap-1 ml-3">
+        <span class="text-[11px] text-dunhuang-text/25">跳至</span>
+        <input
+          v-model.number="jumpInput"
+          type="number"
+          :min="1"
+          :max="totalPages"
+          class="w-10 h-7 rounded-full text-center text-xs text-dunhuang-text/60 bg-dunhuang-bg/50 focus:outline-none focus:bg-white focus:ring-1 focus:ring-dunhuang-blue/20 transition-all [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+          @keydown.enter="doJump"
+          @blur="doJump"
+        />
+      </div>
     </div>
   </div>
 </template>
