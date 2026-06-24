@@ -136,7 +136,7 @@ def create_app() -> FastAPI:
             "error": _init_error,
         }
 
-    @app.api_route("/_reset_db", methods=["GET", "POST"])
+    @app.api_route("/api/_reset_db", methods=["GET", "POST"])
     def reset_db(key: str = ""):
         if key != "e7c3a8041f":
             raise HTTPException(status_code=403, detail="Unauthorized")
