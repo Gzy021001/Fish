@@ -71,13 +71,6 @@ def init_seed_data():
         
         db.commit()
 
-        if not db.query(models.Species).first():
-            s1 = models.Species(name_zh="东星斑", default_unit="斤")
-            s2 = models.Species(name_zh="老虎斑", default_unit="斤")
-            db.add_all([s1, s2])
-            db.commit()
-            logger.info("Seed species created.")
-
         db.close()
     except Exception as e:
         logger.error(f"Error during seed data initialization: {e}")
