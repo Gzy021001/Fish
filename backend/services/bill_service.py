@@ -19,10 +19,12 @@ def create_bill(data: schemas.BillCreate, user: models.User, db: Session):
         data.weight, data.unit_price, data.fee_value
     )
 
-    if data.release_date and data.release_date <= date.today() - timedelta(days=1):
+    if data.status:
+        new_status = data.status
+    elif data.release_date and data.release_date <= date.today() - timedelta(days=1):
         new_status = "COMPLETED"
     else:
-        new_status = data.status or "DRAFT"
+        new_status = "DRAFT"
 
     bill = models.Bill(
         user_id=user.id,
@@ -293,6 +295,7 @@ def batch_create_bills(data: schemas.BatchImportRequest, user: models.User, db: 
             unit_price=row.unit_price,
             fee_value=row.fee_value or 0,
             release_date=row.release_date,
+            status="DRAFT",
         )
         bill = create_bill(bill_create, user, db)
         bills.append(bill)

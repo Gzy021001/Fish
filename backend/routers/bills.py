@@ -67,7 +67,7 @@ def batch_create_bills_route(
     current_user: models.User = Depends(auth.require_admin),
 ):
     result = batch_create_bills(payload, current_user, db)
-    affected_ids = list(set(row.species_id for row in payload.rows if row.species_id))
+    affected_ids = list(set(b.species_id for b in result.bills))
     if affected_ids:
         trends_cache.invalidate_by_species(affected_ids)
     return result
