@@ -214,12 +214,15 @@
                       {{ formatMoney(row.unit_price) }}
                     </td>
                     <td
+                      v-if="feeMergeMap.get(index) !== 0"
                       class="px-4 py-2.5 text-right text-sm tabular-nums"
-                      :class="
+                      :rowspan="feeMergeMap.get(index) || undefined"
+                      :class="[
                         row.fee_value > 0
                           ? 'text-dunhuang-orange'
-                          : 'text-dunhuang-text/40'
-                      "
+                          : 'text-dunhuang-text/40',
+                        (feeMergeMap.get(index) ?? 0) > 1 ? 'align-top' : '',
+                      ]"
                     >
                       {{ formatMoney(row.fee_value) }}
                     </td>
@@ -271,6 +274,9 @@
             ></div>
             <p class="text-base font-serif text-dunhuang-text/70">
               正在导入数据...
+            </p>
+            <p v-if="importProgress" class="text-sm text-dunhuang-text/50">
+              {{ importProgress }}
             </p>
           </div>
           <div v-else class="space-y-5">
@@ -369,13 +375,14 @@
 </template>
 
 <script setup lang="ts">
-import { ref, shallowRef } from "vue";
+import { ref, shallowRef, onMounted } from "vue";
 import { useRouter } from "vue-router";
 import * as XLSX from "xlsx";
 import { apiErrorMessage, isAuthError } from "../lib/error";
 import { dateStr, formatMoney } from "../lib/utils";
 import { useToast } from "../composables/useToast";
-import { saveImportedRowsBatch } from "../services/billingEntryService";
+import { saveImportedRowsBatch, saveImportedRowsChunked } from "../services/billingEntryService";
+import api from "../api";
 import {
   detectColumns,
   parseImportRows,
@@ -402,7 +409,7 @@ function getMatrixHeaders(matrix: any[][]) {
     "日期",
     "鱼",
   ];
-  for (let r = 0; r < Math.min(10, matrix.length); r++) {
+  for (let r = 0; r < Math.min(15, matrix.length); r++) {
     const row = matrix[r];
     if (!row) continue;
     const vals: string[] = [];
@@ -434,6 +441,14 @@ const importResult = ref<{
 const importRows = shallowRef<any[]>([]);
 const detectedColumns = shallowRef<Record<string, string | null>>({});
 const sheetDateLabel = ref<string | null>(null);
+const importProgress = ref("");  // 分片导入进度文字
+// 服务费合并单元格：key=行索引, value=rowspan（0 表示该行被上方合并覆盖，跳过渲染）
+const feeMergeMap = shallowRef<Map<number, number>>(new Map());
+
+onMounted(() => {
+  // 进入页面时提前唤醒服务器，避免后续导入时因冷启动导致超时
+  api.get("/health").catch(() => {});
+});
 
 const keyLabels: Record<string, string> = {
   species: "品种",
@@ -467,43 +482,56 @@ const cancelImport = () => {
   detectedColumns.value = {};
   sheetDateLabel.value = null;
   importResult.value = null;
+  feeMergeMap.value = new Map();
+  importProgress.value = "";
 };
 
-function getSheetHeaders(worksheet) {
-  const range = XLSX.utils.decode_range(worksheet["!ref"] || "A1");
-  const kw = [
-    "品种",
-    "品名",
-    "名称",
-    "物种",
-    "重量",
-    "公斤",
-    "斤",
-    "单价",
-    "价格",
-    "总计",
-    "实付",
-    "服务费",
-    "日期",
-    "鱼",
-  ];
-  for (let r = range.s.r; r <= Math.min(range.s.r + 10, range.e.r); r++) {
-    const vals = [];
-    let m = 0;
-    for (let c = range.s.c; c <= range.e.c; c++) {
-      const cell = worksheet[XLSX.utils.encode_cell({ r, c })];
-      const v = cell ? String(cell.v ?? "").trim() : "";
-      vals.push(v);
-      if (kw.some((k) => v.includes(k))) m++;
+// --- Matrix helpers ---
+
+const GAP_CUTOFF = 5;
+
+function cellVal(ws: XLSX.WorkSheet, r: number, c: number): any {
+  const cell = ws[XLSX.utils.encode_cell({ r, c })];
+
+  return cell && cell.v !== undefined ? cell.v : "";
+}
+
+function buildMatrix(
+  ws: XLSX.WorkSheet,
+  range: XLSX.Range,
+  maxCols: number,
+): { matrix: any[][]; lastRow: number } {
+  const matrix: any[][] = [];
+
+  let emptyRun = 0;
+
+  let lastNonEmpty = range.s.r;
+
+  for (let r = range.s.r; r <= range.e.r; r++) {
+    const row: any[] = [];
+
+    let hasContent = false;
+
+    for (let c = 0; c < maxCols; c++) {
+      const v = cellVal(ws, r, c);
+
+      row.push(v);
+
+      if (v !== "" && v !== null && v !== undefined) hasContent = true;
     }
-    if (m >= 2) return { headers: vals, headerRow: r };
+
+    matrix.push(row);
+
+    if (hasContent) {
+      lastNonEmpty = r;
+      emptyRun = 0;
+    } else {
+      emptyRun++;
+      if (emptyRun >= GAP_CUTOFF) break;
+    }
   }
-  const fb = [];
-  for (let c = range.s.c; c <= range.e.c; c++) {
-    const cell = worksheet[XLSX.utils.encode_cell({ r: range.s.r, c })];
-    fb.push(cell ? String(cell.v ?? "").trim() : "");
-  }
-  return { headers: fb, headerRow: range.s.r };
+
+  return { matrix, lastRow: lastNonEmpty };
 }
 
 const handleFileUpload = (event) => {
@@ -532,16 +560,10 @@ const handleFileUpload = (event) => {
 
         // 1. 生成原始的二维数组（扩展列数到 50，防止 !ref 漏掉右侧的合并单元格列）
         const range = XLSX.utils.decode_range(ws["!ref"] || "A1");
-        const MAX_COLS = Math.max(range.e.c + 1, 50);
-        const matrix: any[][] = [];
-        for (let r = 0; r <= range.e.r; r++) {
-          const row: any[] = [];
-          for (let c = 0; c < MAX_COLS; c++) {
-            const cell = ws[XLSX.utils.encode_cell({ r, c })];
-            row.push(cell && cell.v !== undefined ? cell.v : "");
-          }
-          matrix.push(row);
-        }
+
+        const maxCols = Math.max(range.e.c + 1, 50);
+
+        const { matrix, lastRow } = buildMatrix(ws, range, maxCols);
 
         // 2. 将所有合并单元格的值向下、向右广播——但**只填充空白格**，绝不覆盖已有值
         if (ws["!merges"]) {
@@ -577,7 +599,7 @@ const handleFileUpload = (event) => {
         let sheetYear: number | null = null;
         let sheetShortDate: { m: number; d: number } | null = null;
 
-        for (let r = 0; r < Math.min(10, matrix.length); r++) {
+        for (let r = 0; r < Math.min(15, matrix.length); r++) {
           const row = matrix[r];
           if (!row) continue;
           for (let c = 0; c < row.length; c++) {
@@ -688,6 +710,34 @@ const handleFileUpload = (event) => {
         allValid.push(...result.validRows);
       }
       importRows.value = allValid;
+      // 服务费合并单元格：连续相同的 fee_value > 0 归为一组，首行保留原值，其余行清零
+      {
+        const m = new Map<number, number>();
+        let i = 0;
+        while (i < allValid.length) {
+          const fee = (allValid[i] as any).fee_value;
+          if (fee > 0) {
+            let span = 1;
+            while (
+              i + span < allValid.length &&
+              (allValid[i + span] as any).fee_value === fee
+            ) {
+              span++;
+            }
+            if (span >= 2) {
+              m.set(i, span);
+              for (let j = 1; j < span; j++) {
+                m.set(i + j, 0);
+                (allValid[i + j] as any).fee_value = 0;
+              }
+            }
+            i += span;
+          } else {
+            i++;
+          }
+        }
+        feeMergeMap.value = m;
+      }
       showPreview.value = true;
       currentStep.value = 2;
     } catch (err) {
@@ -703,13 +753,17 @@ const confirmImport = async () => {
   importing.value = true;
   importResult.value = null;
   currentStep.value = 3;
+  importProgress.value = "正在连接服务器...";
   try {
-    const result = await saveImportedRowsBatch(importRows.value, true);
+    const result = await saveImportedRowsChunked(importRows.value, (done, total) => {
+      importProgress.value = `正在导入 ${done}/${total} 批...`;
+    });
     importResult.value = {
       success_count: result.success_count,
       skip_count: result.skip_count,
       errors: result.errors || [],
     };
+    importProgress.value = "";
     toast.success(
       "成功导入 " +
         result.success_count +
@@ -719,6 +773,7 @@ const confirmImport = async () => {
   } catch (err) {
     if (isAuthError(err)) return;
     console.error(err);
+    importProgress.value = "";
     importResult.value = {
       success_count: 0,
       skip_count: 0,

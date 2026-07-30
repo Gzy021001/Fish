@@ -78,6 +78,46 @@ export async function saveImportedRows(
 
 /** Batch import: single API call for all rows. Much faster than sequential. */
 export async function saveImportedRowsBatch(rows: ImportRow[], replace = false): Promise<{ success_count: number; skip_count: number; errors: string[] }> {
-  const res = await api.post('/bills/batch', { rows, replace })
+  const res = await api.post('/bills/batch', { rows, replace }, { timeout: 60000 })
   return res.data
+}
+
+const CHUNK_SIZE = 25
+
+/** Chunked batch import: splits large imports into small chunks to avoid serverless timeout.
+ *  First chunk uses replace=true to clear old data; remaining chunks append. */
+export async function saveImportedRowsChunked(
+  rows: ImportRow[],
+  onProgress?: (done: number, total: number) => void,
+): Promise<{ success_count: number; skip_count: number; errors: string[] }> {
+  // 快速健康检查，唤醒 serverless 冷启动
+  try { await api.get('/bills?limit=1', { timeout: 15000 }) } catch (_) { /* 忽略 */ }
+
+  const chunks: ImportRow[][] = []
+  for (let i = 0; i < rows.length; i += CHUNK_SIZE) {
+    chunks.push(rows.slice(i, i + CHUNK_SIZE))
+  }
+
+  let totalSuccess = 0
+  let totalSkip = 0
+  const allErrors: string[] = []
+
+  for (let ci = 0; ci < chunks.length; ci++) {
+    const isFirst = ci === 0
+    try {
+      const res = await api.post('/bills/batch', {
+        rows: chunks[ci],
+        replace: isFirst,  // 仅首个分片执行 replace 删除旧数据
+      }, { timeout: 45000 })
+      totalSuccess += res.data.success_count ?? 0
+      totalSkip += res.data.skip_count ?? 0
+      if (res.data.errors) allErrors.push(...res.data.errors)
+    } catch (err: any) {
+      const msg = err.response?.data?.detail || err.message || '未知错误'
+      allErrors.push(`分片 ${ci + 1}/${chunks.length} 失败: ${msg}`)
+    }
+    if (onProgress) onProgress(ci + 1, chunks.length)
+  }
+
+  return { success_count: totalSuccess, skip_count: totalSkip, errors: allErrors }
 }

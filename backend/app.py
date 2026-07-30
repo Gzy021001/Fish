@@ -2,6 +2,8 @@ import logging
 import traceback
 import os
 import time
+import json
+import urllib.request
 from fastapi import FastAPI, Request, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
@@ -55,16 +57,6 @@ def init_app():
         _init_error = str(exc)
         logger.error("Initialization failed: %s", _init_error)
         logger.error(traceback.format_exc())
-
-        if "tenant/user" in _init_error and "not found" in _init_error:
-            raise Exception(
-                "数据库连接失败：Supabase 项目 ID 或区域配置错误。"
-                "请检查 Vercel DATABASE_URL。"
-            )
-        if "password authentication failed" in _init_error:
-            raise Exception(
-                "数据库连接失败：密码错误，请检查 Vercel DATABASE_URL。"
-            )
         raise
 
 
@@ -140,9 +132,17 @@ def create_app() -> FastAPI:
     async def global_exception_handler(_request: Request, exc: Exception):
         logger.error("Global exception: %s", exc)
         logger.error(traceback.format_exc())
+        # #region debug-point D:global-exception
+        _p = ".dbg/db-read-failure.env"; _u, _s = "http://127.0.0.1:7777/event", "db-read-failure"; exec("try:\n with open(_p, encoding='utf-8') as f: c=f.read(); _u=next((l.split('=',1)[1] for l in c.split('\\n') if l.startswith('DEBUG_SERVER_URL=')), _u); _s=next((l.split('=',1)[1] for l in c.split('\\n') if l.startswith('DEBUG_SESSION_ID=')), _s)\nexcept: pass"); exec("try:\n urllib.request.urlopen(urllib.request.Request(_u, data=json.dumps({\"sessionId\": _s, \"runId\": \"pre-fix\", \"hypothesisId\": \"D\", \"location\": \"app.py:global_exception_handler\", \"msg\": \"[DEBUG] global exception captured\", \"data\": {\"path\": str(_request.url.path), \"error_type\": type(exc).__name__, \"error_message\": str(exc)}}).encode(), headers={\"Content-Type\": \"application/json\"}), timeout=0.2).read()\nexcept: pass")
+        # #endregion
+        # 暴露真实错误类型以便前端排查，避免笼统的"服务器内部错误"误导用户
+        error_type = type(exc).__name__
         return JSONResponse(
             status_code=500,
-            content={"detail": "服务器内部错误，请稍后重试"},
+            content={
+                "detail": "服务器内部错误，请稍后重试",
+                "error": error_type,
+            },
         )
 
     return app

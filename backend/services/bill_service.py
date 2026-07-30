@@ -4,6 +4,7 @@ from datetime import date, timedelta
 from fastapi import HTTPException
 from sqlalchemy import func, cast, String
 from sqlalchemy.orm import Session
+from sqlalchemy.exc import IntegrityError
 
 import models
 import schemas
@@ -11,7 +12,7 @@ from utils import calculate_bill_amounts, get_bill_or_404
 from services.audit_service import record_create, record_update, record_delete
 
 
-def create_bill(data: schemas.BillCreate, user: models.User, db: Session):
+def create_bill(data: schemas.BillCreate, user: models.User, db: Session, commit: bool = True):
     if data.weight <= 0 or data.unit_price <= 0:
         raise HTTPException(status_code=400, detail="重量和单价必须大于0")
 
@@ -50,8 +51,9 @@ def create_bill(data: schemas.BillCreate, user: models.User, db: Session):
         data=data.model_dump(),
     )
 
-    db.commit()
-    db.refresh(bill)
+    if commit:
+        db.commit()
+        db.refresh(bill)
     return bill
 
 
@@ -244,6 +246,9 @@ def delete_bill(bill_id: int, user: models.User, db: Session):
         old_data=old_data,
     )
 
+    # 避免外键约束报错
+    db.query(models.AuditLog).filter(models.AuditLog.bill_id == bill.id).update({"bill_id": None})
+    
     db.delete(bill)
     db.commit()
     return {"message": "Bill deleted successfully"}
@@ -262,10 +267,20 @@ def batch_create_bills(data: schemas.BatchImportRequest, user: models.User, db: 
             if row.release_date:
                 dates_to_replace.add(row.release_date)
         for d in dates_to_replace:
-            db.query(models.Bill).filter(
+            # 查出要删除的账单
+            bills_to_delete = db.query(models.Bill.id).filter(
                 models.Bill.release_date >= d,
                 models.Bill.release_date < (d + timedelta(days=1))
-            ).delete()
+            ).all()
+            
+            if bills_to_delete:
+                bill_ids = [b.id for b in bills_to_delete]
+                # 解除 audit_logs 中的外键引用，防止 Postgres 的 IntegrityError (Foreign Key Violation)
+                db.query(models.AuditLog).filter(models.AuditLog.bill_id.in_(bill_ids)).update(
+                    {"bill_id": None}, synchronize_session=False
+                )
+                # 然后再删除单据
+                db.query(models.Bill).filter(models.Bill.id.in_(bill_ids)).delete(synchronize_session=False)
         db.flush()
 
     existing_species = {s.name_zh: s for s in db.query(models.Species).all()}
@@ -279,14 +294,21 @@ def batch_create_bills(data: schemas.BatchImportRequest, user: models.User, db: 
 
         species = existing_species.get(name_zh)
         if not species:
-            species = models.Species(
-                name_zh=name_zh,
-                default_price=row.unit_price,
-                default_unit="公斤",
-                release_date=row.release_date,
-            )
-            db.add(species)
-            db.flush()
+            try:
+                with db.begin_nested():
+                    species = models.Species(
+                        name_zh=name_zh,
+                        default_price=row.unit_price,
+                        default_unit="公斤",
+                        release_date=row.release_date,
+                    )
+                    db.add(species)
+                    db.flush()
+            except IntegrityError:
+                # 并发情况下，另一个请求可能刚刚创建了这个品种
+                species = db.query(models.Species).filter(models.Species.name_zh == name_zh).first()
+                if not species:
+                    raise  # 如果查不到，说明是其他的完整性错误，继续向上抛出
             existing_species[name_zh] = species
 
         bill_create = schemas.BillCreate(
@@ -297,9 +319,11 @@ def batch_create_bills(data: schemas.BatchImportRequest, user: models.User, db: 
             release_date=row.release_date,
             status="DRAFT",
         )
-        bill = create_bill(bill_create, user, db)
+        bill = create_bill(bill_create, user, db, commit=False)
         bills.append(bill)
         success_count += 1
+
+    db.commit()
 
     return schemas.BatchImportResult(
         success_count=success_count,

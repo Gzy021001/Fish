@@ -17,6 +17,8 @@ export function detectColumns(headers: string[]): Record<string, string | null> 
   for (const [k, cand] of Object.entries(COLUMN_MAPS)) {
     const nc = cand.map(normalizeHeader)
     for (const [i, h] of nh.entries()) {
+      // 跳过空表头，防止 !h 时 c.includes("") === true 导致的误匹配
+      if (!h) continue
       if (nc.includes(h) || nc.some(c => h.includes(c) || c.includes(h))) { r[k] = headers[i]; break }
     }
   }
@@ -74,7 +76,7 @@ export function parseExcelDate(raw: unknown, fallbackYear?: number): string | nu
 
 // 删除了 parseSheetDate
 
-const NON_BILL_KW = ["\u8d2d\u751f\u603b\u91cd\u91cf", "\u8d2d\u751f\u603b\u65a4\u6570", "\u5b9e\u4ed8\u91d1\u989d", "\u4f59\u6b3e", "\u968f\u559c", "\u8f66\u8d39", "\u8239\u8d39", "\u6253\u5305\u888b", "\u8d2d\u751f\u4ed8\u6b3e\u660e\u7ec6", "\u4e0a\u5468", "\u672c\u5468", "\u73b0\u573a\u968f\u559c", "\u968f\u559c\u7d2f\u8ba1", "\u6148\u60b2\u62a4\u751f"]
+const NON_BILL_KW = ["\u8d2d\u751f\u603b\u91cd\u91cf", "\u8d2d\u751f\u603b\u65a4\u6570", "\u5b9e\u4ed8\u91d1\u989d", "\u4f59\u6b3e", "\u968f\u559c", "\u8f66\u8d39", "\u8239\u8d39", "\u6253\u5305\u888b", "\u8d2d\u751f\u4ed8\u6b3e\u660e\u7ec6", "\u4e0a\u5468", "\u672c\u5468", "\u73b0\u573a\u968f\u559c", "\u968f\u559c\u7d2f\u8ba1", "\u6148\u60b2\u62a4\u751f", "\u8d2d\u4e70\u603b\u91cd\u91cf", "\u8d2d\u4e70\u603b\u65a4\u6570"]
 
 function isNonBillRow(name: string): boolean { return NON_BILL_KW.some(k => name.includes(k)) }
 

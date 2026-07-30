@@ -3,6 +3,7 @@ from typing import Optional
 
 from fastapi import HTTPException, UploadFile
 from sqlalchemy.orm import Session
+from sqlalchemy.exc import IntegrityError
 
 import models
 import schemas
@@ -56,7 +57,11 @@ def create_species(data: schemas.SpeciesCreate, user: models.User, db: Session):
 
     species = models.Species(**data.model_dump())
     db.add(species)
-    db.flush()
+    try:
+        with db.begin_nested():
+            db.flush()
+    except IntegrityError:
+        raise HTTPException(status_code=400, detail="品种名称已存在，请勿重复添加")
 
     record_create(
         db,
@@ -104,7 +109,11 @@ def update_species(species_id: int, data: schemas.SpeciesUpdate, user: models.Us
     for field, value in data.model_dump(exclude={"created_at"}).items():
         setattr(species, field, value)
 
-    db.flush()
+    try:
+        with db.begin_nested():
+            db.flush()
+    except IntegrityError:
+        raise HTTPException(status_code=400, detail="品种名称已存在，请勿重复添加")
 
     new_data = data.model_dump(exclude={"created_at"})
     record_update(
@@ -164,6 +173,17 @@ def delete_species(species_id: int, user: models.User, db: Session):
         old_data=old_data,
     )
 
+    # 避免外键约束报错
+    db.query(models.AuditLog).filter(models.AuditLog.species_id == species.id).update({"species_id": None})
+
     db.delete(species)
-    db.commit()
+    try:
+        db.commit()
+    except IntegrityError:
+        db.rollback()
+        raise HTTPException(
+            status_code=400,
+            detail="该品种已被其他数据使用，无法删除",
+        )
     return {"message": "Species deleted successfully"}
+ 

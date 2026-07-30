@@ -80,10 +80,13 @@
 ## ⚙️ 部署与环境配置
 
 ### 环境变量 (`.env`)
-在项目根目录需配置以下环境变量（本地和 Vercel 控制台均需配置）：
+在项目根目录需配置以下环境变量（本地和 Vercel 控制台均需配置）。
+**强烈建议使用 Neon Serverless Postgres** 或 Supabase。
+Neon 提供了开箱即用的连接池和分支功能，非常适合 Vercel/Serverless 环境。
+
 ```env
-# 数据库连接串（连接池模式，必须包含项目ID后缀和 6543 端口）
-DATABASE_URL=postgresql://[user]:[password]@[host]:6543/postgres.[project_id]
+# 数据库连接串（以 Neon 为例）
+DATABASE_URL="postgresql://[user]:[password]@[endpoint].aws.neon.tech/neondb?sslmode=require&channel_binding=require"
 # JWT 加密密钥
 SECRET_KEY=your_secret_key
 # 数据库初始化重置标志（按需开启）

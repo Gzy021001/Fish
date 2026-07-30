@@ -44,10 +44,10 @@ class Bill(Base):
 class AuditLog(Base):
     __tablename__ = "audit_logs"
     id = Column(Integer, primary_key=True, index=True)
-    bill_id = Column(Integer, ForeignKey("bills.id"), nullable=True, index=True)
-    species_id = Column(Integer, ForeignKey("species.id"), nullable=True, index=True)
+    bill_id = Column(Integer, ForeignKey("bills.id", ondelete="SET NULL"), nullable=True, index=True)
+    species_id = Column(Integer, ForeignKey("species.id", ondelete="SET NULL"), nullable=True, index=True)
     entity_type = Column(String(50), default="BILL", index=True)
-    user_id = Column(Integer, ForeignKey("users.id"), index=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True)
     action = Column(String(50), index=True)
     old_data = Column(String, nullable=True)
     new_data = Column(String, nullable=True)
