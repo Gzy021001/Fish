@@ -1,4 +1,4 @@
-﻿python311/
+python311/
 .venv/
 venv/
 env/
@@ -27,4 +27,3 @@ backend/export_sql.py
 backend/main.py
 
 # Root-level redundant files
-requirements.txt
