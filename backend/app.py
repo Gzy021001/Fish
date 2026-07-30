@@ -57,7 +57,8 @@ def init_app():
         _init_error = str(exc)
         logger.error("Initialization failed: %s", _init_error)
         logger.error(traceback.format_exc())
-        raise
+        # DO NOT raise here. If we raise, the Vercel lambda crashes on cold start and returns a 500 error.
+        # Instead, we catch it, store it in _init_error, and the middleware will return a graceful 503 response.
 
 
 def create_app() -> FastAPI:

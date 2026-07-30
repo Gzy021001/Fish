@@ -49,9 +49,10 @@ def _normalize_database_url(raw_url: str) -> str:
 _raw_url = os.getenv("DATABASE_URL") or _read_local_env_url()
 
 if not _raw_url:
-    raise ValueError("DATABASE_URL environment variable is not set. Please configure it in .env.local.")
-
-DATABASE_URL = _normalize_database_url(_raw_url)
+    logger.error("DATABASE_URL environment variable is not set.")
+    DATABASE_URL = "sqlite:///./fish_price.db" # Fallback so the module can load, but it will likely fail later if it expects postgres
+else:
+    DATABASE_URL = _normalize_database_url(_raw_url)
 
 try:
     parsed = urlparse(DATABASE_URL)
@@ -64,15 +65,21 @@ try:
 except Exception:
     pass
 
-kwargs = {
-    "pool_pre_ping": True,
-    "pool_size": 5,
-    "max_overflow": 10,
-    "connect_args": {
-        "connect_timeout": 10,
-        "sslmode": "require",
+kwargs = {}
+if DATABASE_URL.startswith("postgresql"):
+    kwargs = {
+        "pool_pre_ping": True,
+        "pool_size": 5,
+        "max_overflow": 10,
+        "connect_args": {
+            "connect_timeout": 5,
+            "sslmode": "require",
+        }
     }
-}
+else:
+    kwargs = {
+        "connect_args": {"check_same_thread": False}
+    }
 
 engine = create_engine(DATABASE_URL, **kwargs)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
