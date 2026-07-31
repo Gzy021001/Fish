@@ -26,10 +26,13 @@ def _read_local_env_url() -> str:
 
 def _normalize_database_url(raw_url: str) -> str:
     raw_url = raw_url.strip()
+    # 强制使用 psycopg2 驱动，避免 Vercel Serverless 下 psycopg3 二进制包不兼容导致的 500 崩溃
     if raw_url.startswith("postgres://"):
-        raw_url = raw_url.replace("postgres://", "postgresql+psycopg://", 1)
-    if raw_url.startswith("postgresql://"):
-        raw_url = raw_url.replace("postgresql://", "postgresql+psycopg://", 1)
+        raw_url = raw_url.replace("postgres://", "postgresql+psycopg2://", 1)
+    if raw_url.startswith("postgresql://") and not raw_url.startswith("postgresql+psycopg2://"):
+        raw_url = raw_url.replace("postgresql://", "postgresql+psycopg2://", 1)
+    # 如果已经被之前的代码替换为了 psycopg://，则修正回来
+    raw_url = raw_url.replace("postgresql+psycopg://", "postgresql+psycopg2://", 1)
 
     try:
         parsed = urlparse(raw_url)
