@@ -67,15 +67,26 @@ except Exception:
 
 kwargs = {}
 if DATABASE_URL.startswith("postgresql"):
-    kwargs = {
-        "pool_pre_ping": True,
-        "pool_size": 5,
-        "max_overflow": 10,
-        "connect_args": {
-            "connect_timeout": 5,
-            "sslmode": "require",
+    # Vercel Serverless 环境下建议关闭连接池或使用 NullPool，因为 Lambda 实例是瞬时的
+    from sqlalchemy.pool import NullPool
+    if os.getenv("VERCEL"):
+        kwargs = {
+            "poolclass": NullPool,
+            "connect_args": {
+                "connect_timeout": 5,
+                "sslmode": "require",
+            }
         }
-    }
+    else:
+        kwargs = {
+            "pool_pre_ping": True,
+            "pool_size": 5,
+            "max_overflow": 10,
+            "connect_args": {
+                "connect_timeout": 5,
+                "sslmode": "require",
+            }
+        }
 else:
     kwargs = {
         "connect_args": {"check_same_thread": False}
