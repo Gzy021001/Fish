@@ -31,18 +31,9 @@ def init_app():
     logger.info("Initializing application...")
     try:
         if os.getenv("VERCEL"):
-            try:
-                with engine.connect() as conn:
-                    from sqlalchemy import text
-
-                    conn.execute(text("SELECT 1 FROM users LIMIT 1"))
-                _initialized = True
-                logger.info(
-                    "Database already initialized, skipping create_all for cold start."
-                )
-                return
-            except Exception:
-                pass
+            logger.info("Vercel environment detected. Skipping create_all and bootstrap for cold start speed.")
+            _initialized = True
+            return
 
         if os.getenv("RESET_DATABASE") == "true":
             logger.warning("RESET_DATABASE=true, dropping all tables...")
