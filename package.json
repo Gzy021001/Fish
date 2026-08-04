@@ -4,7 +4,9 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "dev": "vite",
+    "dev": "node scripts/dev.js",
+    "dev:frontend": "vite",
+    "dev:backend": "cd backend && uvicorn app:app --port 8000 --reload",
     "build": "vue-tsc -b && vite build",
     "preview": "vite preview",
     "check": "vue-tsc -b",

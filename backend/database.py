@@ -86,7 +86,7 @@ if DATABASE_URL.startswith("postgresql"):
             "pool_size": 5,
             "max_overflow": 10,
             "connect_args": {
-                "connect_timeout": 5,
+                "connect_timeout": 15,
                 "sslmode": "require",
             }
         }

@@ -52,11 +52,16 @@ def init_app():
         # Instead, we catch it, store it in _init_error, and the middleware will return a graceful 503 response.
 
 
+import asyncio
+
 def create_app() -> FastAPI:
     app = FastAPI(title="Fish Price Platform API")
     uploads_dir = get_uploads_dir()
 
-    init_app()
+    @app.on_event("startup")
+    async def on_startup():
+        loop = asyncio.get_event_loop()
+        loop.run_in_executor(None, init_app)
 
     app.add_middleware(GZipMiddleware, minimum_size=1000)
     app.add_middleware(
