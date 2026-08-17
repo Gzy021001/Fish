@@ -136,12 +136,19 @@ def upload_image(species_id: int, image: UploadFile, db: Session):
     if not image.content_type or not image.content_type.startswith("image/"):
         raise HTTPException(status_code=400, detail="请上传图片文件")
 
+    if getattr(image, "size", 0) > 5 * 1024 * 1024:
+        raise HTTPException(status_code=400, detail="图片大小不能超过 5MB")
+
     try:
         contents = image.file.read()
+        if len(contents) > 5 * 1024 * 1024:
+            raise HTTPException(status_code=400, detail="图片大小不能超过 5MB")
         species.image_url = store_image_asset(contents, image.content_type, folder="species")
         db.commit()
         db.refresh(species)
         return species
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error("Error processing image: %s", e)
         raise HTTPException(status_code=500, detail="图片处理失败，请稍后重试")

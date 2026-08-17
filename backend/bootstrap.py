@@ -50,8 +50,13 @@ def ensure_db_schema_updates():
 def init_seed_data():
     try:
         db = next(get_db())
+        # 一条 COUNT 替代四次逐用户 SELECT，减少 DB 往返
+        user_count = db.query(models.User).count()
+        if user_count > 0:
+            db.close()
+            logger.info("Users already exist, skipping seed data.")
+            return
 
-        # 预设用户列表
         users_to_create = [
             {"username": "admin", "password": os.getenv("ADMIN_PASSWORD", "admin123"), "role": "admin"},
             {"username": "operator1", "password": "op123456", "role": "operator"},
@@ -60,17 +65,15 @@ def init_seed_data():
         ]
 
         for user_info in users_to_create:
-            if not db.query(models.User).filter(models.User.username == user_info["username"]).first():
-                new_user = models.User(
-                    username=user_info["username"],
-                    password_hash=auth.get_password_hash(user_info["password"]),
-                    role=user_info["role"],
-                )
-                db.add(new_user)
-                logger.info(f"User {user_info['username']} created.")
+            new_user = models.User(
+                username=user_info["username"],
+                password_hash=auth.get_password_hash(user_info["password"]),
+                role=user_info["role"],
+            )
+            db.add(new_user)
+            logger.info(f"User {user_info['username']} created.")
         
         db.commit()
-
         db.close()
     except Exception as e:
         logger.error(f"Error during seed data initialization: {e}")

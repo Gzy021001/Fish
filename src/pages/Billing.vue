@@ -1,5 +1,5 @@
 <template>
-  <div class="h-full flex flex-col space-y-6 overflow-hidden">
+  <div class="h-full flex flex-col space-y-6">
     <Transition name="switch-fade" mode="out-in">
       <div
         v-if="showForm"
@@ -247,50 +247,55 @@
                     >
                   </div>
                   <div
-                    class="flex-1 min-h-0 grid grid-cols-1 md:grid-cols-2 gap-3 overflow-y-auto pr-2 custom-scrollbar"
+                    class="flex-1 min-h-0 grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-2 overflow-y-auto pr-2 custom-scrollbar content-start"
                   >
                     <div
                       v-for="(entry, idx) in billEntries"
                       :key="entry.species_id"
-                      class="rounded-xl border border-dunhuang-yellow/20 bg-white p-2.5 transition-shadow hover:shadow-sm"
+                      class="rounded-xl border border-dunhuang-yellow/30 bg-white p-2 transition-shadow hover:shadow-md hover:border-dunhuang-yellow/50 relative group flex flex-col"
                     >
-                      <div class="flex items-center gap-2 mb-2">
+                      <div
+                        class="flex items-center gap-2 mb-1.5 border-b border-dunhuang-yellow/10 pb-1.5"
+                      >
                         <img
                           v-if="getEntrySpecies(entry.species_id)?.image_url"
                           :src="getEntrySpecies(entry.species_id)!.image_url!"
                           :alt="getEntryName(entry.species_id)"
-                          class="w-10 h-8 rounded-lg object-cover border border-dunhuang-yellow/30 shrink-0"
+                          class="w-9 h-9 rounded-lg object-cover border border-dunhuang-yellow/30 shrink-0 shadow-sm"
                         />
                         <div
                           v-else
-                          class="w-10 h-8 rounded-lg bg-dunhuang-yellow/10 border border-dunhuang-yellow/30 flex items-center justify-center text-dunhuang-blue shrink-0"
+                          class="w-9 h-9 rounded-lg bg-dunhuang-yellow/10 border border-dunhuang-yellow/30 flex items-center justify-center text-dunhuang-blue shrink-0 shadow-sm"
                         >
                           <span class="text-xs font-bold">{{
                             getEntryName(entry.species_id).charAt(0)
                           }}</span>
                         </div>
-                        <div class="flex-1 min-w-0 flex items-center gap-2">
+                        <div
+                          class="flex-1 min-w-0 flex flex-col justify-center"
+                        >
                           <span
-                            class="font-medium text-dunhuang-blue text-sm truncate"
+                            class="font-medium text-dunhuang-blue text-sm truncate leading-tight"
                             >{{ getEntryName(entry.species_id) }}</span
                           >
                           <span
-                            class="text-xs text-dunhuang-red font-mono ml-auto shrink-0"
+                            class="text-[10px] text-dunhuang-text/50 font-medium mt-0.5"
                           >
-                            {{
+                            <span class="text-dunhuang-red font-mono">{{
                               (
                                 getEntrySpecies(entry.species_id)
                                   ?.default_price ??
                                 entry.unit_price ??
                                 0
                               ).toFixed(2)
-                            }}（元/公斤）
+                            }}</span>
+                            元/公斤
                           </span>
                         </div>
                         <button
                           type="button"
                           @click="removeEntry(idx)"
-                          class="text-dunhuang-text/30 hover:text-dunhuang-red transition-colors w-5 h-5 flex items-center justify-center rounded-full hover:bg-dunhuang-red/8 shrink-0"
+                          class="absolute top-1.5 right-1.5 text-dunhuang-text/20 hover:text-dunhuang-red transition-all duration-200 w-5 h-5 flex items-center justify-center rounded-full hover:bg-dunhuang-red/10 shrink-0 opacity-0 group-hover:opacity-100"
                           title="移除此品种"
                         >
                           <svg
@@ -302,46 +307,50 @@
                             <path
                               stroke-linecap="round"
                               stroke-linejoin="round"
-                              stroke-width="2"
+                              stroke-width="2.5"
                               d="M6 18L18 6M6 6l12 12"
                             />
                           </svg>
                         </button>
                       </div>
-                      <div class="grid grid-cols-2 gap-2">
+                      <div class="grid grid-cols-2 gap-2 mt-0">
                         <div>
                           <label
-                            class="block text-xs text-dunhuang-text/50 mb-1"
+                            class="block text-[10px] font-medium text-dunhuang-text/60 mb-1"
                             >总重 ({{
                               getEntryUnit(entry.species_id) || "公斤"
                             }})</label
                           >
-                          <input
-                            type="text"
-                            inputmode="decimal"
-                            v-model="entry.weight"
-                            @blur="
-                              entry.weight = (+entry.weight || 0).toFixed(2)
-                            "
-                            class="w-full bg-dunhuang-bg border border-dunhuang-yellow/40 rounded-lg px-2.5 py-1.5 text-sm focus:ring-0 outline-none font-mono"
-                          />
+                          <div class="relative">
+                            <input
+                              type="text"
+                              inputmode="decimal"
+                              v-model="entry.weight"
+                              @blur="
+                                entry.weight = (+entry.weight || 0).toFixed(2)
+                              "
+                              class="w-full bg-dunhuang-bg/50 border border-dunhuang-yellow/40 rounded-md px-2 py-1 text-xs focus:ring-0 outline-none font-mono text-dunhuang-blue font-medium transition-colors focus:bg-white focus:border-dunhuang-blue/50 hover:border-dunhuang-yellow/60"
+                            />
+                          </div>
                         </div>
                         <div>
                           <label
-                            class="block text-xs text-dunhuang-text/50 mb-1"
+                            class="block text-[10px] font-medium text-dunhuang-text/60 mb-1"
                             >服务费（元）</label
                           >
-                          <input
-                            type="text"
-                            inputmode="decimal"
-                            v-model="entry.fee_value"
-                            @blur="
-                              entry.fee_value = (+entry.fee_value || 0).toFixed(
-                                2,
-                              )
-                            "
-                            class="w-full bg-dunhuang-bg border border-dunhuang-yellow/40 rounded-lg px-2.5 py-1.5 text-sm focus:ring-0 outline-none font-mono"
-                          />
+                          <div class="relative">
+                            <input
+                              type="text"
+                              inputmode="decimal"
+                              v-model="entry.fee_value"
+                              @blur="
+                                entry.fee_value = (
+                                  +entry.fee_value || 0
+                                ).toFixed(2)
+                              "
+                              class="w-full bg-dunhuang-bg/50 border border-dunhuang-yellow/40 rounded-md px-2 py-1 text-xs focus:ring-0 outline-none font-mono text-dunhuang-blue font-medium transition-colors focus:bg-white focus:border-dunhuang-blue/50 hover:border-dunhuang-yellow/60"
+                            />
+                          </div>
                         </div>
                       </div>
                     </div>
@@ -459,152 +468,204 @@
         class="bg-white rounded-2xl shadow-md border border-dunhuang-yellow/30 p-8"
       >
         <div class="flex items-center justify-between mb-6">
-          <div
-            class="flex items-center gap-6 border-b border-dunhuang-yellow/30 pb-2"
-          >
-            <button
-              v-for="tab in tabs"
-              :key="tab.key"
-              @click="switchTab(tab.key)"
-              :class="[
-                'text-lg font-serif font-bold transition-colors pb-1 -mb-[5px] border-b-2',
-                activeTab === tab.key
-                  ? 'text-dunhuang-blue border-dunhuang-blue'
-                  : 'text-dunhuang-text/50 border-transparent hover:text-dunhuang-blue/70',
-              ]"
+          <div class="flex items-center gap-4">
+            <div
+              class="flex items-center gap-6 border-b border-dunhuang-yellow/30 pb-2"
             >
-              {{ tab.label }}
-            </button>
-          </div>
-
-          <div class="flex gap-2 items-center">
-            <!-- 日期筛选 -->
-            <div class="relative" ref="datePickerWrapperRef">
               <button
-                @click="toggleShowDatePicker"
+                v-for="tab in tabs"
+                :key="tab.key"
+                @click="switchTab(tab.key)"
                 :class="[
-                  'flex items-center gap-1.5 rounded-lg px-3 h-8 text-sm font-medium transition-all duration-200',
-                  dateRangeLabel
+                  'text-lg font-serif font-bold transition-colors pb-1 -mb-[5px] border-b-2',
+                  activeTab === tab.key
+                    ? 'text-dunhuang-blue border-dunhuang-blue'
+                    : 'text-dunhuang-text/50 border-transparent hover:text-dunhuang-blue/70',
+                ]"
+              >
+                {{ tab.label }}
+              </button>
+            </div>
+
+            <!-- 筛选面板 -->
+            <div class="relative self-center mb-2" ref="filterWrapperRef">
+              <button
+                @click="
+                  showFilterDropdown
+                    ? (showFilterDropdown = false)
+                    : openFilterDropdown()
+                "
+                :class="[
+                  'flex items-center justify-center gap-1.5 rounded-lg px-3.5 h-7 text-[13px] font-semibold transition-all duration-200',
+                  activeFilterCount > 0
                     ? 'bg-dunhuang-yellow/15 text-dunhuang-blue border border-dunhuang-yellow/40 shadow-sm'
                     : 'bg-dunhuang-bg/50 text-dunhuang-text/40 border border-dunhuang-blue/15 hover:text-dunhuang-text/60 hover:border-dunhuang-blue/35 hover:bg-white',
                 ]"
               >
                 <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  width="14"
-                  height="14"
-                  viewBox="0 0 24 24"
+                  class="w-4 h-4"
                   fill="none"
                   stroke="currentColor"
-                  stroke-width="1.5"
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  class="shrink-0"
+                  viewBox="0 0 24 24"
                 >
-                  <rect width="18" height="18" x="3" y="4" rx="2" ry="2" />
-                  <line x1="16" x2="16" y1="2" y2="6" />
-                  <line x1="8" x2="8" y1="2" y2="6" />
-                  <line x1="3" x2="21" y1="10" y2="10" />
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"
+                  />
                 </svg>
-                <span>{{ dateRangeLabel || "选择筛选日期" }}</span>
+                <span>筛选</span>
                 <span
-                  v-if="filterDateFrom || filterDateTo"
-                  @click.stop="clearDateFilter"
-                  class="w-4 h-4 rounded-full inline-flex items-center justify-center text-[10px] leading-none bg-dunhuang-blue/15 hover:bg-dunhuang-red/20 hover:text-dunhuang-red transition-colors shrink-0 ml-0.5"
+                  v-if="activeFilterCount > 0"
+                  class="ml-1 flex items-center justify-center w-4 h-4 text-[10px] font-bold text-white bg-dunhuang-red rounded-full leading-none pt-[1px]"
                 >
-                  ✕
+                  {{ activeFilterCount }}
                 </span>
-                <svg
-                  v-else
-                  xmlns="http://www.w3.org/2000/svg"
-                  width="12"
-                  height="12"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  stroke-width="2"
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  class="shrink-0 transition-transform duration-200"
-                  :class="showDatePicker ? 'rotate-180' : ''"
-                >
-                  <polyline points="6 9 12 15 18 9" />
-                </svg>
               </button>
+
               <Transition name="dropdown">
                 <div
-                  v-if="showDatePicker"
-                  class="absolute top-full mt-1.5 right-0 z-30"
+                  v-if="showFilterDropdown"
+                  class="absolute top-full mt-2 left-0 z-50"
                 >
                   <div
-                    class="bg-white rounded-2xl shadow-xl border border-dunhuang-yellow/20 w-[340px]"
+                    class="bg-white rounded-2xl shadow-xl border border-dunhuang-yellow/20 w-[320px]"
                     style="
                       box-shadow:
                         0 12px 36px rgba(92, 64, 51, 0.12),
                         0 4px 12px rgba(92, 64, 51, 0.06);
                     "
                   >
-                    <!-- 面板标题 -->
-                    <div class="flex items-center gap-2.5 px-5 pt-4 pb-3">
+                    <div
+                      class="flex items-center gap-2.5 px-5 pt-4 pb-3 border-b border-dunhuang-yellow/10"
+                    >
                       <div
                         class="w-1 h-5 rounded-full bg-dunhuang-yellow shrink-0"
                       ></div>
                       <h4
                         class="text-sm font-serif font-bold text-dunhuang-blue"
                       >
-                        日期筛选
+                        筛选
                       </h4>
-                      <span
-                        v-if="dateRangeLabel"
-                        class="text-xs text-dunhuang-text/40 ml-auto truncate max-w-[160px]"
-                        >{{ dateRangeLabel }}</span
-                      >
                     </div>
 
-                    <!-- 自定义日期范围 -->
-                    <div class="px-5 pt-3 pb-4">
-                      <label
-                        class="block text-[11px] text-dunhuang-text/35 mb-2 tracking-wider"
-                        >自定义范围</label
-                      >
-                      <div
-                        class="flex items-center gap-1.5 border border-dunhuang-yellow/30 rounded-lg bg-dunhuang-bg/30 px-2 h-9 w-full hover:border-dunhuang-yellow/50 focus-within:border-dunhuang-blue focus-within:bg-white focus-within:shadow-sm focus-within:shadow-dunhuang-blue/5 transition-all duration-200"
-                      >
-                        <DateInput
-                          v-model="pickerFromDate"
-                          placeholder="开始日期"
-                          size="sm"
-                          variant="ghost"
-                          class="flex-1 min-w-0"
-                        />
-                        <span
-                          class="text-dunhuang-text/40 text-sm font-medium shrink-0 px-1 leading-none flex items-center justify-center pt-[1px]"
-                          >至</span
+                    <div class="px-5 py-4 space-y-4">
+                      <!-- 品种搜索 -->
+                      <div>
+                        <label
+                          class="block text-[11px] text-dunhuang-text/40 mb-1.5 tracking-wider font-medium"
+                          >搜索品种</label
                         >
-                        <DateInput
-                          v-model="pickerToDate"
-                          placeholder="结束日期"
-                          size="sm"
-                          variant="ghost"
-                          class="flex-1 min-w-0"
-                        />
+                        <div
+                          class="flex items-center bg-dunhuang-bg/30 border border-dunhuang-yellow/30 rounded-lg px-2.5 h-9 focus-within:border-dunhuang-blue focus-within:bg-white transition-all duration-200"
+                        >
+                          <svg
+                            class="w-3.5 h-3.5 text-dunhuang-blue/40 shrink-0"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                          >
+                            <circle cx="11" cy="11" r="8"></circle>
+                            <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                          </svg>
+                          <input
+                            type="text"
+                            v-model="pickerSearchText"
+                            placeholder="输入品种名称..."
+                            class="flex-1 w-full bg-transparent border-none text-sm text-dunhuang-blue font-medium focus:outline-none focus:ring-0 px-2 placeholder:text-dunhuang-text/30"
+                            @keydown.enter="applyFilters"
+                          />
+                        </div>
+                      </div>
+
+                      <!-- 日期范围 -->
+                      <div>
+                        <label
+                          class="block text-[11px] text-dunhuang-text/40 mb-1.5 tracking-wider font-medium"
+                          >放生日期范围</label
+                        >
+                        <div
+                          class="flex items-center gap-1.5 border border-dunhuang-yellow/30 rounded-lg bg-dunhuang-bg/30 px-2 h-9 w-full hover:border-dunhuang-yellow/50 focus-within:border-dunhuang-blue focus-within:bg-white transition-all duration-200"
+                        >
+                          <DateInput
+                            v-model="pickerFromDate"
+                            placeholder="开始日期"
+                            size="sm"
+                            variant="ghost"
+                            class="flex-1 min-w-0"
+                          />
+                          <span
+                            class="text-dunhuang-text/30 text-xs font-medium shrink-0 px-0.5"
+                            >至</span
+                          >
+                          <DateInput
+                            v-model="pickerToDate"
+                            placeholder="结束日期"
+                            size="sm"
+                            variant="ghost"
+                            class="flex-1 min-w-0"
+                          />
+                        </div>
+                      </div>
+                      <!-- 归档状态 (仅在最新单据下显示) -->
+                      <div v-if="activeTab === 'current'">
+                        <label
+                          class="block text-[11px] text-dunhuang-text/40 mb-1.5 tracking-wider font-medium"
+                          >单据状态</label
+                        >
+                        <div class="flex gap-2">
+                          <button
+                            @click="pickerStatus = ''"
+                            :class="[
+                              'flex-1 h-8 rounded-lg text-xs font-medium transition-all duration-200 border',
+                              pickerStatus === ''
+                                ? 'bg-dunhuang-blue text-white border-dunhuang-blue'
+                                : 'bg-dunhuang-bg/30 text-dunhuang-text/60 border-dunhuang-yellow/30 hover:border-dunhuang-blue/50',
+                            ]"
+                          >
+                            全部
+                          </button>
+                          <button
+                            @click="pickerStatus = 'DRAFT'"
+                            :class="[
+                              'flex-1 h-8 rounded-lg text-xs font-medium transition-all duration-200 border',
+                              pickerStatus === 'DRAFT'
+                                ? 'bg-dunhuang-blue text-white border-dunhuang-blue'
+                                : 'bg-dunhuang-bg/30 text-dunhuang-text/60 border-dunhuang-yellow/30 hover:border-dunhuang-blue/50',
+                            ]"
+                          >
+                            草稿
+                          </button>
+                          <button
+                            @click="pickerStatus = 'COMPLETED'"
+                            :class="[
+                              'flex-1 h-8 rounded-lg text-xs font-medium transition-all duration-200 border',
+                              pickerStatus === 'COMPLETED'
+                                ? 'bg-dunhuang-blue text-white border-dunhuang-blue'
+                                : 'bg-dunhuang-bg/30 text-dunhuang-text/60 border-dunhuang-yellow/30 hover:border-dunhuang-blue/50',
+                            ]"
+                          >
+                            已归档
+                          </button>
+                        </div>
                       </div>
                     </div>
 
                     <!-- 操作按钮 -->
                     <div
-                      class="flex justify-end items-center px-5 py-3 bg-dunhuang-bg/40 border-t border-dunhuang-yellow/8 rounded-b-2xl"
+                      class="flex justify-end items-center px-5 py-3 bg-dunhuang-bg/40 border-t border-dunhuang-yellow/10 rounded-b-2xl"
                     >
                       <div class="flex gap-2">
                         <button
-                          @click="handleSearchClick"
+                          @click="applyFilters"
                           class="px-5 py-1.5 rounded-lg text-xs font-medium transition-all duration-200 bg-dunhuang-blue text-white hover:bg-dunhuang-blue/90 shadow-sm hover:shadow-md"
                         >
                           搜索
                         </button>
                         <button
-                          @click="resetDateFilter"
-                          class="px-4 py-1.5 rounded-lg text-xs text-dunhuang-text/50 hover:text-dunhuang-text/70 hover:bg-dunhuang-bg transition-colors"
+                          @click="resetFilters"
+                          class="px-4 py-1.5 rounded-lg text-xs text-dunhuang-text/50 hover:text-dunhuang-text/70 hover:bg-dunhuang-yellow/20 transition-colors font-medium"
                         >
                           重置
                         </button>
@@ -614,47 +675,9 @@
                 </div>
               </Transition>
             </div>
+          </div>
 
-            <!-- 搜索 -->
-            <div
-              class="flex items-center bg-dunhuang-bg/50 border border-dunhuang-blue/15 rounded-lg px-2.5 transition-all duration-200 hover:border-dunhuang-blue/35 focus-within:border-dunhuang-blue focus-within:ring-2 focus-within:ring-dunhuang-blue/15 focus-within:bg-white h-8"
-            >
-              <button
-                type="button"
-                @click="performSearch"
-                class="text-dunhuang-blue/50 hover:text-dunhuang-blue transition-colors shrink-0"
-              >
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  width="15"
-                  height="15"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  stroke-width="2"
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                >
-                  <circle cx="11" cy="11" r="8"></circle>
-                  <line x1="21" x2="16.65" y1="21" y2="16.65"></line>
-                </svg>
-              </button>
-              <input
-                type="text"
-                v-model="searchText"
-                placeholder="搜索品种..."
-                @keydown.enter="performSearch"
-                class="bg-transparent border-none text-sm text-dunhuang-blue font-medium focus:outline-none focus:ring-0 p-0 w-28 ml-1.5 placeholder:text-dunhuang-text/30"
-              />
-              <button
-                v-if="searchText"
-                @click="clearSearchText"
-                class="text-dunhuang-text/30 hover:text-dunhuang-red text-xs leading-none px-1 transition-colors"
-              >
-                ✕
-              </button>
-            </div>
-
+          <div class="flex gap-2 items-center">
             <!-- 批量删除 -->
             <button
               v-if="activeTab === 'current' && selectedBillIds.length > 0"
@@ -662,6 +685,19 @@
               class="h-8 px-3.5 rounded-lg text-sm font-medium transition-all duration-200 text-dunhuang-red hover:bg-dunhuang-red/8 border border-dunhuang-red/25 hover:border-dunhuang-red/40"
             >
               批量删除 ({{ selectedBillIds.length }})
+            </button>
+
+            <!-- 批量归档 -->
+            <button
+              v-if="
+                activeTab === 'current' &&
+                selectedBillIds.length > 0 &&
+                authStore.isAdmin
+              "
+              @click="confirmArchiveBills"
+              class="h-8 px-3.5 rounded-lg text-sm font-medium transition-all duration-200 text-dunhuang-green hover:bg-dunhuang-green/8 border border-dunhuang-green/25 hover:border-dunhuang-green/40"
+            >
+              核对无误并归档 ({{ selectedBillIds.length }})
             </button>
 
             <!-- current tab 专有按钮：导入 -->
@@ -699,228 +735,302 @@
         </div>
 
         <div
-          class="border border-dunhuang-yellow/30 rounded-lg bg-white overflow-hidden"
+          class="border border-dunhuang-yellow/30 rounded-lg bg-white overflow-hidden flex flex-col h-[534px]"
         >
+          <!-- Header (Synced Scroll) -->
           <div
-            class="overflow-y-scroll overflow-x-hidden custom-scrollbar h-[534px]"
+            ref="tableHeaderRef"
+            class="overflow-hidden shrink-0 bg-[#fbf6ec] z-40 transform-gpu shadow-sm"
           >
-            <div class="flex flex-col">
+            <div class="flex min-w-[1100px] h-[42px]">
               <div
-                class="sticky top-0 bg-dunhuang-bg/90 backdrop-blur z-20 flex w-full shrink-0 transform-gpu h-[42px]"
+                class="bg-dunhuang-yellow/10 text-dunhuang-blue font-sans font-bold text-sm flex w-full h-full"
               >
                 <div
-                  class="bg-dunhuang-yellow/20 text-dunhuang-blue font-sans font-bold text-sm flex w-full h-full"
+                  v-if="activeTab === 'current'"
+                  class="px-3 py-2 border-b border-dunhuang-yellow/40 flex items-center justify-center w-12 shrink-0 sticky left-0 bg-[#fbf6ec] z-50"
                 >
-                  <div
-                    v-if="activeTab === 'current'"
-                    class="px-3 py-2 border-b border-dunhuang-yellow/40 flex items-center justify-center w-10 shrink-0 sticky left-0 bg-dunhuang-yellow/20 backdrop-blur z-30 sticky-col-left"
+                  <input
+                    type="checkbox"
+                    class="w-4 h-4 rounded border-2 border-dunhuang-yellow/40 text-dunhuang-blue focus:ring-0 focus:ring-offset-0 cursor-pointer transition-all duration-200"
+                    :checked="isAllSelected"
+                    @change="toggleSelectAll"
+                  />
+                </div>
+                <div
+                  class="col-th w-16 shrink-0 flex items-center z-50 bg-[#fbf6ec]"
+                  :class="
+                    activeTab === 'current'
+                      ? 'sticky left-12'
+                      : 'sticky left-0 pl-2'
+                  "
+                >
+                  序号
+                </div>
+                <div
+                  class="col-th w-28 shrink-0 flex items-center z-50 bg-[#fbf6ec] shadow-[2px_0_5px_-2px_rgba(0,0,0,0.05)]"
+                  :class="
+                    activeTab === 'current'
+                      ? 'sticky left-[112px]'
+                      : 'sticky left-16'
+                  "
+                >
+                  品种
+                </div>
+                <div
+                  class="col-th flex-[0.35] flex items-center justify-center"
+                >
+                  归档状态
+                </div>
+                <div class="col-th flex-[0.5] flex items-center">
+                  重量（公斤）
+                </div>
+                <div class="col-th flex-[0.6] flex items-center">
+                  单价（元）
+                </div>
+                <div class="col-th flex-[0.6] flex items-center">
+                  小计（元）
+                </div>
+                <div class="col-th flex-[0.5] flex items-center">
+                  服务费（元）
+                </div>
+                <div class="col-th flex-[0.6] flex items-center">
+                  总金额（元）
+                </div>
+                <div class="col-th flex-[0.7] flex items-center">放生日期</div>
+                <div class="col-th flex-[0.9] flex items-center">添加时间</div>
+                <div
+                  v-if="activeTab === 'current'"
+                  class="col-th flex items-center justify-center w-40 shrink-0 sticky right-0 bg-[#fbf6ec] z-50 shadow-[-2px_0_5px_-2px_rgba(0,0,0,0.05)]"
+                >
+                  操作
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Body (Main Scroll Area) -->
+          <div
+            ref="tableBodyRef"
+            @scroll="handleTableScroll"
+            class="overflow-auto custom-scrollbar flex-1 w-full"
+          >
+            <div class="flex flex-col min-w-[1100px] relative min-h-[450px]">
+              <div
+                v-for="(b, index) in paginatedBills"
+                :key="b.id"
+                class="border-b border-dunhuang-yellow/20 hover:bg-[#fcf8f0] transition-colors text-sm group flex w-full shrink-0 h-[45px]"
+              >
+                <div
+                  v-if="activeTab === 'current'"
+                  class="px-3 py-2 flex items-center justify-center w-12 shrink-0 sticky left-0 bg-white group-hover:bg-[#fcf8f0] transition-colors z-30"
+                >
+                  <input
+                    type="checkbox"
+                    class="w-4 h-4 rounded border-2 border-dunhuang-yellow/40 text-dunhuang-blue focus:ring-0 focus:ring-offset-0 cursor-pointer transition-all duration-200"
+                    :value="b.id"
+                    v-model="selectedBillIds"
+                  />
+                </div>
+                <div
+                  class="col-td-muted w-16 shrink-0 flex items-center bg-white group-hover:bg-[#fcf8f0] transition-colors z-30"
+                  :class="
+                    activeTab === 'current'
+                      ? 'sticky left-12'
+                      : 'sticky left-0 pl-2'
+                  "
+                >
+                  {{ (currentPage - 1) * pageSize + index + 1 }}
+                </div>
+                <div
+                  class="col-td font-medium w-28 shrink-0 flex items-center truncate pr-2 bg-white group-hover:bg-[#fcf8f0] transition-colors z-30 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.05)]"
+                  :class="
+                    activeTab === 'current'
+                      ? 'sticky left-[112px]'
+                      : 'sticky left-16'
+                  "
+                >
+                  {{ getSpeciesName(b.species_id) }}
+                </div>
+                <div
+                  class="col-td flex-[0.35] flex items-center justify-center"
+                >
+                  <span
+                    v-if="b.status === 'COMPLETED'"
+                    class="text-[10px] px-1.5 py-0.5 rounded bg-dunhuang-blue/10 text-dunhuang-blue border border-dunhuang-blue/20 shrink-0"
+                    >已归档</span
                   >
-                    <input
-                      type="checkbox"
-                      class="w-4 h-4 rounded border-2 border-dunhuang-yellow/40 text-dunhuang-blue focus:ring-0 focus:ring-offset-0 cursor-pointer transition-all duration-200"
-                      :checked="isAllSelected"
-                      @change="toggleSelectAll"
-                    />
-                  </div>
-                  <div
-                    class="col-th flex-[0.25] flex items-center"
-                    :class="
-                      activeTab === 'current' ? '' : 'sticky left-0 z-30 pl-2'
-                    "
+                  <span
+                    v-else-if="b.status === 'DRAFT'"
+                    class="text-[10px] px-1.5 py-0.5 rounded bg-dunhuang-yellow/20 text-dunhuang-orange border border-dunhuang-yellow/40 shrink-0"
+                    >草稿</span
                   >
-                    序号
-                  </div>
-                  <div class="col-th flex-[0.55] flex items-center">品种</div>
-                  <div class="col-th flex-[0.5] flex items-center">
-                    重量（公斤）
-                  </div>
-                  <div class="col-th flex-[0.6] flex items-center">
-                    单价（元）
-                  </div>
-                  <div class="col-th flex-[0.6] flex items-center">
-                    小计（元）
-                  </div>
-                  <div class="col-th flex-[0.5] flex items-center">
-                    服务费（元）
-                  </div>
-                  <div class="col-th flex-[0.6] flex items-center">
-                    总金额（元）
-                  </div>
-                  <div class="col-th flex-[0.7] flex items-center">
-                    放生日期
-                  </div>
-                  <div class="col-th flex-[0.9] flex items-center">
-                    添加时间
-                  </div>
-                  <div
-                    v-if="activeTab === 'current'"
-                    class="col-th flex items-center justify-center w-40 shrink-0 sticky right-0 bg-dunhuang-yellow/20 z-30 sticky-col-right"
-                  >
-                    操作
+                </div>
+                <div class="col-td tabular-nums flex-[0.5] flex items-center">
+                  {{ formatMoney(b.weight) }}
+                </div>
+                <div class="col-td-mono-red flex-[0.6] flex items-center">
+                  {{ formatMoney(b.unit_price) }}
+                </div>
+                <div class="col-td-green flex-[0.6] flex items-center">
+                  {{ formatMoney(b.subtotal) }}
+                </div>
+                <div class="col-td tabular-nums flex-[0.5] flex items-center">
+                  {{ formatFee(b) }}
+                </div>
+                <div class="col-td-mono-red flex-[0.6] flex items-center">
+                  {{ formatMoney(b.total_amount) }}
+                </div>
+                <div class="col-td flex-[0.7] flex items-center">
+                  {{ dateStr(b.release_date || b.species?.release_date) }}
+                </div>
+                <div class="col-td-time flex-[0.9] flex items-center">
+                  {{ dateTimeStr(b.created_at) }}
+                </div>
+                <div
+                  v-if="activeTab === 'current'"
+                  class="px-3 py-2 flex items-center justify-center w-40 shrink-0 sticky right-0 bg-white group-hover:bg-[#fcf8f0] transition-colors z-30 shadow-[-2px_0_5px_-2px_rgba(0,0,0,0.05)]"
+                >
+                  <div class="flex items-center justify-center gap-1">
+                    <button
+                      @click="viewBill(b)"
+                      class="px-2 py-1 rounded text-xs transition-colors text-dunhuang-blue hover:bg-dunhuang-blue/10 border border-transparent hover:border-dunhuang-blue/30"
+                    >
+                      查看
+                    </button>
+                    <button
+                      @click="editBill(b)"
+                      class="px-2 py-1 rounded text-xs transition-colors text-dunhuang-green hover:bg-dunhuang-green/10 border border-transparent hover:border-dunhuang-green/30"
+                    >
+                      编辑
+                    </button>
+                    <button
+                      @click="confirmDeleteBill(b.id)"
+                      class="px-2 py-1 rounded text-xs transition-colors text-dunhuang-red hover:bg-dunhuang-red/10 border border-transparent hover:border-dunhuang-red/30"
+                    >
+                      删除
+                    </button>
                   </div>
                 </div>
               </div>
-
-              <div class="flex flex-col relative min-h-[450px]">
+              <template
+                v-for="i in Math.max(0, pageSize - paginatedBills.length)"
+                :key="'placeholder-' + i"
+              >
                 <div
-                  v-for="(b, index) in paginatedBills"
-                  :key="b.id"
-                  class="border-b border-dunhuang-yellow/20 hover:bg-dunhuang-yellow/10 transition-colors text-sm group flex w-full shrink-0 h-[45px]"
+                  class="border-b border-dunhuang-yellow/10 text-sm flex w-full shrink-0 h-[45px]"
                 >
                   <div
                     v-if="activeTab === 'current'"
-                    class="px-3 py-2 flex items-center justify-center w-10 shrink-0 sticky left-0 bg-white/60 backdrop-blur-md group-hover:bg-dunhuang-yellow/10 transition-colors sticky-col-left"
-                  >
-                    <input
-                      type="checkbox"
-                      class="w-4 h-4 rounded border-2 border-dunhuang-yellow/40 text-dunhuang-blue focus:ring-0 focus:ring-offset-0 cursor-pointer transition-all duration-200"
-                      :value="b.id"
-                      v-model="selectedBillIds"
-                    />
-                  </div>
+                    class="px-3 py-2 flex items-center justify-center w-12 shrink-0 sticky left-0 bg-white z-30"
+                  ></div>
                   <div
-                    class="col-td-muted flex-[0.25] flex items-center"
+                    class="col-td-muted w-16 shrink-0 flex items-center bg-white z-30"
                     :class="
                       activeTab === 'current'
-                        ? ''
-                        : 'sticky left-0 bg-white/60 backdrop-blur-md z-20 pl-2'
+                        ? 'sticky left-12'
+                        : 'sticky left-0 pl-2'
                     "
-                  >
-                    {{ (currentPage - 1) * pageSize + index + 1 }}
-                  </div>
-                  <div class="col-td font-medium flex-[0.55] flex items-center">
-                    {{ getSpeciesName(b.species_id) }}
-                  </div>
-                  <div class="col-td tabular-nums flex-[0.5] flex items-center">
-                    {{ formatMoney(b.weight) }}
-                  </div>
-                  <div class="col-td-mono-red flex-[0.6] flex items-center">
-                    {{ formatMoney(b.unit_price) }}
-                  </div>
-                  <div class="col-td-green flex-[0.6] flex items-center">
-                    {{ formatMoney(b.subtotal) }}
-                  </div>
-                  <div class="col-td tabular-nums flex-[0.5] flex items-center">
-                    {{ formatFee(b) }}
-                  </div>
-                  <div class="col-td-mono-red flex-[0.6] flex items-center">
-                    {{ formatMoney(b.total_amount) }}
-                  </div>
-                  <div class="col-td flex-[0.7] flex items-center">
-                    {{ dateStr(b.release_date || b.species?.release_date) }}
-                  </div>
-                  <div class="col-td-time flex-[0.9] flex items-center">
-                    {{ dateTimeStr(b.created_at) }}
-                  </div>
+                  ></div>
+                  <div
+                    class="col-td font-medium w-28 shrink-0 flex items-center bg-white z-30 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.05)]"
+                    :class="
+                      activeTab === 'current'
+                        ? 'sticky left-[112px]'
+                        : 'sticky left-16'
+                    "
+                  ></div>
+                  <div
+                    class="col-td flex-[0.35] flex items-center justify-center"
+                  ></div>
+                  <div
+                    class="col-td tabular-nums flex-[0.5] flex items-center"
+                  ></div>
+                  <div
+                    class="col-td-mono-red flex-[0.6] flex items-center"
+                  ></div>
+                  <div class="col-td-green flex-[0.6] flex items-center"></div>
+                  <div
+                    class="col-td tabular-nums flex-[0.5] flex items-center"
+                  ></div>
+                  <div
+                    class="col-td-mono-red flex-[0.6] flex items-center"
+                  ></div>
+                  <div class="col-td flex-[0.7] flex items-center"></div>
+                  <div class="col-td-time flex-[0.9] flex items-center"></div>
                   <div
                     v-if="activeTab === 'current'"
-                    class="px-3 py-2 flex items-center justify-center w-40 shrink-0 sticky right-0 bg-white group-hover:bg-dunhuang-yellow/10 transition-colors sticky-col-right"
-                  >
-                    <div class="flex items-center justify-center gap-1">
-                      <button
-                        @click="viewBill(b)"
-                        class="px-2 py-1 rounded text-xs transition-colors text-dunhuang-blue hover:bg-dunhuang-blue/10 border border-transparent hover:border-dunhuang-blue/30"
-                      >
-                        查看
-                      </button>
-                      <button
-                        @click="editBill(b)"
-                        class="px-2 py-1 rounded text-xs transition-colors text-dunhuang-green hover:bg-dunhuang-green/10 border border-transparent hover:border-dunhuang-green/30"
-                      >
-                        编辑
-                      </button>
-                      <button
-                        @click="confirmDeleteBill(b.id)"
-                        class="px-2 py-1 rounded text-xs transition-colors text-dunhuang-red hover:bg-dunhuang-red/10 border border-transparent hover:border-dunhuang-red/30"
-                      >
-                        删除
-                      </button>
-                    </div>
-                  </div>
-                </div>
-                <template
-                  v-for="i in Math.max(0, pageSize - paginatedBills.length)"
-                  :key="'placeholder-' + i"
-                >
-                  <div
-                    class="border-b border-dunhuang-yellow/10 text-sm flex w-full shrink-0 h-[45px]"
-                  >
-                    <div
-                      class="px-3 py-2 flex items-center justify-center w-10 shrink-0 sticky left-0 bg-white/60 sticky-col-left"
-                    ></div>
-                    <div
-                      class="col-td-muted flex-[0.25] flex items-center"
-                    ></div>
-                    <div
-                      class="col-td font-medium flex-[0.55] flex items-center"
-                    ></div>
-                    <div
-                      class="col-td tabular-nums flex-[0.5] flex items-center"
-                    ></div>
-                    <div
-                      class="col-td-mono-red flex-[0.6] flex items-center"
-                    ></div>
-                    <div
-                      class="col-td-green flex-[0.6] flex items-center"
-                    ></div>
-                    <div
-                      class="col-td tabular-nums flex-[0.5] flex items-center"
-                    ></div>
-                    <div
-                      class="col-td-mono-red flex-[0.6] flex items-center"
-                    ></div>
-                    <div class="col-td flex-[0.7] flex items-center"></div>
-                    <div class="col-td-time flex-[0.9] flex items-center"></div>
-                    <div
-                      v-if="activeTab === 'current'"
-                      class="px-3 py-2 flex items-center justify-center w-40 shrink-0 sticky right-0 bg-white/60 sticky-col-right"
-                    ></div>
-                  </div>
-                </template>
-                <div
-                  class="flex w-full shrink-0 h-[42px] bg-white border-t-2 border-dunhuang-yellow/30 sticky bottom-0 z-20 transform-gpu"
-                >
-                  <div class="px-4 py-2 flex-[0.25] flex items-center"></div>
-                  <div class="px-4 py-2 flex-[0.55] flex items-center"></div>
-                  <div class="px-4 py-2 flex-[0.5] flex items-center">
-                    <span class="tabular-nums text-xs text-dunhuang-text/60">{{
-                      formatMoney(tableSumWeight)
-                    }}</span>
-                  </div>
-                  <div class="px-4 py-2 flex-[0.6] flex items-center"></div>
-                  <div class="px-4 py-2 flex-[0.6] flex items-center">
-                    <span class="tabular-nums text-xs text-dunhuang-green">{{
-                      formatMoney(tableSumSubtotal)
-                    }}</span>
-                  </div>
-                  <div class="px-4 py-2 flex-[0.5] flex items-center">
-                    <span class="tabular-nums text-xs text-dunhuang-text/60">{{
-                      formatMoney(tableSumFee)
-                    }}</span>
-                  </div>
-                  <div class="px-4 py-2 flex-[0.6] flex items-center">
-                    <span class="tabular-nums text-xs text-dunhuang-red">{{
-                      formatMoney(tableSumTotal)
-                    }}</span>
-                  </div>
-                  <div class="px-4 py-2 flex-[0.7] flex items-center"></div>
-                  <div class="px-4 py-2 flex-[0.9] flex items-center"></div>
-                  <div
-                    v-if="activeTab === 'current'"
-                    class="px-3 py-2 w-40 shrink-0 sticky right-0 bg-white sticky-col-right"
+                    class="px-3 py-2 flex items-center justify-center w-40 shrink-0 sticky right-0 bg-white z-30 shadow-[-2px_0_5px_-2px_rgba(0,0,0,0.05)]"
                   ></div>
                 </div>
+              </template>
+              <div
+                v-if="bills.length === 0"
+                class="absolute inset-0 flex items-center justify-center pointer-events-none"
+              >
                 <div
-                  v-if="bills.length === 0"
-                  class="absolute inset-0 flex items-center justify-center pointer-events-none"
+                  class="text-dunhuang-text/50 bg-white/50 px-6 py-2 rounded-full backdrop-blur-sm shadow-sm border border-dunhuang-yellow/30"
                 >
-                  <div
-                    class="text-dunhuang-text/50 bg-white/50 px-6 py-2 rounded-full backdrop-blur-sm shadow-sm border border-dunhuang-yellow/30"
-                  >
-                    暂无单据
-                  </div>
+                  暂无单据
                 </div>
               </div>
+            </div>
+          </div>
+
+          <!-- Footer (Synced Scroll) -->
+          <div
+            ref="tableFooterRef"
+            class="overflow-hidden shrink-0 bg-white border-t-2 border-dunhuang-yellow/30 shadow-[0_-2px_5px_-2px_rgba(0,0,0,0.05)]"
+          >
+            <div class="flex min-w-[1100px] h-[42px]">
+              <div
+                v-if="activeTab === 'current'"
+                class="w-12 shrink-0 sticky left-0 bg-white z-50"
+              ></div>
+              <div
+                class="w-16 shrink-0 bg-white z-50"
+                :class="
+                  activeTab === 'current' ? 'sticky left-12' : 'sticky left-0'
+                "
+              ></div>
+              <div
+                class="w-28 shrink-0 flex items-center justify-end pr-4 text-xs text-dunhuang-text/60 bg-white z-50 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.05)]"
+                :class="
+                  activeTab === 'current'
+                    ? 'sticky left-[112px]'
+                    : 'sticky left-16'
+                "
+              >
+                总计
+              </div>
+              <div class="px-4 py-2 flex-[0.35]"></div>
+              <div class="px-4 py-2 flex-[0.5] flex items-center">
+                <span class="tabular-nums text-xs text-dunhuang-text/60">{{
+                  formatMoney(tableSumWeight)
+                }}</span>
+              </div>
+              <div class="px-4 py-2 flex-[0.6] flex items-center"></div>
+              <div class="px-4 py-2 flex-[0.6] flex items-center">
+                <span class="tabular-nums text-xs text-dunhuang-green">{{
+                  formatMoney(tableSumSubtotal)
+                }}</span>
+              </div>
+              <div class="px-4 py-2 flex-[0.5] flex items-center">
+                <span class="tabular-nums text-xs text-dunhuang-text/60">{{
+                  formatMoney(tableSumFee)
+                }}</span>
+              </div>
+              <div class="px-4 py-2 flex-[0.6] flex items-center">
+                <span class="tabular-nums text-xs text-dunhuang-red">{{
+                  formatMoney(tableSumTotal)
+                }}</span>
+              </div>
+              <div class="px-4 py-2 flex-[0.7] flex items-center"></div>
+              <div class="px-4 py-2 flex-[0.9] flex items-center"></div>
+              <div
+                v-if="activeTab === 'current'"
+                class="px-3 py-2 w-40 shrink-0 sticky right-0 bg-white z-50 shadow-[-2px_0_5px_-2px_rgba(0,0,0,0.05)]"
+              ></div>
             </div>
           </div>
         </div>
@@ -1204,7 +1314,7 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, onBeforeUnmount, ref } from "vue";
+import { onMounted, onBeforeUnmount, ref, computed } from "vue";
 import { useI18n } from "vue-i18n";
 import { useRouter } from "vue-router";
 import { useAuthStore } from "../stores/auth";
@@ -1221,71 +1331,84 @@ const { t } = useI18n();
 const router = useRouter();
 const authStore = useAuthStore();
 
-const showDatePicker = ref(false);
-const datePickerWrapperRef = ref<HTMLElement | null>(null);
+const showFilterDropdown = ref(false);
+const filterWrapperRef = ref<HTMLElement | null>(null);
+const pickerSearchText = ref("");
+const pickerStatus = ref("");
 
-const handleDatePickerClickOutside = (e: MouseEvent) => {
-  if (
-    showDatePicker.value &&
-    datePickerWrapperRef.value &&
-    !datePickerWrapperRef.value.contains(e.target as Node)
-  ) {
-    cancelDatePicker();
+const tableHeaderRef = ref<HTMLElement | null>(null);
+const tableBodyRef = ref<HTMLElement | null>(null);
+const tableFooterRef = ref<HTMLElement | null>(null);
+
+const handleTableScroll = (e: Event) => {
+  const target = e.target as HTMLElement;
+  if (tableHeaderRef.value) {
+    tableHeaderRef.value.scrollLeft = target.scrollLeft;
+  }
+  if (tableFooterRef.value) {
+    tableFooterRef.value.scrollLeft = target.scrollLeft;
   }
 };
 
-const now = new Date();
-const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+const handleFilterClickOutside = (e: MouseEvent) => {
+  if (
+    showFilterDropdown.value &&
+    filterWrapperRef.value &&
+    !filterWrapperRef.value.contains(e.target as Node)
+  ) {
+    showFilterDropdown.value = false;
+  }
+};
+
 const pickerFromDate = ref("");
 const pickerToDate = ref("");
 
-const openDatePicker = () => {
-  if (filterDateFrom.value) {
-    pickerFromDate.value = filterDateFrom.value;
-  }
-  if (filterDateTo.value) {
-    pickerToDate.value = filterDateTo.value;
-  }
+const openFilterDropdown = () => {
+  pickerFromDate.value = filterDateFrom.value;
+  pickerToDate.value = filterDateTo.value;
+  pickerSearchText.value = billingSearch.value;
+  pickerStatus.value = filterStatus.value;
+  showFilterDropdown.value = true;
 };
 
-const handleSearchClick = () => {
-  console.error("[搜索按钮] 被点击了!");
-  dateApply();
-};
-
-const dateApply = async () => {
-  // 确保开始日期不晚于结束日期
+const applyFilters = async () => {
   let from = pickerFromDate.value || "";
   let to = pickerToDate.value || "";
   if (from && to && from > to) {
     [from, to] = [to, from];
   }
-  console.error("[dateApply] 设置筛选日期:", from, to);
   filterDateFrom.value = from;
   filterDateTo.value = to;
-  showDatePicker.value = false;
+
+  billingSearch.value = pickerSearchText.value;
+  searchText.value = pickerSearchText.value;
+  filterStatus.value = pickerStatus.value;
+
+  showFilterDropdown.value = false;
   await fetchBills();
 };
 
-const cancelDatePicker = () => {
-  showDatePicker.value = false;
-};
-
-const resetDateFilter = () => {
+const resetFilters = () => {
   pickerFromDate.value = "";
   pickerToDate.value = "";
-  clearDateFilter();
-  showDatePicker.value = false;
+  pickerSearchText.value = "";
+  pickerStatus.value = "";
+  filterDateFrom.value = "";
+  filterDateTo.value = "";
+  billingSearch.value = "";
+  searchText.value = "";
+  filterStatus.value = "";
+  showFilterDropdown.value = false;
+  fetchBills();
 };
 
-const toggleShowDatePicker = () => {
-  if (showDatePicker.value) {
-    showDatePicker.value = false;
-  } else {
-    openDatePicker();
-    showDatePicker.value = true;
-  }
-};
+const activeFilterCount = computed(() => {
+  let count = 0;
+  if (filterDateFrom.value || filterDateTo.value) count++;
+  if (billingSearch.value) count++;
+  if (filterStatus.value) count++;
+  return count;
+});
 
 const tabs = [
   { key: "current", label: "最新单据" },
@@ -1323,6 +1446,7 @@ const {
   activeTab,
   filterDateFrom,
   filterDateTo,
+  filterStatus,
   dateRangeLabel,
   billingSearch,
   bills,
@@ -1345,6 +1469,7 @@ const {
   switchTab,
   clearDateFilter,
   exportBills,
+  confirmArchiveBills,
   confirmDeleteBill,
   confirmBatchDeleteBills,
   executeDeleteBill,
@@ -1389,13 +1514,13 @@ const handleSaveBill = async () => {
 };
 
 onMounted(() => {
-  document.addEventListener("click", handleDatePickerClickOutside);
+  document.addEventListener("mousedown", handleFilterClickOutside);
   fetchSpecies();
   fetchBills();
 });
 
 onBeforeUnmount(() => {
-  document.removeEventListener("mousedown", handleDatePickerClickOutside);
+  document.removeEventListener("mousedown", handleFilterClickOutside);
 });
 </script>
 

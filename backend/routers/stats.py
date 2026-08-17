@@ -36,7 +36,15 @@ def get_price_trends_batch_route(
     db: Session = Depends(get_db),
     current_user: models.User = Depends(auth.get_current_user),
 ):
-    ids = [int(i.strip()) for i in species_ids.split(",") if i.strip()]
+    try:
+        ids = [int(i.strip()) for i in species_ids.split(",") if i.strip()]
+    except ValueError:
+        from fastapi import HTTPException
+        raise HTTPException(status_code=400, detail="无效的品种ID格式")
+        
+    if not ids:
+        return {}
+        
     sorted_ids_str = "_".join(map(str, sorted(ids)))
     cache_key = f"trend_batch_{sorted_ids_str}_{year or 'recent'}"
     

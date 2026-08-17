@@ -16,6 +16,10 @@ def create_bill(data: schemas.BillCreate, user: models.User, db: Session, commit
     if data.weight <= 0 or data.unit_price <= 0:
         raise HTTPException(status_code=400, detail="重量和单价必须大于0")
 
+    species = db.query(models.Species).filter(models.Species.id == data.species_id).first()
+    if not species:
+        raise HTTPException(status_code=400, detail="所选品种不存在")
+
     subtotal, fee, total_amount = calculate_bill_amounts(
         data.weight, data.unit_price, data.fee_value
     )
@@ -60,8 +64,9 @@ def create_bill(data: schemas.BillCreate, user: models.User, db: Session, commit
 def sync_bills(date_str: str, user: models.User, db: Session):
     draft_bills = db.query(models.Bill).filter(models.Bill.status == "DRAFT").all()
     count = 0
+    today = date.today()
     for bill in draft_bills:
-        if bill.created_at and bill.created_at.isoformat() == date_str:
+        if bill.release_date and bill.release_date < today:
             bill.status = "COMPLETED"
             count += 1
 
@@ -78,30 +83,55 @@ def sync_bills(date_str: str, user: models.User, db: Session):
     return count
 
 
+def archive_bills(bill_ids: list[int], user: models.User, db: Session):
+    bills = db.query(models.Bill).filter(
+        models.Bill.id.in_(bill_ids),
+        models.Bill.status == "DRAFT"
+    ).all()
+    count = 0
+    for bill in bills:
+        bill.status = "COMPLETED"
+        count += 1
+        record_update(
+            db,
+            entity_type="BILL",
+            user_id=user.id,
+            bill_id=bill.id,
+            old_data={"status": "DRAFT"},
+            new_data={"status": "COMPLETED"},
+        )
+    db.commit()
+    return count
+
+
 def _apply_bill_filters(query, status=None, date_from=None, date_to=None, date_str=None, q=None):
     from sqlalchemy import or_
-    if status:
-        query = query.filter(models.Bill.status == status)
-    if date_from:
-        date_from_dt = date.fromisoformat(date_from)
-        query = query.filter(
-            or_(
-                models.Bill.release_date >= date_from_dt,
-                (models.Bill.release_date.is_(None) & (models.Species.release_date >= date_from_dt))
+    try:
+        if status:
+            query = query.filter(models.Bill.status == status)
+        if date_from:
+            date_from_dt = date.fromisoformat(date_from)
+            query = query.filter(
+                or_(
+                    models.Bill.release_date >= date_from_dt,
+                    (models.Bill.release_date.is_(None) & (models.Species.release_date >= date_from_dt))
+                )
             )
-        )
-    if date_to:
-        end = date.fromisoformat(date_to) + timedelta(days=1)
-        query = query.filter(
-            or_(
-                models.Bill.release_date < end,
-                (models.Bill.release_date.is_(None) & (models.Species.release_date < end))
+        if date_to:
+            end = date.fromisoformat(date_to) + timedelta(days=1)
+            query = query.filter(
+                or_(
+                    models.Bill.release_date < end,
+                    (models.Bill.release_date.is_(None) & (models.Species.release_date < end))
+                )
             )
-        )
-    if date_str:
-        date_dt = date.fromisoformat(date_str)
-        date_end = date_dt + timedelta(days=1)
-        query = query.filter(models.Bill.release_date >= date_dt, models.Bill.release_date < date_end)
+        if date_str:
+            date_dt = date.fromisoformat(date_str)
+            date_end = date_dt + timedelta(days=1)
+            query = query.filter(models.Bill.release_date >= date_dt, models.Bill.release_date < date_end)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="日期格式无效")
+        
     if q:
         query = query.filter(models.Species.name_zh.ilike(f"%{q}%"))
     return query
@@ -180,6 +210,10 @@ def update_bill(bill_id: int, data: schemas.BillCreate, user: models.User, db: S
         raise HTTPException(status_code=400, detail="重量和单价必须大于0")
 
     bill = get_bill_or_404(bill_id, db)
+
+    species = db.query(models.Species).filter(models.Species.id == data.species_id).first()
+    if not species:
+        raise HTTPException(status_code=400, detail="所选品种不存在")
 
     old_data = {
         "species_id": bill.species_id,
@@ -317,7 +351,7 @@ def batch_create_bills(data: schemas.BatchImportRequest, user: models.User, db: 
             unit_price=row.unit_price,
             fee_value=row.fee_value or 0,
             release_date=row.release_date,
-            status="DRAFT",
+            status=None,
         )
         bill = create_bill(bill_create, user, db, commit=False)
         bills.append(bill)

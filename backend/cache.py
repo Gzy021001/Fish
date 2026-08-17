@@ -1,9 +1,10 @@
 import time
 
 class SimpleCache:
-    def __init__(self, ttl: int = 300):
+    def __init__(self, ttl: int = 300, max_size: int = 1000):
         self._store = {}
         self._ttl = ttl
+        self._max_size = max_size
 
     def get(self, key: str):
         entry = self._store.get(key)
@@ -16,6 +17,17 @@ class SimpleCache:
         return value
 
     def set(self, key: str, value):
+        if len(self._store) >= self._max_size:
+            # 清理过期的
+            now = time.time()
+            expired = [k for k, (_, exp) in self._store.items() if now > exp]
+            for k in expired:
+                del self._store[k]
+            # 如果还是满的，随机删掉一半
+            if len(self._store) >= self._max_size:
+                keys_to_delete = list(self._store.keys())[:self._max_size // 2]
+                for k in keys_to_delete:
+                    del self._store[k]
         self._store[key] = (value, time.time() + self._ttl)
 
     def clear(self, key: str = None):

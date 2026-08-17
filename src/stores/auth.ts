@@ -1,10 +1,11 @@
+import { computed } from 'vue'
 import { defineStore } from 'pinia'
-import { ref, computed } from 'vue'
+import { useStorage } from '@vueuse/core'
 
 export const useAuthStore = defineStore('auth', () => {
-  const token = ref<string | null>(localStorage.getItem('token'))
-  const username = ref<string | null>(localStorage.getItem('username'))
-  const role = ref<string | null>(localStorage.getItem('role'))
+  const token = useStorage<string | null>('token', null)
+  const username = useStorage<string | null>('username', null)
+  const role = useStorage<string | null>('role', null)
 
   const isAdmin = computed(() => role.value === 'admin')
 
@@ -12,18 +13,12 @@ export const useAuthStore = defineStore('auth', () => {
     token.value = newToken
     username.value = user
     role.value = userRole
-    localStorage.setItem('token', newToken)
-    localStorage.setItem('username', user)
-    localStorage.setItem('role', userRole)
   }
 
   function logout() {
     token.value = null
     username.value = null
     role.value = null
-    localStorage.removeItem('token')
-    localStorage.removeItem('username')
-    localStorage.removeItem('role')
   }
 
   return { token, username, role, isAdmin, login, logout }

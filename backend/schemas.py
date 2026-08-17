@@ -1,13 +1,13 @@
-from pydantic import BaseModel, field_serializer, field_validator
+from pydantic import BaseModel, field_serializer, field_validator, Field
 from datetime import datetime, date
 from typing import Optional
 
 class UserBase(BaseModel):
-    username: str
-    role: str = "operator"
+    username: str = Field(..., max_length=50)
+    role: str = Field("operator", max_length=20)
 
 class UserCreate(UserBase):
-    password: str
+    password: str = Field(..., min_length=6, max_length=100)
 
 class User(UserBase):
     id: int
@@ -16,12 +16,12 @@ class User(UserBase):
         from_attributes = True
 
 class SpeciesBase(BaseModel):
-    name_zh: str
-    default_unit: str
+    name_zh: str = Field(..., max_length=100)
+    default_unit: str = Field(..., max_length=20)
     default_price: float = 0.0
     image_url: Optional[str] = None
-    supplier_name: Optional[str] = None
-    supplier_note: Optional[str] = None
+    supplier_name: Optional[str] = Field(None, max_length=200)
+    supplier_note: Optional[str] = Field(None, max_length=500)
     release_date: Optional[date] = None
     created_at: Optional[date] = None
 
@@ -62,10 +62,10 @@ class BillBase(BaseModel):
     species_id: int
     weight: float
     unit_price: float
-    currency: str = "CNY"
-    fee_type: str = "FIXED"
+    currency: str = Field("CNY", max_length=10)
+    fee_type: str = Field("FIXED", max_length=20)
     fee_value: float
-    status: str = "DRAFT"
+    status: str = Field("DRAFT", max_length=20)
     release_date: Optional[date] = None
 
 class BillCreate(BillBase):
@@ -95,8 +95,8 @@ class Bill(BillBase):
 class AuditLogBase(BaseModel):
     bill_id: Optional[int] = None
     species_id: Optional[int] = None
-    entity_type: str = "BILL"
-    action: str
+    entity_type: str = Field("BILL", max_length=50)
+    action: str = Field(..., max_length=50)
     old_data: Optional[str] = None
     new_data: Optional[str] = None
 
@@ -118,9 +118,12 @@ class TokenData(BaseModel):
 class SyncRequest(BaseModel):
     date: str
 
+class ArchiveRequest(BaseModel):
+    bill_ids: list[int]
+
 
 class BatchImportRow(BaseModel):
-    name_zh: str
+    name_zh: str = Field(..., max_length=100)
     weight: float = 0.0
     unit_price: float = 0.0
     fee_value: float = 0.0
@@ -145,7 +148,7 @@ class BatchImportRow(BaseModel):
             return None
 
 class BatchImportRequest(BaseModel):
-    rows: list[BatchImportRow]
+    rows: list[BatchImportRow] = Field(..., max_length=5000)
     replace: bool = False
 
 class BatchImportResult(BaseModel):

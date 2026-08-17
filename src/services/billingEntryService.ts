@@ -1,4 +1,5 @@
-import api from "../api"
+import api from '../api'
+import type { Species, ApiError } from '../types'
 
 export interface ImportRow {
   name_zh: string
@@ -19,19 +20,19 @@ export interface BillEntryInput {
 export async function ensureSpecies(
   nameZh: string,
   defaultPrice: number,
-  existingList: any[],
+  existingList: Species[],
   releaseDate?: string,
-): Promise<any> {
+): Promise<Species> {
   const found = existingList.find((s) => s.name_zh === nameZh)
   if (found) return found
 
-  const spRes = await api.post("/species", {
+  const spRes = await api.post('/species', {
     name_zh: nameZh,
     default_price: defaultPrice,
-    default_unit: "公斤",
-    release_date: releaseDate || new Date().toLocaleDateString("sv-SE"),
+    default_unit: '公斤',
+    release_date: releaseDate || new Date().toLocaleDateString('sv-SE'),
   })
-  const species = spRes.data
+  const species = spRes.data as Species
   existingList.push(species)
   return species
 }
@@ -41,23 +42,23 @@ export function buildBillPayload(entry: BillEntryInput) {
     species_id: entry.species_id,
     weight: entry.weight,
     unit_price: entry.unit_price,
-    fee_type: "FIXED",
+    fee_type: 'FIXED',
     fee_value: entry.fee_value,
-    currency: "CNY",
-    status: "DRAFT",
+    currency: 'CNY',
+    status: 'DRAFT',
     release_date: entry.release_date || null,
   }
 }
 
 export async function saveEntry(entry: BillEntryInput) {
   const payload = buildBillPayload(entry)
-  const response = await api.post("/bills", payload)
+  const response = await api.post('/bills', payload)
   return response.data
 }
 
 export async function saveImportedRows(
   rows: ImportRow[],
-  speciesList: any[],
+  speciesList: Species[],
 ): Promise<number> {
   let saved = 0
   for (const row of rows) {
@@ -107,13 +108,14 @@ export async function saveImportedRowsChunked(
     try {
       const res = await api.post('/bills/batch', {
         rows: chunks[ci],
-        replace: isFirst,  // 仅首个分片执行 replace 删除旧数据
+        replace: isFirst,
       }, { timeout: 45000 })
       totalSuccess += res.data.success_count ?? 0
       totalSkip += res.data.skip_count ?? 0
       if (res.data.errors) allErrors.push(...res.data.errors)
-    } catch (err: any) {
-      const msg = err.response?.data?.detail || err.message || '未知错误'
+    } catch (err: unknown) {
+      const error = err as ApiError
+      const msg = error.response?.data?.detail || error.message || '未知错误'
       allErrors.push(`分片 ${ci + 1}/${chunks.length} 失败: ${msg}`)
     }
     if (onProgress) onProgress(ci + 1, chunks.length)

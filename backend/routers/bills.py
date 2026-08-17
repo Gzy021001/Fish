@@ -44,6 +44,18 @@ def sync_bills_route(
     return {"message": f"已归档 {count} 条至历史", "count": count}
 
 
+@router.post("/bills/archive")
+def archive_bills_route(
+    payload: schemas.ArchiveRequest,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(auth.require_admin),
+):
+    from services.bill_service import archive_bills
+    count = archive_bills(payload.bill_ids, current_user, db)
+    trends_cache.clear()
+    return {"message": f"成功归档 {count} 条单据", "count": count}
+
+
 @router.get("/bills")
 def list_bills_route(
     page: int = 1,

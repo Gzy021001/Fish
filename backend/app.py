@@ -23,6 +23,16 @@ _initialized = False
 _init_error = None
 
 
+def _tables_exist():
+    """快速检查：users 表存在说明 DB 已初始化，跳过 create_all"""
+    try:
+        from sqlalchemy import inspect
+        inspector = inspect(engine)
+        return "users" in inspector.get_table_names()
+    except Exception:
+        return False
+
+
 def init_app():
     global _initialized, _init_error
     if _initialized:
@@ -39,7 +49,12 @@ def init_app():
             logger.warning("RESET_DATABASE=true, dropping all tables...")
             Base.metadata.drop_all(bind=engine)
 
-        Base.metadata.create_all(bind=engine)
+        # 已有表则跳过 create_all，节省 information_schema 查询
+        if _tables_exist():
+            logger.info("Tables already exist, skipping create_all.")
+        else:
+            Base.metadata.create_all(bind=engine)
+
         bootstrap.run()
         _initialized = True
         _init_error = None
@@ -48,8 +63,6 @@ def init_app():
         _init_error = str(exc)
         logger.error("Initialization failed: %s", _init_error)
         logger.error(traceback.format_exc())
-        # DO NOT raise here. If we raise, the Vercel lambda crashes on cold start and returns a 500 error.
-        # Instead, we catch it, store it in _init_error, and the middleware will return a graceful 503 response.
 
 
 import asyncio
@@ -60,8 +73,13 @@ def create_app() -> FastAPI:
 
     @app.on_event("startup")
     async def on_startup():
-        loop = asyncio.get_event_loop()
-        loop.run_in_executor(None, init_app)
+        if os.getenv("VERCEL"):
+            # Vercel Serverless：不阻塞启动，通过 503 中间件优雅降级
+            loop = asyncio.get_event_loop()
+            loop.run_in_executor(None, init_app)
+        else:
+            # 本地开发：同步等待 init 完成，Uvicorn 的 "startup complete" 即为真正就绪信号
+            init_app()
 
     app.add_middleware(GZipMiddleware, minimum_size=1000)
     app.add_middleware(
@@ -129,10 +147,6 @@ def create_app() -> FastAPI:
     async def global_exception_handler(_request: Request, exc: Exception):
         logger.error("Global exception: %s", exc)
         logger.error(traceback.format_exc())
-        # #region debug-point D:global-exception
-        _p = ".dbg/db-read-failure.env"; _u, _s = "http://127.0.0.1:7777/event", "db-read-failure"; exec("try:\n with open(_p, encoding='utf-8') as f: c=f.read(); _u=next((l.split('=',1)[1] for l in c.split('\\n') if l.startswith('DEBUG_SERVER_URL=')), _u); _s=next((l.split('=',1)[1] for l in c.split('\\n') if l.startswith('DEBUG_SESSION_ID=')), _s)\nexcept: pass"); exec("try:\n urllib.request.urlopen(urllib.request.Request(_u, data=json.dumps({\"sessionId\": _s, \"runId\": \"pre-fix\", \"hypothesisId\": \"D\", \"location\": \"app.py:global_exception_handler\", \"msg\": \"[DEBUG] global exception captured\", \"data\": {\"path\": str(_request.url.path), \"error_type\": type(exc).__name__, \"error_message\": str(exc)}}).encode(), headers={\"Content-Type\": \"application/json\"}), timeout=0.2).read()\nexcept: pass")
-        # #endregion
-        # 暴露真实错误类型以便前端排查，避免笼统的"服务器内部错误"误导用户
         error_type = type(exc).__name__
         return JSONResponse(
             status_code=500,
