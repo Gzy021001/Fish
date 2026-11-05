@@ -16,7 +16,9 @@ def create_bill(data: schemas.BillCreate, user: models.User, db: Session, commit
     if data.weight <= 0 or data.unit_price <= 0:
         raise HTTPException(status_code=400, detail="重量和单价必须大于0")
 
-    species = db.query(models.Species).filter(models.Species.id == data.species_id).first()
+    species = db.query(models.Species).filter(
+        models.Species.id == data.species_id, models.Species.is_deleted.is_(False)
+    ).first()
     if not species:
         raise HTTPException(status_code=400, detail="所选品种不存在")
 
@@ -43,6 +45,11 @@ def create_bill(data: schemas.BillCreate, user: models.User, db: Session, commit
         total_amount=total_amount,
         status=new_status,
         release_date=data.release_date,
+        payment_method=data.payment_method,
+        weekly_donation=data.weekly_donation,
+        alipay_amount=data.alipay_amount,
+        wechat_amount=data.wechat_amount,
+        suixi_amount=data.suixi_amount,
     )
     db.add(bill)
     db.flush()
@@ -62,7 +69,11 @@ def create_bill(data: schemas.BillCreate, user: models.User, db: Session, commit
 
 
 def sync_bills(date_str: str, user: models.User, db: Session):
-    draft_bills = db.query(models.Bill).filter(models.Bill.status == "DRAFT").all()
+    draft_bills = (
+        db.query(models.Bill)
+        .filter(models.Bill.status == "DRAFT", models.Bill.is_deleted.is_(False))
+        .all()
+    )
     count = 0
     today = date.today()
     for bill in draft_bills:
@@ -86,7 +97,8 @@ def sync_bills(date_str: str, user: models.User, db: Session):
 def archive_bills(bill_ids: list[int], user: models.User, db: Session):
     bills = db.query(models.Bill).filter(
         models.Bill.id.in_(bill_ids),
-        models.Bill.status == "DRAFT"
+        models.Bill.status == "DRAFT",
+        models.Bill.is_deleted.is_(False),
     ).all()
     count = 0
     for bill in bills:
@@ -138,7 +150,14 @@ def _apply_bill_filters(query, status=None, date_from=None, date_to=None, date_s
 
 def list_bills(db: Session, page: int = 1, page_size: int = 10, limit: int = 100, status: str = None, date: str = None, date_from: str = None, date_to: str = None, q: str = None):
     from sqlalchemy.orm import joinedload
-    query = db.query(models.Bill).join(models.Species).options(joinedload(models.Bill.species)).order_by(func.coalesce(models.Bill.release_date, models.Species.release_date).desc().nullslast(), models.Bill.id.desc())
+
+    # 单页硬上限 200 条；page_size=-1（全量）语义保留，供导出/历史页使用
+    if page_size > 200:
+        page_size = 200
+    if limit > 200:
+        limit = 200
+
+    query = db.query(models.Bill).join(models.Species).options(joinedload(models.Bill.species)).filter(models.Bill.is_deleted.is_(False)).order_by(func.coalesce(models.Bill.release_date, models.Species.release_date).desc().nullslast(), models.Bill.created_at.desc(), models.Bill.id.desc())
     query = _apply_bill_filters(query, status, date_from, date_to, date, q)
 
     if limit > 0:
@@ -163,13 +182,13 @@ def list_bills(db: Session, page: int = 1, page_size: int = 10, limit: int = 100
         func.sum(models.Bill.weight),
         func.sum(models.Bill.subtotal),
         func.sum(models.Bill.total_amount)
-    ).join(models.Species)
+    ).join(models.Species).filter(models.Bill.is_deleted.is_(False))
     sum_query = _apply_bill_filters(sum_query, status, date_from, date_to, date, q)
 
     sum_result = sum_query.first()
-    sum_weight = sum_result[0] or 0.0 if sum_result else 0.0
-    sum_subtotal = sum_result[1] or 0.0 if sum_result else 0.0
-    sum_total_amount = sum_result[2] or 0.0 if sum_result else 0.0
+    sum_weight = (sum_result[0] or 0.0) if sum_result else 0.0
+    sum_subtotal = (sum_result[1] or 0.0) if sum_result else 0.0
+    sum_total_amount = (sum_result[2] or 0.0) if sum_result else 0.0
 
     if page_size == -1:
         items = query.all()
@@ -197,12 +216,15 @@ def list_bills(db: Session, page: int = 1, page_size: int = 10, limit: int = 100
 def get_bill(bill_id: int, db: Session):
     from sqlalchemy.orm import joinedload
 
-    return (
+    bill = (
         db.query(models.Bill)
         .options(joinedload(models.Bill.species))
-        .filter(models.Bill.id == bill_id)
+        .filter(models.Bill.id == bill_id, models.Bill.is_deleted.is_(False))
         .first()
-    ) or get_bill_or_404(bill_id, db)
+    )
+    if not bill:
+        raise HTTPException(status_code=404, detail="未找到该单据")
+    return bill
 
 
 def update_bill(bill_id: int, data: schemas.BillCreate, user: models.User, db: Session):
@@ -211,7 +233,9 @@ def update_bill(bill_id: int, data: schemas.BillCreate, user: models.User, db: S
 
     bill = get_bill_or_404(bill_id, db)
 
-    species = db.query(models.Species).filter(models.Species.id == data.species_id).first()
+    species = db.query(models.Species).filter(
+        models.Species.id == data.species_id, models.Species.is_deleted.is_(False)
+    ).first()
     if not species:
         raise HTTPException(status_code=400, detail="所选品种不存在")
 
@@ -222,6 +246,13 @@ def update_bill(bill_id: int, data: schemas.BillCreate, user: models.User, db: S
         "currency": bill.currency,
         "fee_type": bill.fee_type,
         "fee_value": bill.fee_value,
+        "release_date": bill.release_date,
+        "status": bill.status,
+        "payment_method": bill.payment_method,
+        "weekly_donation": bill.weekly_donation,
+        "alipay_amount": bill.alipay_amount,
+        "wechat_amount": bill.wechat_amount,
+        "suixi_amount": bill.suixi_amount,
     }
 
     subtotal, fee, total_amount = calculate_bill_amounts(
@@ -242,10 +273,29 @@ def update_bill(bill_id: int, data: schemas.BillCreate, user: models.User, db: S
     bill.total_amount = total_amount
     if data.release_date is not None:
         bill.release_date = data.release_date
+    bill.payment_method = data.payment_method
+    bill.weekly_donation = data.weekly_donation
+    bill.alipay_amount = data.alipay_amount
+    bill.wechat_amount = data.wechat_amount
+    bill.suixi_amount = data.suixi_amount
 
     db.flush()
 
-    new_data = data.model_dump()
+    new_data = {
+        "species_id": bill.species_id,
+        "weight": bill.weight,
+        "unit_price": bill.unit_price,
+        "currency": bill.currency,
+        "fee_type": bill.fee_type,
+        "fee_value": bill.fee_value,
+        "release_date": bill.release_date,
+        "status": bill.status,
+        "payment_method": bill.payment_method,
+        "weekly_donation": bill.weekly_donation,
+        "alipay_amount": bill.alipay_amount,
+        "wechat_amount": bill.wechat_amount,
+        "suixi_amount": bill.suixi_amount,
+    }
     record_update(
         db,
         entity_type="BILL",
@@ -270,6 +320,13 @@ def delete_bill(bill_id: int, user: models.User, db: Session):
         "currency": bill.currency,
         "fee_type": bill.fee_type,
         "fee_value": bill.fee_value,
+        "release_date": bill.release_date,
+        "status": bill.status,
+        "payment_method": bill.payment_method,
+        "weekly_donation": bill.weekly_donation,
+        "alipay_amount": bill.alipay_amount,
+        "wechat_amount": bill.wechat_amount,
+        "suixi_amount": bill.suixi_amount,
     }
 
     record_delete(
@@ -280,10 +337,8 @@ def delete_bill(bill_id: int, user: models.User, db: Session):
         old_data=old_data,
     )
 
-    # 避免外键约束报错
-    db.query(models.AuditLog).filter(models.AuditLog.bill_id == bill.id).update({"bill_id": None})
-    
-    db.delete(bill)
+    # 软删除：保留审计日志的 bill_id 引用，审计链不断
+    bill.is_deleted = True
     db.commit()
     return {"message": "Bill deleted successfully"}
 
@@ -297,27 +352,22 @@ def batch_create_bills(data: schemas.BatchImportRequest, user: models.User, db: 
 
     if data.replace:
         dates_to_replace = set()
+        # 分片导入时首片会带上整份文件的全部放生日期，保证所有日期都被覆盖清空
+        if data.replace_dates:
+            dates_to_replace.update(d for d in data.replace_dates if d)
         for row in data.rows:
             if row.release_date:
                 dates_to_replace.add(row.release_date)
         for d in dates_to_replace:
-            # 查出要删除的账单
-            bills_to_delete = db.query(models.Bill.id).filter(
+            # 软删除当天已有单据（保留审计引用），再插入新单据
+            db.query(models.Bill).filter(
                 models.Bill.release_date >= d,
-                models.Bill.release_date < (d + timedelta(days=1))
-            ).all()
-            
-            if bills_to_delete:
-                bill_ids = [b.id for b in bills_to_delete]
-                # 解除 audit_logs 中的外键引用，防止 Postgres 的 IntegrityError (Foreign Key Violation)
-                db.query(models.AuditLog).filter(models.AuditLog.bill_id.in_(bill_ids)).update(
-                    {"bill_id": None}, synchronize_session=False
-                )
-                # 然后再删除单据
-                db.query(models.Bill).filter(models.Bill.id.in_(bill_ids)).delete(synchronize_session=False)
+                models.Bill.release_date < (d + timedelta(days=1)),
+                models.Bill.is_deleted.is_(False),
+            ).update({"is_deleted": True}, synchronize_session=False)
         db.flush()
 
-    existing_species = {s.name_zh: s for s in db.query(models.Species).all()}
+    existing_species = {s.name_zh: s for s in db.query(models.Species).filter(models.Species.is_deleted.is_(False)).all()}
 
     for row in data.rows:
         name_zh = row.name_zh.strip()
@@ -352,6 +402,10 @@ def batch_create_bills(data: schemas.BatchImportRequest, user: models.User, db: 
             fee_value=row.fee_value or 0,
             release_date=row.release_date,
             status=None,
+            payment_method=row.payment_method,
+            alipay_amount=row.alipay_amount,
+            wechat_amount=row.wechat_amount,
+            suixi_amount=row.suixi_amount,
         )
         bill = create_bill(bill_create, user, db, commit=False)
         bills.append(bill)
@@ -379,6 +433,7 @@ def get_price_trend(species_id: int, db: Session, year: int = None):
         )
         .filter(models.Bill.species_id == species.id)
         .filter(models.Bill.release_date.isnot(None))
+        .filter(models.Bill.is_deleted.is_(False))
     )
 
     if year:
@@ -407,6 +462,7 @@ def get_price_trends_batch(species_ids: list[int], db: Session, year: int = None
         )
         .filter(models.Bill.species_id.in_(species_ids))
         .filter(models.Bill.release_date.isnot(None))
+        .filter(models.Bill.is_deleted.is_(False))
     )
 
     if year:

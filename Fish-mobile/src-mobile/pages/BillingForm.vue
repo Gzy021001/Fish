@@ -78,7 +78,75 @@
             <span class="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-[#8a6b4a]">元</span>
           </div>
         </div>
-        
+
+        <div>
+          <label class="mb-1 block text-sm font-medium text-[#8a6b4a]">随喜类型</label>
+          <select
+            v-model="formData.payment_method"
+            class="w-full rounded-xl border border-[#d8c1a0] bg-white px-3 py-2.5 text-[#5c4033] outline-none focus:border-[#8b6914]"
+          >
+            <option value="">未选择</option>
+            <option value="支付宝">支付宝</option>
+            <option value="微信">微信</option>
+            <option value="随喜放生">随喜放生</option>
+          </select>
+        </div>
+
+        <div class="grid grid-cols-3 gap-2">
+          <div>
+            <label class="mb-1 block text-sm font-medium text-[#8a6b4a]">支付宝（元）</label>
+            <input
+              v-model="formData.alipay_amount"
+              type="number"
+              step="0.01"
+              min="0"
+              inputmode="decimal"
+              class="w-full rounded-xl border border-[#d8c1a0] bg-white px-3 py-2.5 text-[#5c4033] outline-none focus:border-[#8b6914]"
+              placeholder="必填"
+            />
+          </div>
+          <div>
+            <label class="mb-1 block text-sm font-medium text-[#8a6b4a]">微信（元）</label>
+            <input
+              v-model="formData.wechat_amount"
+              type="number"
+              step="0.01"
+              min="0"
+              inputmode="decimal"
+              class="w-full rounded-xl border border-[#d8c1a0] bg-white px-3 py-2.5 text-[#5c4033] outline-none focus:border-[#8b6914]"
+              placeholder="必填"
+            />
+          </div>
+          <div>
+            <label class="mb-1 block text-sm font-medium text-[#8a6b4a]">随喜放生（元）</label>
+            <input
+              v-model="formData.suixi_amount"
+              type="number"
+              step="0.01"
+              min="0"
+              inputmode="decimal"
+              class="w-full rounded-xl border border-[#d8c1a0] bg-white px-3 py-2.5 text-[#5c4033] outline-none focus:border-[#8b6914]"
+              placeholder="必填"
+            />
+          </div>
+        </div>
+
+        <div>
+          <label class="mb-1 block text-sm font-medium text-[#8a6b4a]">本周现场随喜（元）</label>
+          <div class="relative">
+            <input
+              v-model="formData.weekly_donation"
+              type="number"
+              step="0.01"
+              min="0"
+              inputmode="decimal"
+              class="w-full rounded-xl border border-[#d8c1a0] bg-white px-3 py-2.5 pr-12 text-[#5c4033] outline-none focus:border-[#8b6914]"
+              placeholder="选填"
+            />
+            <span class="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-[#8a6b4a]">元</span>
+          </div>
+        </div>
+
         <div class="rounded-xl bg-[#fcf7ef] p-3 text-right">
           <span class="text-sm text-[#8a6b4a]">小计金额：</span>
           <span class="text-lg font-bold text-[#8b6914]">¥ {{ subtotal.toFixed(2) }}</span>
@@ -162,7 +230,7 @@ import { computed, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import MobileDatePicker from '../components/MobileDatePicker.vue'
 import api from '../api'
-import { apiErrorMessage, isAuthError } from '../../src/lib/error'
+import { apiErrorMessage, isAuthError } from '../../../src/lib/error'
 
 const route = useRoute()
 const router = useRouter()
@@ -183,11 +251,22 @@ const formData = ref({
   unit_price: '',
   status: 'COMPLETED',
   fee_value: 0,
+  payment_method: '',
+  weekly_donation: '',
+  alipay_amount: '',
+  wechat_amount: '',
+  suixi_amount: '',
 })
 
 const selectedSpecies = computed(() => {
   return speciesList.value.find(s => s.id === formData.value.species_id)
 })
+
+// 三个随喜金额都必填（保存前校验）
+const hasAllSuixiAmounts = () =>
+  String(formData.value.alipay_amount).trim() !== '' &&
+  String(formData.value.wechat_amount).trim() !== '' &&
+  String(formData.value.suixi_amount).trim() !== ''
 
 const selectedSpeciesUnit = computed(() => selectedSpecies.value?.default_unit || '')
 
@@ -238,6 +317,11 @@ const fetchBillDetail = async () => {
       unit_price: String(data.unit_price),
       status: data.status,
       fee_value: data.fee_value || 0,
+      payment_method: data.payment_method || '',
+      weekly_donation: data.weekly_donation != null ? String(data.weekly_donation) : '',
+      alipay_amount: data.alipay_amount != null ? String(data.alipay_amount) : '',
+      wechat_amount: data.wechat_amount != null ? String(data.wechat_amount) : '',
+      suixi_amount: data.suixi_amount != null ? String(data.suixi_amount) : '',
     }
   } catch (error: any) {
     if (!isAuthError(error)) {
@@ -265,6 +349,10 @@ const handleSave = async () => {
     errorMsg.value = '请输入有效的单价'
     return
   }
+  if (!hasAllSuixiAmounts()) {
+    errorMsg.value = '请填写三个随喜金额（支付宝 / 微信 / 随喜放生）'
+    return
+  }
 
   saving.value = true
   try {
@@ -272,7 +360,24 @@ const handleSave = async () => {
       ...formData.value,
       weight: parseFloat(String(formData.value.weight)),
       unit_price: parseFloat(String(formData.value.unit_price)),
-      species_id: Number(formData.value.species_id)
+      species_id: Number(formData.value.species_id),
+      payment_method: formData.value.payment_method || null,
+      weekly_donation:
+        String(formData.value.weekly_donation).trim() === ''
+          ? null
+          : parseFloat(String(formData.value.weekly_donation)),
+      alipay_amount:
+        String(formData.value.alipay_amount).trim() === ''
+          ? null
+          : parseFloat(String(formData.value.alipay_amount)),
+      wechat_amount:
+        String(formData.value.wechat_amount).trim() === ''
+          ? null
+          : parseFloat(String(formData.value.wechat_amount)),
+      suixi_amount:
+        String(formData.value.suixi_amount).trim() === ''
+          ? null
+          : parseFloat(String(formData.value.suixi_amount)),
     }
 
     if (isEdit.value) {
@@ -290,6 +395,11 @@ const handleSave = async () => {
         unit_price: '',
         status: 'COMPLETED',
         fee_value: 0,
+        payment_method: '',
+        weekly_donation: '',
+        alipay_amount: '',
+        wechat_amount: '',
+        suixi_amount: '',
       }
     }
   } catch (error: any) {

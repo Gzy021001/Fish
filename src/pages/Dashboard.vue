@@ -10,7 +10,7 @@
           </h3>
           <div class="relative">
             <button
-              class="flex items-center gap-2 bg-dunhuang-bg/50 rounded-lg border border-dunhuang-yellow/20 px-3 py-1.5 hover:border-dunhuang-yellow/40 transition-colors cursor-pointer"
+              class="flex items-center gap-2 bg-dunhuang-bg/50 rounded-lg border border-dunhuang-yellow/20 h-9 px-4 hover:border-dunhuang-yellow/40 transition-colors cursor-pointer"
               @click.stop="toggleYearDropdown"
               @blur="closeYearDropdown"
             >

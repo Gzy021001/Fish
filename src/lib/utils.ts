@@ -8,7 +8,13 @@ export function dateStr(d: string | undefined | null): string {
 }
 
 export function dateTimeStr(d: string | undefined | null): string {
-  return dateStr(d)
+  if (!d) return ""
+  const normalized = d.replace("T", " ")
+  const [datePart, timePart] = normalized.split(" ")
+  const parts = datePart.split("-")
+  if (parts.length !== 3) return d
+  const ymd = `${parseInt(parts[0])}/${parseInt(parts[1])}/${parseInt(parts[2])}`
+  return timePart ? `${ymd} ${timePart.slice(0, 5)}` : ymd
 }
 
 export function formatMoney(value: number | undefined | null): string {

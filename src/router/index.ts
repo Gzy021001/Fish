@@ -11,6 +11,12 @@ const router = createRouter({
       meta: { requiresAuth: false }
     },
     {
+      path: '/change-password',
+      name: 'ChangePassword',
+      component: () => import('../pages/ChangePassword.vue'),
+      meta: { requiresAuth: true }
+    },
+    {
       path: '/',
       component: () => import('../components/Layout.vue'),
       meta: { requiresAuth: true },
@@ -38,6 +44,13 @@ router.beforeEach((to, from, next) => {
     next('/login')
   } else if (to.path === '/login' && authStore.token) {
     next('/')
+  } else if (
+    authStore.token &&
+    authStore.mustChangePassword &&
+    to.path !== '/change-password'
+  ) {
+    // 初始账号未改密前，只能访问改密页
+    next('/change-password')
   } else {
     next()
   }

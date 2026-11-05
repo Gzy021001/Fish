@@ -1,4 +1,5 @@
 import * as XLSX from "xlsx"
+import { isPackagingItem } from "./utils"
 
 const COLUMN_MAPS: Record<string, string[]> = {
   species: ["品种", "品名", "鱼种", "物种", "名称", "商品名", "鱼类", "品种名称", "水产名称", "货物名称", "品称", "品类", "name", "product", "species", "type"],
@@ -25,6 +26,13 @@ export function detectColumns(headers: string[]): Record<string, string | null> 
   return r
 }
 
+// 括号内若是这些单位词，不当作品种名（否则「蛏子（件）」会被清洗成「件」）
+const UNIT_WORDS = new Set([
+  "\u4ef6", "\u5757", "\u4e2a", "\u65a4", "\u516c\u65a4", "\u7bb1", "\u6876", "\u6761", "\u53ea",
+  "\u5c3e", "\u5305", "\u888b", "\u76d2", "\u4e32", "\u7c92", "\u9897", "\u6839", "\u628a",
+  "\u4efd", "\u7247", "\u679a", "\u5bf9", "\u53cc", "\u6253", "\u677f", "\u63d0", "\u5934",
+])
+
 export function normalizeSpeciesName(raw: string): string {
   if (!raw) return ""
   let s = String(raw).trim()
@@ -36,8 +44,10 @@ export function normalizeSpeciesName(raw: string): string {
   s = s.replace(/^(\u5927|\u5c0f|\u4e2d|\u7279|\u8d85|\u53f0)([\u4e00-\u9fff]{2,})/, "$2")
   const pm = s.match(/^([\u4e00-\u9fff]{1,2})[（(]([\u4e00-\u9fff]+)[）)]$/)
   if (pm && /^(\u5927|\u5c0f|\u4e2d|\u82b1|\u9ed1|\u767d|\u9ec4|\u9752|\u7ea2|\u8089|\u751f|\u5e72|\u9c9c)$/.test(pm[1])) s = pm[2]
+  // 括号内名称优先（如「大头（鳙鱼）」→「鳙鱼」），但括号内若是单位词（件/块/个…）
+  // 则保留括号外的品种名，交给后续剥离单位括号（如「蛏子（件）」→「蛏子」）
   const pm2 = s.match(/^([\u4e00-\u9fff]{1,3})[（(]([\u4e00-\u9fff]+)[）)]$/)
-  if (pm2) s = pm2[2]
+  if (pm2 && !UNIT_WORDS.has(pm2[2])) s = pm2[2]
   s = s.replace(/[（(]\u4e2a[）)]/g, "")
   s = s.replace(/[\(（][^)）]*[\)）]/g, "")
   if (s.length > 4) { s = s.replace(/鱼鱻$/, "") }
@@ -83,7 +93,62 @@ function isNonBillRow(name: string): boolean { return NON_BILL_KW.some(k => name
 const JIN_TO_KG = 0.5
 function detectJinUnit(wc: string | null): boolean { return !!wc && wc.includes("\u65a4") && !wc.includes("\u516c\u65a4") }
 
-export interface ParsedRow { name_zh: string; weight: number; unit_price: number; fee_value: number; release_date: string | null }
+export interface ParsedRow {
+  name_zh: string
+  weight: number
+  unit_price: number
+  fee_value: number
+  release_date: string | null
+  alipay_amount?: number | null
+  wechat_amount?: number | null
+  suixi_amount?: number | null
+  /** 收款行对应的随喜类型（支付宝/微信/随喜放生），列表的"随喜类型"列用它展示 */
+  payment_method?: string | null
+  /** jsonData 内的行号（0 起），用于把收款区的逐笔行挂到同一行的单据上 */
+  matrixRow?: number
+}
+
+export type PaymentKind = "alipay" | "wechat" | "suixi"
+
+export interface RowPayment {
+  kind: PaymentKind
+  amount: number
+}
+
+const PAYMENT_LABELS: Record<string, PaymentKind> = {
+  "支付宝": "alipay",
+  "微信": "wechat",
+  "随喜放生": "suixi",
+}
+
+/**
+ * 从导入模板（慈悲组购生明细表格式）右侧收款区抓取逐笔收款行，按出现顺序返回。
+ * 注意：模板里收款行与数据行不一定严格同行（有些文件收款区从表头行就开始），
+ * 所以这里只按顺序收集，交给调用方按顺序对应到当天的单据上。
+ */
+export function extractRowPayments(matrix: any[][]): RowPayment[] {
+  const result: RowPayment[] = []
+  matrix.forEach((row) => {
+    if (!row) return
+    for (let c = 0; c < row.length; c++) {
+      const label = String(row[c] ?? "").trim()
+      const kind = PAYMENT_LABELS[label]
+      if (!kind) continue
+      // 金额在标签右侧第 1~2 格
+      for (let k = c + 1; k <= Math.min(c + 2, row.length - 1); k++) {
+        const v = row[k]
+        if (v === "" || v === null || v === undefined) continue
+        const n = typeof v === "number" ? v : parseFloat(String(v))
+        if (!isNaN(n) && n > 0) {
+          result.push({ kind, amount: n })
+        }
+        break
+      }
+      break
+    }
+  })
+  return result
+}
 export interface SkippedRow { rowIndex: number; reason: string; rawData: Record<string, unknown> }
 export interface ParseResult { validRows: ParsedRow[]; skippedRows: SkippedRow[] }
 
@@ -107,16 +172,25 @@ export function parseImportRows(jsonData: Record<string, unknown>[], columns: Re
       console.log(`[parseImportRows] row[${idx}]: rs="${rs}" rw="${rw}" rp="${rp}" rf="${rf}" rd="${rd}"`);
     }
 
+    // 完全空白的行（品种/重量/单价/服务费都为空）直接忽略，不计入"跳过"统计
+    const isBlankRow = [rs, rw, rp, rf].every(
+      (v) => v === null || v === undefined || String(v).trim() === ""
+    )
+    if (isBlankRow) continue
+
     const nm = normalizeSpeciesName(String(rs ?? ""))
     if (!nm) { skippedRows.push({ rowIndex: idx + 2, reason: "\u54c1\u79cd\u540d\u79f0\u4e3a\u7a7a\u6216\u65e0\u6cd5\u8bc6\u522b", rawData: raw }); continue }
-    if (isNonBillRow(nm) || isNonBillRow(String(rs ?? ""))) { skippedRows.push({ rowIndex: idx + 2, reason: "\u975e\u8d2d\u751f\u6761\u76ee", rawData: raw }); continue }
+    // 汇总行（本周现场随喜/累计等）不是错误，直接忽略，不进入"查看原因"列表
+    if (isNonBillRow(nm) || isNonBillRow(String(rs ?? ""))) { continue }
+    // 打包耗材（冰块/打包袋等）不是物命品种，直接忽略（与物命列表/导出的过滤规则一致）
+    if (isPackagingItem(nm)) { continue }
     const up = parseFloat(String(rp ?? 0))
     if (isNaN(up) || up <= 0) { skippedRows.push({ rowIndex: idx + 2, reason: "\u5355\u4ef7\u65e0\u6548", rawData: raw }); continue }
     let wt = isNaN(parseFloat(String(rw ?? ""))) ? 0 : parseFloat(String(rw ?? ""))
     if (detectJinUnit(columns.weight) && wt > 0) wt = wt * JIN_TO_KG
     const fv = isNaN(parseFloat(String(rf ?? ""))) ? 0 : parseFloat(String(rf ?? ""))
     const rd2 = parseExcelDate(rd, fallbackYear)
-    validRows.push({ name_zh: nm, weight: wt, unit_price: up, fee_value: fv, release_date: rd2 })
+    validRows.push({ name_zh: nm, weight: wt, unit_price: up, fee_value: fv, release_date: rd2, matrixRow: idx })
     if (debugCount < 5) {
       console.log(`[parseImportRows] row[${idx}] → VALID: nm="${nm}" weight=${wt} up=${up} fee=${fv} date=${rd2}`);
     }

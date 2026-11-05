@@ -10,10 +10,14 @@ export function useBillAudit(speciesList: Ref<Species[]>) {
   const viewingBillLogs = ref<AuditLog[]>([])
   const loadingLogs = ref(false)
 
-  const getSpeciesName = (id: number) => {
-    const sp = speciesList.value.find((s) => s.id === id)
-    return sp ? sp.name_zh : `未知品种(${id})`
-  }
+  const speciesMap = computed(() => {
+    const map = new Map<number, Species>()
+    for (const sp of speciesList.value) map.set(sp.id, sp)
+    return map
+  })
+
+  const getSpeciesName = (id: number) =>
+    speciesMap.value.get(id)?.name_zh ?? `未知品种(${id})`
 
   const formatAction = (action: string) => {
     const map: Record<string, string> = {

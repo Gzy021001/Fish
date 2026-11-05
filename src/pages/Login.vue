@@ -95,8 +95,8 @@ import { apiErrorMessage } from '../lib/error'
 const router = useRouter()
 const authStore = useAuthStore()
 
-const username = ref('admin')
-const password = ref('admin123')
+const username = ref('')
+const password = ref('')
 const loading = ref(false)
 const errorMsg = ref('')
 
@@ -116,9 +116,10 @@ const handleLogin = async () => {
     const token = response.data.access_token;
     const payload = JSON.parse(atob(token.split('.')[1]));
     const userRole = payload.role || 'operator';
+    const mustChange = !!payload.mcp;
 
-    authStore.login(token, username.value, userRole);
-    router.push('/dashboard')
+    authStore.login(token, username.value, userRole, mustChange);
+    router.push(mustChange ? '/change-password' : '/dashboard')
   } catch (error: any) {
     if (error.response && error.response.status === 404) {
       errorMsg.value = "登录失败：接口未找到 (404)，请确保后端正常运行。"

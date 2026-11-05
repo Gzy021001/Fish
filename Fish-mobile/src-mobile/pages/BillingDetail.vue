@@ -68,16 +68,38 @@
             <span class="text-[#5c4033]">{{ formatWeight(bill.weight, bill.species?.default_unit) }}</span>
           </div>
           <div class="flex items-center justify-between gap-3 text-sm">
-            <span class="text-[#8a6b4a]">单价</span>
+            <span class="text-[#8a6b4a]">单价（元）</span>
             <span class="text-[#5c4033]">{{ formatMoney(bill.unit_price) }}</span>
           </div>
           <div class="flex items-center justify-between gap-3 text-sm">
-            <span class="text-[#8a6b4a]">小计</span>
+            <span class="text-[#8a6b4a]">小计（元）</span>
             <span class="text-[#5c4033]">{{ formatMoney(bill.subtotal) }}</span>
           </div>
           <div class="flex items-center justify-between gap-3 text-sm">
-            <span class="text-[#8a6b4a]">总金额</span>
+            <span class="text-[#8a6b4a]">总金额（元）</span>
             <span class="text-[#8b6914] font-semibold">{{ formatMoney(bill.total_amount) }}</span>
+          </div>
+          <div class="flex items-center justify-between gap-3 text-sm">
+            <span class="text-[#8a6b4a]">随喜类型</span>
+            <span class="text-[#5c4033]">{{ bill.payment_method || '--' }}</span>
+          </div>
+          <div v-if="bill.alipay_amount != null" class="flex items-center justify-between gap-3 text-sm">
+            <span class="text-[#8a6b4a]">支付宝（元）</span>
+            <span class="text-[#5c4033]">{{ formatMoney(bill.alipay_amount) }}</span>
+          </div>
+          <div v-if="bill.wechat_amount != null" class="flex items-center justify-between gap-3 text-sm">
+            <span class="text-[#8a6b4a]">微信（元）</span>
+            <span class="text-[#5c4033]">{{ formatMoney(bill.wechat_amount) }}</span>
+          </div>
+          <div v-if="bill.suixi_amount != null" class="flex items-center justify-between gap-3 text-sm">
+            <span class="text-[#8a6b4a]">随喜放生（元）</span>
+            <span class="text-[#5c4033]">{{ formatMoney(bill.suixi_amount) }}</span>
+          </div>
+          <div class="flex items-center justify-between gap-3 text-sm">
+            <span class="text-[#8a6b4a]">本周现场随喜（元）</span>
+            <span class="text-[#5c4033]">{{
+              bill.weekly_donation != null ? formatMoney(bill.weekly_donation) : '--'
+            }}</span>
           </div>
           <div class="flex items-center justify-between gap-3 text-sm">
             <span class="text-[#8a6b4a]">放生日期</span>
@@ -93,7 +115,7 @@
       <article class="rounded-2xl bg-white/95 p-4 shadow-sm">
         <div class="flex items-start justify-between gap-3">
           <div class="min-w-0">
-            <p class="text-xs text-[#8a6b4a]">总金额</p>
+            <p class="text-xs text-[#8a6b4a]">总金额（元）</p>
             <p class="mt-2 text-2xl font-semibold text-[#8b6914]">
               {{ formatMoney(bill.total_amount) }}
             </p>
@@ -109,7 +131,7 @@ import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import api from '../api'
 import { useBillingContextStore } from '../stores/billingContext'
-import { apiErrorMessage, isAuthError } from '../../src/lib/error'
+import { apiErrorMessage, isAuthError } from '../../../src/lib/error'
 
 type BillDetail = {
   id: number
@@ -119,6 +141,11 @@ type BillDetail = {
   total_amount: number
   status: string
   release_date?: string | null
+  payment_method?: string | null
+  weekly_donation?: number | null
+  alipay_amount?: number | null
+  wechat_amount?: number | null
+  suixi_amount?: number | null
   created_at?: string | null
   species?: {
     name_zh?: string

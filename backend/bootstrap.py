@@ -43,6 +43,30 @@ def ensure_db_schema_updates():
                 existing = {col["name"] for col in inspector.get_columns("bills")}
                 if "status" not in existing:
                     conn.execute(text("ALTER TABLE bills ADD COLUMN status VARCHAR(20) DEFAULT 'DRAFT'"))
+                if "is_deleted" not in existing:
+                    conn.execute(text("ALTER TABLE bills ADD COLUMN is_deleted BOOLEAN DEFAULT 0"))
+                if "payment_method" not in existing:
+                    conn.execute(text("ALTER TABLE bills ADD COLUMN payment_method VARCHAR(20)"))
+                if "weekly_donation" not in existing:
+                    conn.execute(text("ALTER TABLE bills ADD COLUMN weekly_donation NUMERIC(12,2)"))
+                if "alipay_amount" not in existing:
+                    conn.execute(text("ALTER TABLE bills ADD COLUMN alipay_amount NUMERIC(12,2)"))
+                if "wechat_amount" not in existing:
+                    conn.execute(text("ALTER TABLE bills ADD COLUMN wechat_amount NUMERIC(12,2)"))
+                if "suixi_amount" not in existing:
+                    conn.execute(text("ALTER TABLE bills ADD COLUMN suixi_amount NUMERIC(12,2)"))
+
+            # Users 表检查（强制改密标记）
+            if "users" in tables:
+                existing = {col["name"] for col in inspector.get_columns("users")}
+                if "must_change_password" not in existing:
+                    conn.execute(text("ALTER TABLE users ADD COLUMN must_change_password BOOLEAN DEFAULT 0"))
+
+            # Species 表软删除标记
+            if "species" in tables:
+                existing = {col["name"] for col in inspector.get_columns("species")}
+                if "is_deleted" not in existing:
+                    conn.execute(text("ALTER TABLE species ADD COLUMN is_deleted BOOLEAN DEFAULT 0"))
     except Exception as e:
         logger.error(f"Error during schema updates: {e}")
 
@@ -69,6 +93,7 @@ def init_seed_data():
                 username=user_info["username"],
                 password_hash=auth.get_password_hash(user_info["password"]),
                 role=user_info["role"],
+                must_change_password=True,  # 初始账号首次登录强制改密
             )
             db.add(new_user)
             logger.info(f"User {user_info['username']} created.")

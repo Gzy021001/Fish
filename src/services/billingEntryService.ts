@@ -15,6 +15,11 @@ export interface BillEntryInput {
   unit_price: number
   fee_value: number
   release_date?: string
+  payment_method?: string | null
+  weekly_donation?: number | null
+  alipay_amount?: number | null
+  wechat_amount?: number | null
+  suixi_amount?: number | null
 }
 
 export async function ensureSpecies(
@@ -47,6 +52,11 @@ export function buildBillPayload(entry: BillEntryInput) {
     currency: 'CNY',
     status: 'DRAFT',
     release_date: entry.release_date || null,
+    payment_method: entry.payment_method || null,
+    weekly_donation: entry.weekly_donation ?? null,
+    alipay_amount: entry.alipay_amount ?? null,
+    wechat_amount: entry.wechat_amount ?? null,
+    suixi_amount: entry.suixi_amount ?? null,
   }
 }
 
@@ -86,13 +96,21 @@ export async function saveImportedRowsBatch(rows: ImportRow[], replace = false):
 const CHUNK_SIZE = 25
 
 /** Chunked batch import: splits large imports into small chunks to avoid serverless timeout.
- *  First chunk uses replace=true to clear old data; remaining chunks append. */
+ *  覆盖模式（默认开启）：首片带上整份文件的全部放生日期，先按日期清空旧数据；其余分片只追加。
+ *  这样跨多个日期的导入（如整年模板）也能正确覆盖，不会留下重复数据。 */
 export async function saveImportedRowsChunked(
   rows: ImportRow[],
   onProgress?: (done: number, total: number) => void,
+  options?: { replace?: boolean },
 ): Promise<{ success_count: number; skip_count: number; errors: string[] }> {
   // 快速健康检查，唤醒 serverless 冷启动
   try { await api.get('/bills?limit=1', { timeout: 15000 }) } catch (_) { /* 忽略 */ }
+
+  const replaceEnabled = options?.replace ?? true
+  // 整份文件涉及的所有放生日期（覆盖时一次性清空，避免跨分片重复）
+  const allDates = Array.from(
+    new Set(rows.map((r) => r.release_date).filter((d): d is string => !!d)),
+  )
 
   const chunks: ImportRow[][] = []
   for (let i = 0; i < rows.length; i += CHUNK_SIZE) {
@@ -105,11 +123,16 @@ export async function saveImportedRowsChunked(
 
   for (let ci = 0; ci < chunks.length; ci++) {
     const isFirst = ci === 0
+    const replace = isFirst && replaceEnabled
     try {
-      const res = await api.post('/bills/batch', {
+      const payload: Record<string, unknown> = {
         rows: chunks[ci],
-        replace: isFirst,
-      }, { timeout: 45000 })
+        replace,
+      }
+      if (replace && allDates.length > 0) {
+        payload.replace_dates = allDates
+      }
+      const res = await api.post('/bills/batch', payload, { timeout: 45000 })
       totalSuccess += res.data.success_count ?? 0
       totalSkip += res.data.skip_count ?? 0
       if (res.data.errors) allErrors.push(...res.data.errors)

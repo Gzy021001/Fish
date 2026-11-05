@@ -14,22 +14,33 @@ logger = logging.getLogger(__name__)
 
 
 def list_species(db: Session, q: Optional[str] = None):
-    query = db.query(models.Species)
+    query = db.query(models.Species).filter(models.Species.is_deleted.is_(False))
     if q:
         query = query.filter(models.Species.name_zh.ilike(f"%{q}%"))
-    return query.order_by(models.Species.id.asc()).all()
+    # 放生日期最新的品种排前面，未填日期的排最后；同日按 id 倒序兜底
+    return (
+        query.order_by(
+            models.Species.release_date.desc().nullslast(),
+            models.Species.id.desc(),
+        )
+        .all()
+    )
 
 
 def serialize_species_list(items, include_images: bool = True):
     result = []
     for item in items:
+        image_url = item.image_url
+        # base64 data URI（Vercel 模式）不进列表接口，避免列表响应膨胀；单查接口不受影响
+        if not include_images or (image_url and str(image_url).startswith("data:")):
+            image_url = None
         result.append(
             {
                 "id": item.id,
                 "name_zh": item.name_zh,
                 "default_unit": item.default_unit,
                 "default_price": item.default_price,
-                "image_url": item.image_url if include_images else None,
+                "image_url": image_url,
                 "supplier_name": item.supplier_name,
                 "supplier_note": item.supplier_note,
                 "release_date": item.release_date,
@@ -41,7 +52,7 @@ def serialize_species_list(items, include_images: bool = True):
 
 def get_species(species_id: int, db: Session):
     species = db.query(models.Species).filter(models.Species.id == species_id).first()
-    if not species:
+    if not species or species.is_deleted:
         raise HTTPException(status_code=404, detail="未找到该品种")
     return species
 
@@ -52,7 +63,10 @@ def create_species(data: schemas.SpeciesCreate, user: models.User, db: Session):
     if data.default_price <= 0:
         raise HTTPException(status_code=400, detail="单价必须大于0")
 
-    if db.query(models.Species).filter(models.Species.name_zh == data.name_zh).first():
+    if db.query(models.Species).filter(
+        models.Species.name_zh == data.name_zh,
+        models.Species.is_deleted.is_(False),
+    ).first():
         raise HTTPException(status_code=400, detail="品种名称已存在，请勿重复添加")
 
     species = models.Species(**data.model_dump())
@@ -94,6 +108,7 @@ def update_species(species_id: int, data: schemas.SpeciesUpdate, user: models.Us
     if db.query(models.Species).filter(
         models.Species.name_zh == data.name_zh,
         models.Species.id != species_id,
+        models.Species.is_deleted.is_(False),
     ).first():
         raise HTTPException(status_code=400, detail="品种名称已存在，请勿重复添加")
 
@@ -104,6 +119,7 @@ def update_species(species_id: int, data: schemas.SpeciesUpdate, user: models.Us
         "supplier_name": species.supplier_name,
         "supplier_note": species.supplier_note,
         "release_date": species.release_date,
+        "image_url": species.image_url,
     }
 
     for field, value in data.model_dump(exclude={"created_at"}).items():
@@ -115,7 +131,15 @@ def update_species(species_id: int, data: schemas.SpeciesUpdate, user: models.Us
     except IntegrityError:
         raise HTTPException(status_code=400, detail="品种名称已存在，请勿重复添加")
 
-    new_data = data.model_dump(exclude={"created_at"})
+    new_data = {
+        "name_zh": species.name_zh,
+        "default_unit": species.default_unit,
+        "default_price": species.default_price,
+        "supplier_name": species.supplier_name,
+        "supplier_note": species.supplier_note,
+        "release_date": species.release_date,
+        "image_url": species.image_url,
+    }
     record_update(
         db,
         entity_type="SPECIES",
@@ -157,7 +181,10 @@ def upload_image(species_id: int, image: UploadFile, db: Session):
 def delete_species(species_id: int, user: models.User, db: Session):
     species = get_species(species_id, db)
 
-    if db.query(models.Bill).filter(models.Bill.species_id == species_id).first():
+    if db.query(models.Bill).filter(
+        models.Bill.species_id == species_id,
+        models.Bill.is_deleted.is_(False),
+    ).first():
         raise HTTPException(
             status_code=400,
             detail="该品种已被单据使用，无法删除",
@@ -180,17 +207,10 @@ def delete_species(species_id: int, user: models.User, db: Session):
         old_data=old_data,
     )
 
-    # 避免外键约束报错
-    db.query(models.AuditLog).filter(models.AuditLog.species_id == species.id).update({"species_id": None})
-
-    db.delete(species)
-    try:
-        db.commit()
-    except IntegrityError:
-        db.rollback()
-        raise HTTPException(
-            status_code=400,
-            detail="该品种已被其他数据使用，无法删除",
-        )
+    # 软删除：保留审计日志的 species_id 引用，审计链不断
+    species.is_deleted = True
+    # 释放唯一索引：名称加前缀，允许以后重建同名品种
+    species.name_zh = f"#deleted#{species.id}#{species.name_zh}"[:100]
+    db.commit()
     return {"message": "Species deleted successfully"}
  

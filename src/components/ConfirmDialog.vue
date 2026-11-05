@@ -44,13 +44,13 @@
           <div class="flex justify-end gap-3">
             <button
               @click="$emit('cancel')"
-              class="px-4 py-2 rounded text-sm transition-colors text-dunhuang-text/70 hover:bg-dunhuang-yellow/20 border border-dunhuang-yellow/50"
+              class="h-10 px-5 rounded-lg text-sm transition-colors text-dunhuang-text/70 hover:bg-dunhuang-yellow/20 border border-dunhuang-yellow/50"
             >
               取消
             </button>
             <button
               @click="$emit('confirm')"
-              class="px-4 py-2 rounded text-sm transition-colors bg-dunhuang-red text-white hover:bg-dunhuang-red/90 shadow-sm"
+              class="h-10 px-5 rounded-lg text-sm transition-colors bg-dunhuang-red text-white hover:bg-dunhuang-red/90 shadow-sm"
             >
               确定删除
             </button>

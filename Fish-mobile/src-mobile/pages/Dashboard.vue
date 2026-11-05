@@ -137,7 +137,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
 import api from '../api'
-import { apiErrorMessage, isAuthError } from '../../src/lib/error'
+import { apiErrorMessage, isAuthError } from '../../../src/lib/error'
 
 type SpeciesItem = {
   id: number

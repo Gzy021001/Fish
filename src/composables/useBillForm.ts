@@ -8,21 +8,28 @@ import type { Species, Bill, ApiError } from '../types'
 export interface BillEntry {
   species_id: number
   weight: string
-  unit_price: number
+  unit_price: string
   fee_value: string
   release_date: string
+  payment_method?: string | null
+  weekly_donation?: number | null
 }
 
 export interface BillFormState {
   id: number | null
   species_id: string
   weight: string
-  unit_price: number
+  unit_price: string
   fee_type: string
   fee_value: string
   currency: string
   status: string
   release_date: string
+  payment_method: string
+  weekly_donation: string
+  alipay_amount: string
+  wechat_amount: string
+  suixi_amount: string
 }
 
 export function useBillForm(speciesList: Ref<Species[]>) {
@@ -42,22 +49,37 @@ export function useBillForm(speciesList: Ref<Species[]>) {
     id: null,
     species_id: '',
     weight: '0.00',
-    unit_price: 0,
+    unit_price: '0.00',
     currency: 'CNY',
     fee_type: 'FIXED',
     fee_value: '0.00',
     status: 'DRAFT',
     release_date: '',
+    payment_method: '',
+    weekly_donation: '',
+    alipay_amount: '',
+    wechat_amount: '',
+    suixi_amount: '',
   })
 
   const billEntries = ref<BillEntry[]>([])
+
+  // 三个随喜金额都必填（新增/编辑保存前校验）
+  const hasAllSuixiAmounts = () => {
+    const v = bill.value
+    return (
+      v.alipay_amount.trim() !== '' &&
+      v.wechat_amount.trim() !== '' &&
+      v.suixi_amount.trim() !== ''
+    )
+  }
 
   const newEntryDefaults = (speciesId: number): BillEntry => {
     const sp = speciesMap.value.get(speciesId)
     return {
       species_id: speciesId,
       weight: '0.00',
-      unit_price: sp?.default_price ?? 0,
+      unit_price: (sp?.default_price ?? 0).toFixed(2),
       fee_value: '0.00',
       release_date: '',
     }
@@ -95,6 +117,11 @@ export function useBillForm(speciesList: Ref<Species[]>) {
   const initNewBill = () => {
     billEntries.value = []
     bill.value.release_date = ''
+    bill.value.payment_method = ''
+    bill.value.weekly_donation = ''
+    bill.value.alipay_amount = ''
+    bill.value.wechat_amount = ''
+    bill.value.suixi_amount = ''
   }
 
   const batchSubtotal = computed(() =>
@@ -140,6 +167,10 @@ export function useBillForm(speciesList: Ref<Species[]>) {
       toast.warning('单价必须大于0')
       return
     }
+    if (!hasAllSuixiAmounts()) {
+      toast.warning('请填写三个随喜金额（支付宝 / 微信 / 随喜放生）')
+      return
+    }
     saving.value = true
     try {
       const payload = {
@@ -150,6 +181,23 @@ export function useBillForm(speciesList: Ref<Species[]>) {
         unit_price: Number(bill.value.unit_price),
         status: 'DRAFT',
         release_date: bill.value.release_date || null,
+        payment_method: bill.value.payment_method || null,
+        weekly_donation:
+          bill.value.weekly_donation.trim() === ''
+            ? null
+            : Number(bill.value.weekly_donation),
+        alipay_amount:
+          bill.value.alipay_amount.trim() === ''
+            ? null
+            : Number(bill.value.alipay_amount),
+        wechat_amount:
+          bill.value.wechat_amount.trim() === ''
+            ? null
+            : Number(bill.value.wechat_amount),
+        suixi_amount:
+          bill.value.suixi_amount.trim() === ''
+            ? null
+            : Number(bill.value.suixi_amount),
       }
       const response = await api.put(`/bills/${bill.value.id}`, payload)
       if (onSaved) onSaved(response.data)
@@ -166,10 +214,15 @@ export function useBillForm(speciesList: Ref<Species[]>) {
 
   const saveBatchBills = async (onSaved?: (data: unknown) => void) => {
     const validEntries = billEntries.value.filter(
-      (e) => +e.weight > 0 && e.unit_price > 0,
+      (e) => +e.weight > 0 && +e.unit_price > 0,
     )
+    const skippedCount = billEntries.value.length - validEntries.length
     if (validEntries.length === 0) {
       toast.warning('请选择品种并填写重量和单价')
+      return
+    }
+    if (!hasAllSuixiAmounts()) {
+      toast.warning('请填写三个随喜金额（支付宝 / 微信 / 随喜放生）')
       return
     }
 
@@ -180,8 +233,26 @@ export function useBillForm(speciesList: Ref<Species[]>) {
         const data = await saveEntry({
           ...entry,
           weight: Number(entry.weight),
+          unit_price: Number(entry.unit_price),
           fee_value: Number(entry.fee_value),
           release_date: entry.release_date || bill.value.release_date,
+          payment_method: bill.value.payment_method || null,
+          weekly_donation:
+            bill.value.weekly_donation.trim() === ''
+              ? null
+              : Number(bill.value.weekly_donation),
+          alipay_amount:
+            bill.value.alipay_amount.trim() === ''
+              ? null
+              : Number(bill.value.alipay_amount),
+          wechat_amount:
+            bill.value.wechat_amount.trim() === ''
+              ? null
+              : Number(bill.value.wechat_amount),
+          suixi_amount:
+            bill.value.suixi_amount.trim() === ''
+              ? null
+              : Number(bill.value.suixi_amount),
         })
         if (onSaved) onSaved(data)
         saved++
@@ -189,7 +260,13 @@ export function useBillForm(speciesList: Ref<Species[]>) {
       billEntries.value = []
       bill.value.release_date = ''
       showForm.value = false
-      toast.success(`成功保存 ${saved} 条`)
+      if (skippedCount > 0) {
+        toast.warning(
+          `成功保存 ${saved} 条，另有 ${skippedCount} 条因重量或单价无效被跳过`,
+        )
+      } else {
+        toast.success(`成功保存 ${saved} 条`)
+      }
     } catch (error: unknown) {
       if (isAuthError(error as ApiError)) return
       if (saved > 0) {
@@ -210,7 +287,7 @@ export function useBillForm(speciesList: Ref<Species[]>) {
       id: b.id,
       species_id: String(b.species_id),
       weight: Number(b.weight ?? 0).toFixed(2),
-      unit_price: b.unit_price,
+      unit_price: Number(b.unit_price ?? 0).toFixed(2),
       currency: b.currency,
       fee_type: 'FIXED',
       fee_value:
@@ -221,6 +298,15 @@ export function useBillForm(speciesList: Ref<Species[]>) {
       release_date: b.release_date
         ? b.release_date.slice(0, 10)
         : '',
+      payment_method: b.payment_method || '',
+      weekly_donation:
+        b.weekly_donation != null ? Number(b.weekly_donation).toFixed(2) : '',
+      alipay_amount:
+        b.alipay_amount != null ? Number(b.alipay_amount).toFixed(2) : '',
+      wechat_amount:
+        b.wechat_amount != null ? Number(b.wechat_amount).toFixed(2) : '',
+      suixi_amount:
+        b.suixi_amount != null ? Number(b.suixi_amount).toFixed(2) : '',
     }
     showForm.value = true
     window.scrollTo({ top: 0, behavior: 'smooth' })

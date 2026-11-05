@@ -22,21 +22,36 @@
       <div class="flex gap-3">
         <button
           v-if="selectedIds.length > 0"
+          @click="exportSpecies"
+          :disabled="exportingSpecies"
+          class="bg-dunhuang-blue/10 hover:bg-dunhuang-blue/20 text-dunhuang-blue border border-dunhuang-blue/20 px-4 py-2 rounded-lg text-sm transition-colors disabled:opacity-50"
+        >
+          批量导出 ({{ selectedIds.length }})
+        </button>
+        <button
+          v-if="selectedIds.length > 0"
           @click="confirmBatchRemoveSpecies"
-          class="bg-dunhuang-red/90 hover:bg-dunhuang-red text-white px-3 py-1.5 rounded text-xs transition-colors"
+          class="bg-dunhuang-red/90 hover:bg-dunhuang-red text-white px-4 py-2 rounded-lg text-sm transition-colors"
         >
           批量删除 ({{ selectedIds.length }})
         </button>
         <button
           v-if="authStore.isAdmin"
           @click="showImportModal = true"
-          class="bg-dunhuang-yellow hover:bg-dunhuang-yellow/80 text-dunhuang-blue px-3 py-1.5 rounded text-xs transition-colors"
+          class="bg-dunhuang-yellow hover:bg-dunhuang-yellow/80 text-dunhuang-blue px-4 py-2 rounded-lg text-sm transition-colors"
         >
           导入
         </button>
         <button
+          @click="exportSpecies"
+          :disabled="exportingSpecies"
+          class="bg-dunhuang-blue/10 hover:bg-dunhuang-blue/20 text-dunhuang-blue border border-dunhuang-blue/20 px-4 py-2 rounded-lg text-sm transition-colors disabled:opacity-50"
+        >
+          导出
+        </button>
+        <button
           @click="showAddModal = true"
-          class="bg-dunhuang-blue hover:bg-dunhuang-green text-white px-3 py-1.5 rounded text-xs transition-colors"
+          class="bg-dunhuang-blue hover:bg-dunhuang-green text-white px-4 py-2 rounded-lg text-sm transition-colors"
         >
           + 新增品种
         </button>
@@ -60,7 +75,7 @@
                 type="checkbox"
                 :checked="isAllSelected"
                 @change="toggleAll"
-                class="w-4 h-4 rounded border-2 border-dunhuang-yellow/40 text-dunhuang-red focus:ring-0 focus:ring-offset-0 cursor-pointer transition-all duration-200"
+                class="custom-checkbox text-dunhuang-red focus-visible:ring-2 focus-visible:ring-dunhuang-red/30 focus-visible:ring-offset-1 outline-none"
               />
             </th>
             <th
@@ -94,7 +109,7 @@
               图片
             </th>
             <th
-              class="px-4 py-2 border-b border-dunhuang-yellow/40 flex items-center justify-center w-40 shrink-0 sticky right-0 bg-dunhuang-yellow/20 backdrop-blur z-30 sticky-col-right"
+              class="px-4 py-2 border-b border-dunhuang-yellow/40 flex items-center justify-center w-44 shrink-0 sticky right-0 bg-dunhuang-yellow/20 backdrop-blur z-30 sticky-col-right"
             >
               操作
             </th>
@@ -113,7 +128,7 @@
                 type="checkbox"
                 v-model="selectedIds"
                 :value="sp.id"
-                class="w-4 h-4 rounded border-2 border-dunhuang-yellow/40 text-dunhuang-red focus:ring-0 focus:ring-offset-0 cursor-pointer transition-all duration-200"
+                class="custom-checkbox text-dunhuang-red focus-visible:ring-2 focus-visible:ring-dunhuang-red/30 focus-visible:ring-offset-1 outline-none"
               />
             </td>
             <td
@@ -156,24 +171,24 @@
               </div>
             </td>
             <td
-              class="px-3 py-1.5 flex items-center justify-center w-40 shrink-0 sticky right-0 bg-white/60 backdrop-blur-md group-hover:bg-dunhuang-yellow/10 transition-colors sticky-col-right"
+              class="px-3 py-1.5 flex items-center justify-center w-44 shrink-0 sticky right-0 bg-white/60 backdrop-blur-md group-hover:bg-dunhuang-yellow/10 transition-colors sticky-col-right"
             >
               <div class="flex items-center justify-center gap-1">
                 <button
                   @click="openDetail(sp.id)"
-                  class="px-2 py-1 rounded text-xs transition-colors text-dunhuang-blue hover:bg-dunhuang-blue/10 border border-transparent hover:border-dunhuang-blue/30"
+                  class="px-2 py-1.5 rounded text-sm whitespace-nowrap shrink-0 transition-colors text-dunhuang-blue hover:bg-dunhuang-blue/10 border border-transparent hover:border-dunhuang-blue/30"
                 >
                   查看
                 </button>
                 <button
                   @click="openDetail(sp.id, true)"
-                  class="px-2 py-1 rounded text-xs transition-colors text-dunhuang-green hover:bg-dunhuang-green/10 border border-transparent hover:border-dunhuang-green/30"
+                  class="px-2 py-1.5 rounded text-sm whitespace-nowrap shrink-0 transition-colors text-dunhuang-green hover:bg-dunhuang-green/10 border border-transparent hover:border-dunhuang-green/30"
                 >
                   编辑
                 </button>
                 <button
                   @click="confirmRemoveSpecies(sp.id)"
-                  class="px-2 py-1 rounded text-xs transition-colors text-dunhuang-red hover:bg-dunhuang-red/10 border border-transparent hover:border-dunhuang-red/30"
+                  class="px-2 py-1.5 rounded text-sm whitespace-nowrap shrink-0 transition-colors text-dunhuang-red hover:bg-dunhuang-red/10 border border-transparent hover:border-dunhuang-red/30"
                 >
                   删除
                 </button>
@@ -195,7 +210,7 @@
             <td class="px-4 py-1.5 flex-1"></td>
             <td class="px-4 py-1.5 flex-1"></td>
             <td
-              class="px-3 py-1.5 w-40 shrink-0 sticky right-0 bg-white/60 sticky-col-right"
+              class="px-3 py-1.5 w-44 shrink-0 sticky right-0 bg-white/60 sticky-col-right"
             ></td>
           </tr>
           <tr
@@ -212,7 +227,7 @@
       </table>
     </div>
 
-    <div class="flex justify-between items-center mt-4 shrink-0 relative z-30">
+    <div class="flex justify-between items-center mt-4 shrink-0 relative z-50 flex-wrap gap-3">
       <div class="text-sm text-dunhuang-text/70">
         共
         <span class="font-bold text-dunhuang-blue">{{ totalItems }}</span>
@@ -424,14 +439,14 @@
                 <button
                   type="submit"
                   :disabled="saving"
-                  class="px-5 py-2.5 rounded-lg text-sm font-medium transition-colors bg-dunhuang-red text-white hover:bg-dunhuang-red/90 shadow-md disabled:opacity-50"
+                  class="h-10 px-5 rounded-lg text-sm font-medium transition-colors bg-dunhuang-red text-white hover:bg-dunhuang-red/90 shadow-md disabled:opacity-50"
                 >
                   {{ saving ? "保存中..." : "保存品种" }}
                 </button>
                 <button
                   type="button"
                   @click="closeAddModal"
-                  class="px-5 py-2.5 rounded-lg text-sm transition-colors text-dunhuang-text/70 hover:bg-dunhuang-yellow/20 border border-dunhuang-yellow/50"
+                  class="h-10 px-5 rounded-lg text-sm transition-colors text-dunhuang-text/70 hover:bg-dunhuang-yellow/20 border border-dunhuang-yellow/50"
                 >
                   取消
                 </button>
@@ -526,32 +541,55 @@
               v-if="!importPreview.length"
               class="flex-1 flex flex-col items-center justify-center space-y-6"
             >
+              <div
+                class="w-full max-w-sm border-2 border-dashed border-dunhuang-yellow/40 rounded-2xl p-10 text-center hover:border-dunhuang-blue hover:bg-dunhuang-yellow/5 transition-all duration-200 cursor-pointer"
+                @click="triggerSpeciesFileInput"
+              >
+                <input
+                  type="file"
+                  ref="speciesFileInput"
+                  accept=".xlsx, .xls"
+                  class="hidden"
+                  @change="handleSpeciesFileUpload"
+                />
+                <div
+                  class="bg-dunhuang-yellow/10 rounded-full w-14 h-14 mx-auto mb-4 flex items-center justify-center"
+                >
+                  <svg
+                    class="w-7 h-7 text-dunhuang-yellow/70"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="1.5"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"
+                    />
+                  </svg>
+                </div>
+                <p class="text-base font-serif text-dunhuang-text/70 mb-1">
+                  点击上传 Excel 文件
+                </p>
+                <p class="text-sm text-dunhuang-text/40">支持 .xlsx、.xls 格式</p>
+              </div>
               <div class="flex gap-3">
                 <button
                   @click="downloadSpeciesTemplate"
-                  class="px-4 py-2 rounded-lg text-sm font-medium transition-colors bg-dunhuang-yellow/20 text-dunhuang-blue hover:bg-dunhuang-yellow/30 border border-dunhuang-yellow/40"
+                  class="h-10 px-5 rounded-lg text-sm font-medium transition-colors bg-dunhuang-yellow/20 text-dunhuang-blue hover:bg-dunhuang-yellow/30 border border-dunhuang-yellow/40"
                 >
                   下载导入模板
                 </button>
-                <div>
-                  <input
-                    type="file"
-                    ref="speciesFileInput"
-                    accept=".xlsx, .xls"
-                    class="hidden"
-                    @change="handleSpeciesFileUpload"
-                  />
-                  <button
-                    @click="triggerSpeciesFileInput"
-                    class="px-4 py-2 rounded-lg text-sm font-medium transition-colors bg-dunhuang-blue text-white hover:bg-dunhuang-green"
-                  >
-                    选择 Excel 文件
-                  </button>
-                </div>
+                <button
+                  @click="triggerSpeciesFileInput"
+                  class="h-10 px-5 rounded-lg text-sm font-medium transition-colors bg-dunhuang-blue text-white hover:bg-dunhuang-green"
+                >
+                  选择 Excel 文件
+                </button>
               </div>
-              <div class="text-center text-dunhuang-text/50 text-sm space-y-1">
-                <p>模板包含字段：品种、单价（元）、放生日期</p>
-                <p>支持 .xlsx / .xls 格式</p>
+              <div class="text-center text-dunhuang-text/50 text-sm">
+                模板包含字段：品种、单价（元）、放生日期
               </div>
             </div>
 
@@ -571,13 +609,34 @@
                     }}</span>
                     项)
                   </span>
+                  <span v-if="importSkipCount > 0" class="ml-1">
+                    (跳过
+                    <span class="font-bold text-dunhuang-yellow">{{
+                      importSkipCount
+                    }}</span>
+                    项)
+                  </span>
                 </span>
-                <button
-                  @click="clearImportPreview"
-                  class="text-xs text-dunhuang-text/50 hover:text-dunhuang-red transition-colors"
-                >
-                  重新选择
-                </button>
+                <div class="flex items-center gap-3">
+                  <label
+                    class="flex items-center gap-1.5 text-xs text-dunhuang-text/60 cursor-pointer select-none"
+                    title="勾选后，已存在的品种全部按本次导入的价格/日期覆盖更新"
+                  >
+                    <input
+                      type="checkbox"
+                      :checked="isAllOverwrite"
+                      @change="toggleAllOverwrite"
+                      class="custom-checkbox text-dunhuang-red outline-none"
+                    />
+                    全部覆盖
+                  </label>
+                  <button
+                    @click="clearImportPreview"
+                    class="text-xs text-dunhuang-text/50 hover:text-dunhuang-red transition-colors"
+                  >
+                    重新选择
+                  </button>
+                </div>
               </div>
 
               <div
@@ -586,20 +645,26 @@
                 <table
                   class="w-full text-left border-collapse whitespace-nowrap text-sm"
                 >
-                  <thead class="sticky top-0 bg-dunhuang-bg">
-                    <tr
-                      class="bg-dunhuang-yellow/20 text-dunhuang-blue font-serif"
-                    >
-                      <th class="px-4 py-2 border-b border-dunhuang-yellow/40">
+                  <thead class="sticky top-0 z-10">
+                    <tr>
+                      <th
+                        class="px-4 py-2.5 border-b border-dunhuang-yellow/30 bg-dunhuang-bg/95 text-xs font-medium text-dunhuang-text/60"
+                      >
                         品种
                       </th>
-                      <th class="px-4 py-2 border-b border-dunhuang-yellow/40">
+                      <th
+                        class="px-4 py-2.5 border-b border-dunhuang-yellow/30 bg-dunhuang-bg/95 text-right text-xs font-medium text-dunhuang-text/60"
+                      >
                         单价（元）
                       </th>
-                      <th class="px-4 py-2 border-b border-dunhuang-yellow/40">
+                      <th
+                        class="px-4 py-2.5 border-b border-dunhuang-yellow/30 bg-dunhuang-bg/95 text-xs font-medium text-dunhuang-text/60"
+                      >
                         放生日期
                       </th>
-                      <th class="px-4 py-2 border-b border-dunhuang-yellow/40">
+                      <th
+                        class="px-4 py-2.5 border-b border-dunhuang-yellow/30 bg-dunhuang-bg/95 text-center text-xs font-medium text-dunhuang-text/60"
+                      >
                         状态
                       </th>
                     </tr>
@@ -610,14 +675,16 @@
                       :key="idx"
                       class="border-b border-dunhuang-yellow/20 hover:bg-dunhuang-yellow/5"
                     >
-                      <td class="px-4 py-2">{{ row.name_zh }}</td>
-                      <td class="px-4 py-2 tabular-nums">
+                      <td class="px-4 py-2.5 text-sm text-dunhuang-text font-medium">
+                        {{ row.name_zh }}
+                      </td>
+                      <td class="px-4 py-2.5 text-right text-sm tabular-nums text-dunhuang-text/80">
                         {{ formatMoney(row.default_price) }}
                       </td>
-                      <td class="px-4 py-2 text-sm">
+                      <td class="px-4 py-2.5 text-sm text-dunhuang-text/60">
                         {{ dateStr(row.release_date) || "-" }}
                       </td>
-                      <td class="px-4 py-2">
+                      <td class="px-4 py-2.5 text-center">
                         <button
                           v-if="row.exists"
                           @click="row.overwrite = !row.overwrite"
@@ -644,14 +711,14 @@
               <div class="flex justify-end gap-3 shrink-0">
                 <button
                   @click="clearImportPreview"
-                  class="px-5 py-2 rounded-lg text-sm transition-colors text-dunhuang-text/70 hover:bg-dunhuang-yellow/20 border border-dunhuang-yellow/50"
+                  class="h-10 px-5 rounded-lg text-sm transition-colors text-dunhuang-text/70 hover:bg-dunhuang-yellow/20 border border-dunhuang-yellow/50"
                 >
                   取消
                 </button>
                 <button
                   @click="confirmImportSpecies"
                   :disabled="importing"
-                  class="px-5 py-2 rounded-lg text-sm font-medium transition-colors bg-dunhuang-red text-white hover:bg-dunhuang-red/90 disabled:opacity-50"
+                  class="h-10 px-5 rounded-lg text-sm font-medium transition-colors bg-dunhuang-red text-white hover:bg-dunhuang-red/90 disabled:opacity-50"
                 >
                   {{
                     importing
@@ -669,7 +736,7 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, ref, shallowRef, computed } from "vue";
+import { onMounted, ref, shallowRef, computed, watch } from "vue";
 import { useRouter } from "vue-router";
 import * as XLSX from "xlsx";
 import api from "../api";
@@ -678,7 +745,6 @@ import {
   formatMoney,
   dateStr,
   compressImage,
-  isPackagingItem,
 } from "../lib/utils";
 import { useToast } from "../composables/useToast";
 import { useSpecies } from "../composables/useSpecies";
@@ -717,12 +783,18 @@ const speciesSearchText = ref("");
 const currentPage = ref(1);
 const pageSize = ref(10);
 
-const displaySpecies = computed(() => {
-  return species.value.filter((sp) => !isPackagingItem(sp.name_zh));
-});
+// 品种库列表显示全部品种（含冰块、打包袋等耗材，不再隐藏）
+const displaySpecies = computed(() => species.value);
 
 const totalItems = computed(() => displaySpecies.value.length);
 const totalPages = computed(() => Math.ceil(totalItems.value / pageSize.value));
+
+// 删除/筛选后当前页可能越界：自动回退到最后一页，避免表格空白、分页器无高亮
+watch(totalPages, (t) => {
+  if (t > 0 && currentPage.value > t) {
+    currentPage.value = t;
+  }
+});
 
 const paginatedSpecies = computed(() => {
   const start = (currentPage.value - 1) * pageSize.value;
@@ -749,18 +821,64 @@ const openImagePreview = (url: string) => {
 };
 
 const isAllSelected = computed(() => {
+  // 只对当前页的判断负责，避免勾一页变成全选所有页
   return (
-    displaySpecies.value.length > 0 &&
-    selectedIds.value.length === displaySpecies.value.length
+    paginatedSpecies.value.length > 0 &&
+    paginatedSpecies.value.every((sp) => selectedIds.value.includes(sp.id))
   );
 });
 
 const toggleAll = (e: Event) => {
   const checked = (e.target as HTMLInputElement).checked;
+  const pageIds = paginatedSpecies.value.map((sp) => sp.id);
   if (checked) {
-    selectedIds.value = displaySpecies.value.map((sp) => sp.id);
+    // 只勾选当前页的行，不影响其它页已选中的数据
+    const extra = pageIds.filter((id) => !selectedIds.value.includes(id));
+    selectedIds.value = [...selectedIds.value, ...extra];
   } else {
-    selectedIds.value = [];
+    selectedIds.value = selectedIds.value.filter((id) => !pageIds.includes(id));
+  }
+};
+
+const exportingSpecies = ref(false);
+
+const exportSpecies = async () => {
+  // 有勾选 -> 只导勾选的品种；没勾选 -> 全量导出
+  const params: Record<string, string> = {};
+  if (selectedIds.value.length > 0) {
+    params.species_ids = selectedIds.value.join(",");
+  }
+  exportingSpecies.value = true;
+  try {
+    const res = await api.get("/species/export", {
+      params,
+      responseType: "blob",
+      timeout: 60000,
+    });
+    const blob = res.data as Blob;
+    if (!blob || blob.size === 0) {
+      toast.error("导出失败：文件为空");
+      return;
+    }
+    let filename = "慈悲组品种库.xlsx";
+    const disposition = res.headers?.["content-disposition"] as string | undefined;
+    if (disposition) {
+      const match = disposition.match(/filename\*=UTF-8''([^;]+)/i);
+      if (match) filename = decodeURIComponent(match[1]);
+    }
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement("a");
+    anchor.href = url;
+    anchor.download = filename;
+    document.body.appendChild(anchor);
+    anchor.click();
+    anchor.remove();
+    URL.revokeObjectURL(url);
+    toast.success("导出完成");
+  } catch (error) {
+    toast.error(apiErrorMessage(error, "导出品种库"));
+  } finally {
+    exportingSpecies.value = false;
   }
 };
 const saving = ref(false);
@@ -992,6 +1110,26 @@ const overwriteCount = computed(
   () => importPreview.value.filter((r) => r.exists && r.overwrite).length,
 );
 
+const existingCount = computed(
+  () => importPreview.value.filter((r) => r.exists).length,
+);
+
+const isAllOverwrite = computed(
+  () =>
+    existingCount.value > 0 &&
+    importPreview.value.filter((r) => r.exists).every((r) => r.overwrite),
+);
+
+const toggleAllOverwrite = (e: Event) => {
+  const checked = (e.target as HTMLInputElement).checked;
+  for (const row of importPreview.value) {
+    if (row.exists) row.overwrite = checked;
+  }
+};
+
+// 解析时被丢弃的行数（名称为空/单价无效/重复），供预览区徽标展示
+const importSkipCount = ref(0);
+
 const triggerSpeciesFileInput = () => {
   if (speciesFileInput.value) {
     speciesFileInput.value.value = "";
@@ -1024,6 +1162,7 @@ const handleSpeciesFileUpload = (event: Event) => {
       const firstSheetName = workbook.SheetNames[0];
       const worksheet = workbook.Sheets[firstSheetName];
       const jsonData = XLSX.utils.sheet_to_json(worksheet) as any[];
+      const parsedTotal = jsonData.length;
 
       const seen = new Set<string>();
 
@@ -1062,6 +1201,8 @@ const handleSpeciesFileUpload = (event: Event) => {
         })
         .filter((r) => r && r.name_zh && r.default_price > 0);
 
+      importSkipCount.value = parsedTotal - importPreview.value.length;
+
       if (importPreview.value.length === 0) {
         toast.warning("未能解析到有效数据，请确认文件格式与模板一致。");
       }
@@ -1075,6 +1216,7 @@ const handleSpeciesFileUpload = (event: Event) => {
 
 const clearImportPreview = () => {
   importPreview.value = [];
+  importSkipCount.value = 0;
 };
 
 const confirmImportSpecies = async () => {

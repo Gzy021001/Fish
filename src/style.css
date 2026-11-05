@@ -60,6 +60,34 @@ div {
     scrollbar-color: rgba(92, 64, 51, 0.2) transparent;
   }
 
+  /* 面板/表格滚动条：可见、细、圆角、配色与页面一致。
+     注意：Chrome 121+ 同时设置 scrollbar-width/scrollbar-color 会忽略
+     ::-webkit-scrollbar 自定义样式并退回原生滚动条，因此这里只走 webkit 伪元素，
+     Firefox 用 @supports 单独兜底。 */
+  .panel-scrollbar::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  .panel-scrollbar::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  .panel-scrollbar::-webkit-scrollbar-thumb {
+    background: rgba(196, 163, 90, 0.35);
+    border-radius: 9999px;
+    border: 1px solid transparent;
+    background-clip: padding-box;
+  }
+  .panel-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: rgba(196, 163, 90, 0.55);
+    background-clip: padding-box;
+  }
+  @supports (-moz-appearance: none) {
+    .panel-scrollbar {
+      scrollbar-width: thin;
+      scrollbar-color: rgba(196, 163, 90, 0.35) transparent;
+    }
+  }
+
   .sticky-col-left {
     box-shadow:
       inset -1px 0 0 0 rgba(196, 163, 90, 0.2),
@@ -70,5 +98,30 @@ div {
     box-shadow:
       inset 1px 0 0 0 rgba(196, 163, 90, 0.2),
       -4px 0 6px -2px rgba(0, 0, 0, 0.05);
+  }
+
+  /* 自定义勾选框：完全去掉浏览器原生外观，选中色跟随文字颜色（currentColor） */
+  .custom-checkbox {
+    appearance: none;
+    -webkit-appearance: none;
+    width: 1rem;
+    height: 1rem;
+    border: 2px solid rgba(196, 163, 90, 0.45);
+    border-radius: 0.3rem;
+    background-color: #fff;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    flex-shrink: 0;
+  }
+  .custom-checkbox:hover {
+    border-color: rgba(196, 163, 90, 0.85);
+  }
+  .custom-checkbox:checked {
+    background-color: currentColor;
+    border-color: currentColor;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='3.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 13l4 4L19 7'/%3E%3C/svg%3E");
+    background-size: 85%;
+    background-position: center;
+    background-repeat: no-repeat;
   }
 }

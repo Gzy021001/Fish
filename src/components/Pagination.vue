@@ -1,5 +1,5 @@
 <template>
-  <div class="flex items-center gap-4">
+  <div class="flex items-center gap-4 flex-wrap justify-end">
     <!-- 每页条数下拉框 (自定义下拉样式) -->
     <div class="flex items-center gap-2" v-if="showPageSizeSelect" ref="dropdownRef">
       <div class="relative group">

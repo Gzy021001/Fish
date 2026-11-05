@@ -106,13 +106,13 @@
           <p class="mt-1 text-sm font-semibold text-[#5c4033]">{{ sumWeightLabel }}</p>
         </div>
         <div>
-          <p class="text-[11px] text-[#8a6b4a]">总金额</p>
+          <p class="text-[11px] text-[#8a6b4a]">总金额（元）</p>
           <p class="mt-1 text-sm font-semibold text-[#8b6914]">{{ sumTotalAmountLabel }}</p>
         </div>
       </div>
 
       <div class="mt-3 border-t border-[#efe1c8] pt-3 text-xs text-[#8a6b4a]">
-        <span>小计合计 {{ sumSubtotalLabel }}</span>
+        <span>小计合计（元） {{ sumSubtotalLabel }}</span>
       </div>
     </div>
 
@@ -178,14 +178,14 @@
             </p>
           </div>
           <p class="shrink-0 text-base font-semibold text-[#8b6914]">
-            {{ formatMoney(item.total_amount) }}
+            {{ formatMoney(item.total_amount) }} 元
           </p>
         </div>
 
         <div class="mt-2 flex items-center justify-between border-t border-[#f2e5cf] pt-2 text-xs text-[#8a6b4a]">
           <span>{{ formatDate(item.release_date || item.created_at) }}</span>
-          <span>单价 {{ formatMoney(item.unit_price) }}</span>
-          <span>小计 {{ formatMoney(item.subtotal) }}</span>
+          <span>单价 {{ formatMoney(item.unit_price) }} 元</span>
+          <span>小计 {{ formatMoney(item.subtotal) }} 元</span>
         </div>
       </article>
       <div
@@ -235,7 +235,7 @@ import { useRouter } from 'vue-router'
 import MobileDatePicker from '../components/MobileDatePicker.vue'
 import api from '../api'
 import { useBillingContextStore } from '../stores/billingContext'
-import { apiErrorMessage, isAuthError } from '../../src/lib/error'
+import { apiErrorMessage, isAuthError } from '../../../src/lib/error'
 
 type BillItem = {
   id: number

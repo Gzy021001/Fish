@@ -35,6 +35,11 @@ export interface Bill {
   fee_value: number
   status: string
   release_date: string | null
+  payment_method: string | null
+  weekly_donation: number | null
+  alipay_amount: number | null
+  wechat_amount: number | null
+  suixi_amount: number | null
   created_at: string
   subtotal: number
   total_amount: number

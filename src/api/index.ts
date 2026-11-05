@@ -8,7 +8,7 @@ const api = axios.create({
   timeout: 40000, // 增加到 40s，应对 Neon 数据库的冷启动延迟
 })
 
-const RETRYABLE_STATUS = new Set<number>([502, 503])
+const RETRYABLE_STATUS = new Set<number>([500, 502, 503, 504])
 const RETRY_DELAY_MS = 4000
 
 const _inFlight = new Map<string, AbortController>()
@@ -36,6 +36,11 @@ function _releaseSignal(config: { signal?: unknown; __inflight_key?: string }) {
 
 function _shouldRetry(error: ApiError): boolean {
   if (!error.config || (error.config as Record<string, unknown>).__retried) return false
+  // 被取消的请求（GET 去重 abort 或主动取消）不应重试，否则会产生冗余请求
+  if (axios.isCancel(error) || error.code === 'ERR_CANCELED') return false
+  // 写操作（POST/PUT/DELETE）不得自动重试：服务端可能已落库，重试会制造重复单据
+  const method = ((error.config as Record<string, unknown>).method as string)?.toLowerCase()
+  if (method && method !== 'get') return false
   const status = error.response?.status
   if (status != null && RETRYABLE_STATUS.has(status)) return true
   return error.response == null && error.code !== 'ECONNABORTED'

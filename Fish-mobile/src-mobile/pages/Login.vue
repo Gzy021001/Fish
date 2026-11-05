@@ -39,7 +39,7 @@ import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import api from '../api'
 import { useAuthStore } from '../stores/auth'
-import { apiErrorMessage } from '../../src/lib/error'
+import { apiErrorMessage } from '../../../src/lib/error'
 
 const router = useRouter()
 const authStore = useAuthStore()

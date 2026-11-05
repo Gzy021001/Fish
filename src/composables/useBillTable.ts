@@ -1,9 +1,7 @@
 import { ref, shallowRef, computed, watch, type Ref } from 'vue'
-import { useDebounceFn } from '@vueuse/core'
-import * as XLSX from 'xlsx'
 import api from '../api'
 import { apiErrorMessage, isAuthError } from '../lib/error'
-import { dateStr, dateTimeStr, formatMoney, isPackagingItem } from '../lib/utils'
+import { formatMoney, isPackagingItem } from '../lib/utils'
 import { useToast } from './useToast'
 import type { Species, Bill, ApiError } from '../types'
 
@@ -31,20 +29,10 @@ export function useBillTable(speciesList: Ref<Species[]>) {
     return map
   })
 
-  const debouncedSearchFetch = useDebounceFn(() => {
-    if (currentPage.value !== 1) {
-      currentPage.value = 1
-    } else {
-      fetchBills()
-    }
-  }, 300)
-
-  watch(billingSearch, () => {
-    debouncedSearchFetch()
-  })
-
   const currentPage = ref(1)
   const pageSize = ref(10)
+  // 翻页请求序号：只接受最后一次请求的响应，防止旧页响应后到覆盖新页数据
+  let fetchGen = 0
 
   watch(currentPage, () => {
     if (activeTab.value !== 'history') {
@@ -128,6 +116,7 @@ export function useBillTable(speciesList: Ref<Species[]>) {
   })
 
   const fetchBills = async () => {
+    const gen = ++fetchGen
     try {
       const params = new URLSearchParams()
       params.set('limit', '0')
@@ -154,6 +143,7 @@ export function useBillTable(speciesList: Ref<Species[]>) {
       }
 
       const res = await api.get(`/bills?${params.toString()}`)
+      if (gen !== fetchGen) return
 
       if (res.data && typeof res.data.total === 'number') {
         let items: Bill[] = res.data.items || []
@@ -181,7 +171,14 @@ export function useBillTable(speciesList: Ref<Species[]>) {
         }
         totalItems.value = bills.value.length
       }
+
+      // 删除/筛选后当前页可能越界：回退到最后一页（watch 会自动重新拉取）
+      const maxPage = Math.max(1, Math.ceil(totalItems.value / pageSize.value))
+      if (currentPage.value > maxPage) {
+        currentPage.value = maxPage
+      }
     } catch (error: unknown) {
+      if (gen !== fetchGen) return
       if (isAuthError(error as ApiError)) return
       console.error('Failed to fetch bills', error)
     }
@@ -192,11 +189,24 @@ export function useBillTable(speciesList: Ref<Species[]>) {
     bills.value = []
     activeTab.value = tab
     selectedBillIds.value = []
+    // 历史单据没有状态筛选，清掉避免徽标计数与面板不一致
+    if (tab === 'history') {
+      filterStatus.value = ''
+    }
 
     if (currentPage.value !== 1) {
       currentPage.value = 1
+    }
+    // 历史 tab 下 watch(currentPage) 不会拉取，这里统一手动拉一次
+    fetchBills()
+  }
+
+  // 筛选变化后统一回到第一页重新拉取；避免依赖 watch 副作用导致漏拉或双拉
+  const refetchFromFirstPage = async () => {
+    if (currentPage.value !== 1 && activeTab.value !== 'history') {
+      currentPage.value = 1 // 触发 watch(currentPage) 自动拉取
     } else {
-      fetchBills()
+      await fetchBills()
     }
   }
 
@@ -208,64 +218,46 @@ export function useBillTable(speciesList: Ref<Species[]>) {
   }
 
   const exportBills = async () => {
-    toast.info('正在准备导出数据...')
-    let source: Bill[] = []
+    // 有勾选 -> 只导勾选的单据；没勾选 -> 全量导出（不再要求先设置日期范围）
+    const params: Record<string, string> = {}
+    if (selectedBillIds.value.length > 0) {
+      params.bill_ids = selectedBillIds.value.join(',')
+    }
+    toast.info(
+      selectedBillIds.value.length > 0
+        ? `正在导出选中的 ${selectedBillIds.value.length} 条单据...`
+        : '正在导出全部单据...',
+    )
     try {
-      const params = new URLSearchParams()
-      params.set('limit', '0')
-      params.set('page_size', '-1')
-      params.set('status', activeTab.value === 'current' ? 'DRAFT' : 'COMPLETED')
-
-      if (filterDateFrom.value) params.set('date_from', filterDateFrom.value)
-      if (filterDateTo.value) params.set('date_to', filterDateTo.value)
-      if (billingSearch.value.trim()) params.set('q', billingSearch.value.trim())
-
-      const res = await api.get(`/bills?${params.toString()}`)
-      if (res.data && res.data.items) {
-        source = res.data.items
-      } else {
-        source = Array.isArray(res.data) ? res.data : []
+      const res = await api.get('/bills/export', {
+        params,
+        responseType: 'blob',
+        timeout: 120000,
+      })
+      const blob = res.data as Blob
+      if (!blob || blob.size === 0) {
+        toast.error('导出失败：文件为空')
+        return
       }
-    } catch {
-      toast.error('获取导出数据失败')
-      return
+      let filename = '慈悲组购生明细表.xlsx'
+      const disposition = res.headers?.['content-disposition'] as string | undefined
+      if (disposition) {
+        const match = disposition.match(/filename\*=UTF-8''([^;]+)/i)
+        if (match) filename = decodeURIComponent(match[1])
+      }
+      const url = URL.createObjectURL(blob)
+      const anchor = document.createElement('a')
+      anchor.href = url
+      anchor.download = filename
+      document.body.appendChild(anchor)
+      anchor.click()
+      anchor.remove()
+      URL.revokeObjectURL(url)
+      toast.success('导出完成')
+    } catch (error: unknown) {
+      if (isAuthError(error as ApiError)) return
+      toast.error(apiErrorMessage(error as ApiError, '导出明细表'))
     }
-
-    if (source.length === 0) {
-      toast.info('没有可导出的单据数据')
-      return
-    }
-
-    const formatNum = (v: number) => {
-      if (!Number.isFinite(v)) return '0.00'
-      return v.toFixed(2)
-    }
-
-    const actualFee = (b: Bill) => ((b.total_amount || 0) - (b.subtotal || 0))
-
-    const exportData = source
-      .filter((b) => !isPackagingItem(getSpeciesName(b.species_id)))
-      .map((b, i) => ({
-        '序号': i + 1,
-        '品种': getSpeciesName(b.species_id),
-        '单据状态': b.status === 'COMPLETED' ? '已归档' : '草稿',
-        '重量': (b.weight ?? 0).toFixed(2),
-        '单价（元）': formatNum(b.unit_price),
-        '小计（元）': formatNum(b.subtotal),
-        '服务费（元）': formatNum(actualFee(b)),
-        '总金额（元）': formatNum(b.total_amount),
-        '放生日期': dateStr(b.release_date || b.species?.release_date || null),
-        '添加时间': dateTimeStr(b.created_at),
-      }))
-
-    const worksheet = XLSX.utils.json_to_sheet(exportData)
-    const workbook = XLSX.utils.book_new()
-    const sheetName = activeTab.value === 'current' ? '最新单据' : '历史单据'
-    XLSX.utils.book_append_sheet(workbook, worksheet, sheetName)
-
-    const fileDate = new Date().toISOString().slice(0, 10).replace(/-/g, '')
-    const prefix = activeTab.value === 'current' ? '最新单据' : '历史单据'
-    XLSX.writeFile(workbook, `${prefix}_${fileDate}.xlsx`)
   }
 
   const syncBillsToHistory = async () => {
@@ -277,23 +269,6 @@ export function useBillTable(speciesList: Ref<Species[]>) {
         await fetchBills()
       } else {
         toast.info('当前没有符合归档条件的过期单据')
-      }
-    } catch (error: unknown) {
-      if (isAuthError(error as ApiError)) return
-      toast.error(apiErrorMessage(error as ApiError, '归档单据'))
-    }
-  }
-
-  const confirmArchiveBills = async () => {
-    if (selectedBillIds.value.length === 0) return
-    try {
-      const res = await api.post('/bills/archive', { bill_ids: selectedBillIds.value })
-      if (res.data && res.data.count > 0) {
-        toast.success(res.data.message)
-        selectedBillIds.value = []
-        await fetchBills()
-      } else {
-        toast.info('选中的单据可能已经是归档状态')
       }
     } catch (error: unknown) {
       if (isAuthError(error as ApiError)) return
@@ -372,9 +347,9 @@ export function useBillTable(speciesList: Ref<Species[]>) {
     formatFee,
     fetchBills,
     switchTab,
+    refetchFromFirstPage,
     clearDateFilter,
     exportBills,
-    confirmArchiveBills,
     confirmDeleteBill,
     confirmBatchDeleteBills,
     executeDeleteBill,

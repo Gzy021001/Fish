@@ -65,8 +65,22 @@ class BillBase(BaseModel):
     currency: str = Field("CNY", max_length=10)
     fee_type: str = Field("FIXED", max_length=20)
     fee_value: float
-    status: str = Field("DRAFT", max_length=20)
+    status: Optional[str] = Field("DRAFT", max_length=20)
     release_date: Optional[date] = None
+    payment_method: Optional[str] = Field(None, max_length=20)
+    weekly_donation: Optional[float] = None
+    alipay_amount: Optional[float] = None
+    wechat_amount: Optional[float] = None
+    suixi_amount: Optional[float] = None
+
+    @field_validator('payment_method', mode='before')
+    @classmethod
+    def coerce_payment_method(cls, v):
+        if v is None or v == '':
+            return None
+        if v not in ('支付宝', '微信', '随喜放生'):
+            raise ValueError('随喜类型仅支持：支付宝/微信/随喜放生')
+        return v
 
 class BillCreate(BillBase):
     pass
@@ -76,7 +90,7 @@ class Bill(BillBase):
     user_id: int
     subtotal: float
     total_amount: float
-    created_at: date
+    created_at: datetime
     species: Optional[SpeciesInBill] = None
 
     class Config:
@@ -89,8 +103,8 @@ class Bill(BillBase):
         return v.strftime('%Y-%m-%d')
 
     @field_serializer('created_at')
-    def serialize_created_at(self, v: date) -> str:
-        return v.strftime('%Y-%m-%d')
+    def serialize_created_at(self, v: datetime) -> str:
+        return v.strftime('%Y-%m-%d %H:%M:%S')
 
 class AuditLogBase(BaseModel):
     bill_id: Optional[int] = None
@@ -103,10 +117,14 @@ class AuditLogBase(BaseModel):
 class AuditLog(AuditLogBase):
     id: int
     user_id: int
-    created_at: date
+    created_at: datetime
 
     class Config:
         from_attributes = True
+
+    @field_serializer('created_at')
+    def serialize_created_at(self, v: datetime) -> str:
+        return v.strftime('%Y-%m-%d %H:%M:%S')
 
 class Token(BaseModel):
     access_token: str
@@ -114,6 +132,9 @@ class Token(BaseModel):
 
 class TokenData(BaseModel):
     username: Optional[str] = None
+
+class ChangePasswordRequest(BaseModel):
+    password: str = Field(..., min_length=6, max_length=100)
 
 class SyncRequest(BaseModel):
     date: str
@@ -128,6 +149,19 @@ class BatchImportRow(BaseModel):
     unit_price: float = 0.0
     fee_value: float = 0.0
     release_date: Optional[date] = None
+    alipay_amount: Optional[float] = None
+    wechat_amount: Optional[float] = None
+    suixi_amount: Optional[float] = None
+    payment_method: Optional[str] = Field(None, max_length=20)
+
+    @field_validator('payment_method', mode='before')
+    @classmethod
+    def coerce_import_payment_method(cls, v):
+        if v is None or v == '':
+            return None
+        if v not in ('支付宝', '微信', '随喜放生'):
+            raise ValueError('随喜类型仅支持：支付宝/微信/随喜放生')
+        return v
 
     @field_validator('release_date', mode='before')
     @classmethod
@@ -150,6 +184,8 @@ class BatchImportRow(BaseModel):
 class BatchImportRequest(BaseModel):
     rows: list[BatchImportRow] = Field(..., max_length=5000)
     replace: bool = False
+    # 覆盖模式下一次清空哪些放生日的数据（分片导入时由首片带上全量日期，避免跨片重复）
+    replace_dates: Optional[list[date]] = None
 
 class BatchImportResult(BaseModel):
     success_count: int

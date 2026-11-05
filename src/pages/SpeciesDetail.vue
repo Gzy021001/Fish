@@ -415,13 +415,13 @@
             <button
               @click="saveEdit"
               :disabled="saving"
-              class="px-5 py-2 rounded-lg text-sm font-medium transition-colors bg-dunhuang-red text-white hover:bg-dunhuang-red/90 shadow-md disabled:opacity-50"
+              class="h-10 px-5 rounded-lg text-sm font-medium transition-colors bg-dunhuang-red text-white hover:bg-dunhuang-red/90 shadow-md disabled:opacity-50"
             >
               {{ saving ? "保存中..." : "保存" }}
             </button>
             <button
               @click="cancelEdit"
-              class="px-5 py-2 rounded-lg text-sm transition-colors text-dunhuang-text/70 hover:bg-dunhuang-yellow/20 border border-dunhuang-yellow/50"
+              class="h-10 px-5 rounded-lg text-sm transition-colors text-dunhuang-text/70 hover:bg-dunhuang-yellow/20 border border-dunhuang-yellow/50"
             >
               取消
             </button>

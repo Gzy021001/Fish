@@ -36,6 +36,13 @@ export default defineConfig({
     host: '0.0.0.0',
     port: 5175,
     strictPort: true, // 强制使用指定端口，避免多开服务时 WebSocket 端口获取错乱
+    watch: {
+      // IDE（Trae/VS Code）原子保存会生成 .xxx.<uuid>.tmpdir 临时目录，
+      // Windows 上 watch 其中的临时文件会 EBUSY 导致 Vite 崩溃，这里直接忽略。
+      // _tmp_chrome 是浏览器自动化留下的 Chrome 用户数据目录，GPU 缓存文件
+      // 会被周期性锁定，同样会触发 EBUSY 崩溃，一并忽略。
+      ignored: ['**/.*.tmpdir/**', '**/_tmp_chrome*/**'],
+    },
     hmr: {
       protocol: 'ws',
       host: 'localhost',

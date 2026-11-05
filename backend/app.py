@@ -12,6 +12,7 @@ from fastapi.responses import JSONResponse
 
 from database import engine, Base
 import bootstrap
+from sqlalchemy.exc import OperationalError as SAOperationalError, DBAPIError as SADBAPIError, TimeoutError as SATimeoutError
 
 from routers import auth, species, bills, logs, stats
 from services.image_storage import get_uploads_dir
@@ -148,6 +149,15 @@ def create_app() -> FastAPI:
         logger.error("Global exception: %s", exc)
         logger.error(traceback.format_exc())
         error_type = type(exc).__name__
+        # 数据库瞬时异常（连接被回收/超时/冷启动）归为 503：前端 GET 会自动重试，避免用户看到"内部错误"
+        if isinstance(exc, (SAOperationalError, SADBAPIError, SATimeoutError)):
+            return JSONResponse(
+                status_code=503,
+                content={
+                    "detail": "服务暂时不可用，请稍后重试",
+                    "error": error_type,
+                },
+            )
         return JSONResponse(
             status_code=500,
             content={

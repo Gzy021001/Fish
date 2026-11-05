@@ -11,7 +11,23 @@ from sqlalchemy.orm import Session
 import models
 from database import get_db
 
-SECRET_KEY = os.getenv("JWT_SECRET_KEY", "dunhuang-fish-platform-super-secret-key")
+_DEV_SECRET_KEY = "dunhuang-fish-platform-super-secret-key"
+
+
+def _is_production() -> bool:
+    return any(
+        os.getenv(k)
+        for k in ("VERCEL", "RENDER", "RAILWAY_ENVIRONMENT", "RAILWAY_SERVICE_ID")
+    )
+
+
+SECRET_KEY = os.getenv("JWT_SECRET_KEY")
+if not SECRET_KEY:
+    if _is_production():
+        raise RuntimeError(
+            "JWT_SECRET_KEY 未设置：生产环境禁止使用默认密钥，请在部署平台配置 JWT_SECRET_KEY"
+        )
+    SECRET_KEY = _DEV_SECRET_KEY
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24 * 7
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/token")
@@ -50,7 +66,7 @@ def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(
             raise credentials_exception
     except JWTError:
         raise credentials_exception
-    
+
     user = db.query(models.User).filter(models.User.username == username).first()
     if user is None:
         raise credentials_exception

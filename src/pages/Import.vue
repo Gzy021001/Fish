@@ -32,7 +32,7 @@
         </div>
         <button
           @click="downloadTemplate"
-          class="bg-dunhuang-blue hover:bg-dunhuang-green text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-1.5"
+          class="h-10 px-5 bg-dunhuang-blue hover:bg-dunhuang-green text-white rounded-lg text-sm font-medium transition-colors flex items-center gap-1.5"
         >
           <svg
             class="w-4 h-4"
@@ -59,8 +59,18 @@
         >
           <div class="text-center">
             <div
-              class="border-2 border-dashed border-dunhuang-yellow/40 rounded-2xl p-14 text-center hover:border-dunhuang-blue hover:bg-dunhuang-yellow/5 transition-all duration-200 cursor-pointer"
+              class="border-2 border-dashed rounded-2xl p-14 text-center transition-all duration-200 cursor-pointer"
+              :class="
+                parsing
+                  ? 'pointer-events-none opacity-60 border-dunhuang-yellow/40'
+                  : isDragging
+                    ? 'border-dunhuang-blue bg-dunhuang-blue/5'
+                    : 'border-dunhuang-yellow/40 hover:border-dunhuang-blue hover:bg-dunhuang-yellow/5'
+              "
               @click="triggerFileInput"
+              @dragover.prevent="isDragging = true"
+              @dragleave="onDragLeave"
+              @drop.prevent="onDrop"
             >
               <input
                 type="file"
@@ -70,7 +80,8 @@
                 @change="handleFileUpload"
               />
               <div
-                class="bg-dunhuang-yellow/10 rounded-full w-16 h-16 mx-auto mb-5 flex items-center justify-center"
+                class="bg-dunhuang-yellow/10 rounded-full w-16 h-16 mx-auto mb-5 flex items-center justify-center transition-transform duration-200"
+                :class="isDragging ? 'scale-110' : ''"
               >
                 <svg
                   class="w-8 h-8 text-dunhuang-yellow/70"
@@ -91,6 +102,15 @@
               </p>
               <p class="text-sm text-dunhuang-text/40">支持 .xlsx、.xls 格式</p>
             </div>
+            <div
+              v-if="parsing"
+              class="mt-4 flex items-center justify-center gap-2 text-sm text-dunhuang-text/60"
+            >
+              <span
+                class="animate-spin rounded-full h-4 w-4 border-2 border-dunhuang-yellow/30 border-t-dunhuang-blue"
+              ></span>
+              正在解析 Excel 文件...
+            </div>
           </div>
         </div>
 
@@ -101,33 +121,90 @@
         >
           <!-- Column Mapping Card -->
           <div
-            class="bg-white rounded-xl border border-dunhuang-yellow/20 p-5 shrink-0"
+            class="bg-white rounded-xl border border-dunhuang-yellow/20 shrink-0 overflow-hidden"
           >
-            <h3
-              class="text-sm font-semibold text-dunhuang-blue mb-3 font-serif"
+            <div
+              class="flex items-center justify-between px-5 py-3 bg-dunhuang-yellow/10 border-b border-dunhuang-yellow/20"
             >
-              列映射
-            </h3>
-            <div class="grid grid-cols-5 gap-3">
+              <span class="text-sm font-semibold text-dunhuang-blue font-serif"
+                >列映射</span
+              >
+              <span class="text-xs text-dunhuang-text/50"
+                >已根据表头自动识别，未识别的列不会导入</span
+              >
+            </div>
+            <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 p-4">
               <div
                 v-for="(label, key) in keyLabels"
                 :key="key"
-                class="flex flex-col gap-1 p-3 rounded-lg border border-dunhuang-yellow/15 bg-dunhuang-yellow/5"
+                class="flex flex-col gap-1.5 px-3 py-2.5 rounded-lg border bg-dunhuang-yellow/[0.04]"
+                :class="
+                  detectedColumns[key] ||
+                  (key === 'release_date' && sheetDateLabel)
+                    ? 'border-dunhuang-yellow/25'
+                    : 'border-dunhuang-red/15'
+                "
               >
-                <span class="text-xs text-dunhuang-text/50 font-medium">{{
+                <span class="text-[11px] text-dunhuang-text/50 font-medium">{{
                   label
                 }}</span>
                 <span
                   v-if="detectedColumns[key]"
-                  class="text-sm text-dunhuang-green font-semibold truncate"
-                  >{{ detectedColumns[key] }}</span
+                  class="flex items-center gap-1.5 text-sm text-dunhuang-green font-semibold min-w-0"
                 >
+                  <svg
+                    class="w-3.5 h-3.5 shrink-0"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2.5"
+                      d="M5 13l4 4L19 7"
+                    />
+                  </svg>
+                  <span class="truncate">{{ detectedColumns[key] }}</span>
+                </span>
                 <span
                   v-else-if="key === 'release_date' && sheetDateLabel"
-                  class="text-sm text-dunhuang-yellow font-semibold truncate"
-                  >{{ sheetDateLabel }} (Sheet)</span
+                  class="flex items-center gap-1.5 text-sm text-dunhuang-orange font-semibold min-w-0"
                 >
-                <span v-else class="text-sm text-dunhuang-red/70">未识别</span>
+                  <svg
+                    class="w-3.5 h-3.5 shrink-0"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                      d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
+                    />
+                  </svg>
+                  <span class="truncate">{{ sheetDateLabel }}（Sheet 标题）</span>
+                </span>
+                <span
+                  v-else
+                  class="flex items-center gap-1.5 text-sm text-dunhuang-red/70"
+                >
+                  <svg
+                    class="w-3.5 h-3.5 shrink-0"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                      d="M6 18L18 6M6 6l12 12"
+                    />
+                  </svg>
+                  未识别
+                </span>
               </div>
             </div>
           </div>
@@ -137,98 +214,116 @@
             class="flex-1 min-h-0 border border-dunhuang-yellow/30 rounded-xl overflow-hidden flex flex-col"
           >
             <div
-              class="flex items-center justify-between px-4 py-3 bg-dunhuang-yellow/10 border-b border-dunhuang-yellow/20 shrink-0"
+              class="flex items-center justify-between gap-3 px-4 py-3 bg-dunhuang-yellow/10 border-b border-dunhuang-yellow/20 shrink-0"
             >
               <span class="text-sm font-semibold text-dunhuang-blue font-serif"
                 >预览数据</span
               >
-              <span class="text-xs text-dunhuang-text/60"
-                >共
-                <b class="text-dunhuang-blue">{{ importRows.length }}</b>
-                条</span
-              >
+              <div class="flex items-center gap-4">
+                <span class="text-xs text-dunhuang-text/60"
+                  >共
+                  <b class="text-dunhuang-blue">{{ importRows.length }}</b>
+                  条</span
+                >
+                <span
+                  v-if="skippedRows.length > 0"
+                  class="flex items-center gap-1.5 text-xs text-dunhuang-text/60"
+                >
+                  <span class="w-1 h-3 rounded-full bg-dunhuang-orange/60 shrink-0"></span>
+                  跳过
+                  <b class="text-dunhuang-orange">{{ skippedRows.length }}</b>
+                  行
+                  <button
+                    @click="showSkipped = !showSkipped"
+                    class="ml-1 text-dunhuang-blue hover:text-dunhuang-green font-medium transition-colors"
+                  >
+                    {{ showSkipped ? "收起原因" : "查看原因" }}
+                  </button>
+                </span>
+                <span
+                  v-if="newSpeciesNames.length > 0"
+                  class="flex items-center gap-1.5 text-xs text-dunhuang-text/60"
+                >
+                  <span class="w-1 h-3 rounded-full bg-dunhuang-orange/60 shrink-0"></span>
+                  将自动新建
+                  <b class="text-dunhuang-orange">{{ newSpeciesNames.length }}</b>
+                  个品种
+                </span>
+              </div>
             </div>
-            <div class="flex-1 overflow-y-auto thin-scrollbar">
-              <table class="w-full text-left border-collapse text-sm">
+            <div
+              v-if="showSkipped && skippedRows.length > 0"
+              class="shrink-0 max-h-36 overflow-y-auto panel-scrollbar bg-dunhuang-yellow/5 px-4 py-2 border-b border-dunhuang-yellow/20"
+            >
+              <div
+                v-for="(s, i) in skippedRows.slice(0, 100)"
+                :key="i"
+                class="text-xs text-dunhuang-text/60 py-1 border-b border-dunhuang-yellow/10 last:border-0"
+              >
+                第 {{ s.rowIndex }} 行：{{ s.reason }}
+              </div>
+            </div>
+            <div class="flex-1 overflow-y-auto panel-scrollbar">
+              <table class="w-full table-fixed text-left border-collapse">
+                <colgroup>
+                  <col style="width: 56px" />
+                  <col />
+                  <col style="width: 15%" />
+                  <col style="width: 12%" />
+                  <col style="width: 12%" />
+                  <col style="width: 16%" />
+                </colgroup>
                 <thead class="sticky top-0 z-10">
-                  <tr>
-                    <th
-                      class="px-3 py-2.5 border-b border-dunhuang-yellow/30 bg-dunhuang-bg/95 w-12 text-center text-xs font-medium text-dunhuang-text/50"
-                    >
-                      #
-                    </th>
-                    <th
-                      class="px-4 py-2.5 border-b border-dunhuang-yellow/30 bg-dunhuang-bg/95 text-xs font-medium text-dunhuang-text/60"
-                    >
-                      品种
-                    </th>
-                    <th
-                      class="px-4 py-2.5 border-b border-dunhuang-yellow/30 bg-dunhuang-bg/95 text-right text-xs font-medium text-dunhuang-text/60"
-                    >
-                      重量(公斤)
-                    </th>
-                    <th
-                      class="px-4 py-2.5 border-b border-dunhuang-yellow/30 bg-dunhuang-bg/95 text-right text-xs font-medium text-dunhuang-text/60"
-                    >
-                      单价(元)
-                    </th>
-                    <th
-                      class="px-4 py-2.5 border-b border-dunhuang-yellow/30 bg-dunhuang-bg/95 text-right text-xs font-medium text-dunhuang-text/60"
-                    >
-                      服务费
-                    </th>
-                    <th
-                      class="px-4 py-2.5 border-b border-dunhuang-yellow/30 bg-dunhuang-bg/95 text-xs font-medium text-dunhuang-text/60"
-                    >
-                      放生日期
-                    </th>
+                  <tr class="bg-[#fbf6ec] text-dunhuang-blue">
+                    <th class="px-3 py-2.5 border-b border-dunhuang-yellow/40 text-center text-xs font-semibold">#</th>
+                    <th class="px-4 py-2.5 border-b border-dunhuang-yellow/40 text-center text-xs font-semibold">品种</th>
+                    <th class="px-4 py-2.5 border-b border-dunhuang-yellow/40 text-center text-xs font-semibold">重量（公斤）</th>
+                    <th class="px-4 py-2.5 border-b border-dunhuang-yellow/40 text-center text-xs font-semibold">单价（元）</th>
+                    <th class="px-4 py-2.5 border-b border-dunhuang-yellow/40 text-center text-xs font-semibold">服务费（元）</th>
+                    <th class="px-4 py-2.5 border-b border-dunhuang-yellow/40 text-center text-xs font-semibold">放生日期</th>
                   </tr>
                 </thead>
-                <tbody class="divide-y divide-dunhuang-yellow/10">
+                <tbody>
                   <tr
                     v-for="(row, index) in importRows"
                     :key="index"
-                    class="hover:bg-dunhuang-yellow/5 transition-colors duration-150"
+                    class="transition-colors hover:bg-dunhuang-yellow/10"
                     :class="
-                      index % 2 === 1 ? 'bg-dunhuang-yellow/3' : 'bg-white'
+                      index % 2 === 1 ? 'bg-dunhuang-yellow/[0.04]' : 'bg-white'
                     "
                   >
-                    <td
-                      class="px-3 py-2.5 text-center text-xs text-dunhuang-text/40 tabular-nums"
-                    >
+                    <td class="px-3 py-2.5 text-center text-xs text-dunhuang-text/40 tabular-nums border-b border-dunhuang-yellow/10">
                       {{ index + 1 }}
                     </td>
-                    <td
-                      class="px-4 py-2.5 text-sm text-dunhuang-text font-medium"
-                    >
-                      {{ row.name_zh }}
+                    <td class="px-4 py-2.5 text-center text-sm text-dunhuang-text font-medium border-b border-dunhuang-yellow/10">
+                      <span class="inline-flex max-w-full items-center gap-1">
+                        <span class="truncate">{{ row.name_zh }}</span>
+                        <span
+                          v-if="isNewSpecies(row.name_zh)"
+                          class="shrink-0 text-[10px] leading-none px-1 py-0.5 rounded bg-dunhuang-orange/10 text-dunhuang-orange border border-dunhuang-orange/25"
+                          >新建</span
+                        >
+                      </span>
                     </td>
-                    <td
-                      class="px-4 py-2.5 text-right text-sm tabular-nums text-dunhuang-text/80"
-                    >
+                    <td class="px-4 py-2.5 text-center text-sm tabular-nums text-dunhuang-text/80 border-b border-dunhuang-yellow/10">
                       {{ formatMoney(row.weight) }}
                     </td>
-                    <td
-                      class="px-4 py-2.5 text-right text-sm tabular-nums text-dunhuang-text/80"
-                    >
+                    <td class="px-4 py-2.5 text-center text-sm tabular-nums text-dunhuang-text/80 border-b border-dunhuang-yellow/10">
                       {{ formatMoney(row.unit_price) }}
                     </td>
                     <td
                       v-if="feeMergeMap.get(index) !== 0"
-                      class="px-4 py-2.5 text-right text-sm tabular-nums"
+                      class="px-4 py-2.5 text-center text-sm tabular-nums align-middle border border-dunhuang-yellow/10"
                       :rowspan="feeMergeMap.get(index) || undefined"
-                      :class="[
+                      :class="
                         row.fee_value > 0
-                          ? 'text-dunhuang-orange'
-                          : 'text-dunhuang-text/40',
-                        (feeMergeMap.get(index) ?? 0) > 1 ? 'align-top' : '',
-                      ]"
+                          ? 'text-dunhuang-orange font-semibold bg-dunhuang-orange/[0.06]'
+                          : 'text-dunhuang-text/40'
+                      "
                     >
                       {{ formatMoney(row.fee_value) }}
                     </td>
-                    <td
-                      class="px-4 py-2.5 text-xs text-dunhuang-text/60 whitespace-nowrap"
-                    >
+                    <td class="px-4 py-2.5 text-center text-sm text-dunhuang-text/60 whitespace-nowrap border-b border-dunhuang-yellow/10">
                       {{ dateStr(row.release_date) || "-" }}
                     </td>
                   </tr>
@@ -246,20 +341,37 @@
           </div>
 
           <!-- Step 2 Actions -->
-          <div class="flex justify-between items-center shrink-0 pt-1">
+          <div class="flex justify-between items-center shrink-0 pt-1 gap-3">
             <button
               @click="cancelImport"
-              class="px-6 py-2 border border-dunhuang-yellow text-dunhuang-text rounded-lg hover:bg-dunhuang-yellow/20 transition-colors text-sm"
+              class="h-10 px-6 border border-dunhuang-yellow text-dunhuang-text rounded-lg hover:bg-dunhuang-yellow/20 transition-colors text-sm"
             >
               取消
             </button>
-            <button
-              @click="confirmImport"
-              class="px-6 py-2 bg-dunhuang-red text-white rounded-lg hover:bg-dunhuang-red/90 transition-colors text-sm disabled:opacity-70"
-              :disabled="importRows.length === 0"
-            >
-              确认导入
-            </button>
+            <div class="flex items-center gap-4">
+              <span class="text-xs text-dunhuang-text/50 hidden sm:block">
+                将导入
+                <b class="text-dunhuang-blue">{{ importRows.length }}</b>
+                条单据
+              </span>
+              <label
+                class="flex items-center gap-1.5 text-xs text-dunhuang-text/60 cursor-pointer select-none"
+              >
+                <input
+                  type="checkbox"
+                  v-model="overwriteSameDate"
+                  class="custom-checkbox text-dunhuang-blue outline-none"
+                />
+                覆盖同日已有单据
+              </label>
+              <button
+                @click="confirmImport"
+                class="h-10 px-6 bg-dunhuang-red text-white rounded-lg hover:bg-dunhuang-red/90 transition-colors text-sm disabled:opacity-70"
+                :disabled="importRows.length === 0"
+              >
+                确认导入
+              </button>
+            </div>
           </div>
         </div>
 
@@ -268,16 +380,51 @@
           v-else-if="currentStep === 3"
           class="flex-1 flex flex-col items-center justify-center text-center"
         >
-          <div v-if="importing" class="space-y-5">
+          <div v-if="importing" class="w-full max-w-md">
             <div
-              class="animate-spin rounded-full h-12 w-12 border-b-2 border-dunhuang-blue mx-auto"
-            ></div>
-            <p class="text-base font-serif text-dunhuang-text/70">
-              正在导入数据...
-            </p>
-            <p v-if="importProgress" class="text-sm text-dunhuang-text/50">
-              {{ importProgress }}
-            </p>
+              class="bg-white rounded-2xl border border-dunhuang-yellow/30 shadow-sm px-8 py-10 flex flex-col items-center gap-5"
+            >
+              <div class="relative w-14 h-14">
+                <div class="absolute inset-0 rounded-full bg-dunhuang-blue/10"></div>
+                <div
+                  class="absolute inset-0 animate-spin rounded-full border-[3px] border-dunhuang-yellow/25 border-t-dunhuang-blue"
+                ></div>
+              </div>
+              <div class="text-center space-y-1.5">
+                <p class="text-base font-serif font-semibold text-dunhuang-blue">
+                  正在导入数据
+                </p>
+                <p class="text-sm text-dunhuang-text/50">
+                  {{ importProgress || "正在连接服务器..." }}
+                </p>
+                <p class="text-xs text-dunhuang-text/40">请勿关闭或刷新页面</p>
+              </div>
+              <div class="w-full">
+                <div
+                  class="flex items-center justify-between text-xs text-dunhuang-text/50 mb-1.5"
+                >
+                  <span class="tabular-nums">
+                    {{
+                      importTotal > 0
+                        ? `第 ${importDone}/${importTotal} 批`
+                        : "准备中"
+                    }}
+                  </span>
+                  <span class="tabular-nums">{{ importPercent }}%</span>
+                </div>
+                <div
+                  class="h-2 w-full rounded-full bg-dunhuang-yellow/15 overflow-hidden"
+                >
+                  <div
+                    class="h-full rounded-full bg-dunhuang-blue transition-all duration-300 ease-out"
+                    :style="{ width: importPercent + '%' }"
+                  ></div>
+                </div>
+                <p class="mt-2.5 text-xs text-dunhuang-text/40 text-center">
+                  共 {{ importRows.length }} 条单据，分批导入中
+                </p>
+              </div>
+            </div>
           </div>
           <div v-else class="space-y-5">
             <div v-if="importResult" class="space-y-3">
@@ -356,13 +503,13 @@
                   currentStep = 1;
                   cancelImport();
                 "
-                class="px-6 py-2 border border-dunhuang-yellow text-dunhuang-text rounded-lg hover:bg-dunhuang-yellow/20 transition-colors text-sm"
+                class="h-10 px-6 border border-dunhuang-yellow text-dunhuang-text rounded-lg hover:bg-dunhuang-yellow/20 transition-colors text-sm"
               >
                 继续导入
               </button>
               <button
                 @click="goBack"
-                class="px-6 py-2 bg-dunhuang-blue text-white rounded-lg hover:bg-dunhuang-green transition-colors text-sm"
+                class="h-10 px-6 bg-dunhuang-blue text-white rounded-lg hover:bg-dunhuang-green transition-colors text-sm"
               >
                 返回列表
               </button>
@@ -375,18 +522,21 @@
 </template>
 
 <script setup lang="ts">
-import { ref, shallowRef, onMounted } from "vue";
+import { computed, ref, shallowRef, onMounted } from "vue";
 import { useRouter } from "vue-router";
 import * as XLSX from "xlsx";
 import { apiErrorMessage, isAuthError } from "../lib/error";
 import { dateStr, formatMoney } from "../lib/utils";
 import { useToast } from "../composables/useToast";
+import { useSpecies } from "../composables/useSpecies";
 import { saveImportedRowsBatch, saveImportedRowsChunked } from "../services/billingEntryService";
 import api from "../api";
 import {
   detectColumns,
   parseImportRows,
   parseExcelDate,
+  normalizeSpeciesName,
+  extractRowPayments,
   type ParsedRow,
   type SkippedRow,
 } from "../lib/importUtils";
@@ -429,10 +579,12 @@ function getMatrixHeaders(matrix: any[][]) {
 
 const router = useRouter();
 const toast = useToast();
+const { speciesList, fetchSpecies } = useSpecies();
 const currentStep = ref(1);
 const fileInput = ref<HTMLInputElement | null>(null);
 const showPreview = ref(false);
 const importing = ref(false);
+const overwriteSameDate = ref(true); // 覆盖同日已有单据（默认开启）
 const importResult = ref<{
   success_count: number;
   skip_count: number;
@@ -442,12 +594,49 @@ const importRows = shallowRef<any[]>([]);
 const detectedColumns = shallowRef<Record<string, string | null>>({});
 const sheetDateLabel = ref<string | null>(null);
 const importProgress = ref("");  // 分片导入进度文字
+const importDone = ref(0);   // 已完成的导入批次
+const importTotal = ref(0);  // 总批次
+const importPercent = computed(() =>
+  importTotal.value > 0
+    ? Math.round((importDone.value / importTotal.value) * 100)
+    : 0,
+);
 // 服务费合并单元格：key=行索引, value=rowspan（0 表示该行被上方合并覆盖，跳过渲染）
 const feeMergeMap = shallowRef<Map<number, number>>(new Map());
+// 拖拽上传高亮
+const isDragging = ref(false);
+// 解析 Excel 中（文件较大时主线程解析需要时间，给用户反馈）
+const parsing = ref(false);
+// 未通过校验的行（含原因），供预览区提示
+const skippedRows = shallowRef<SkippedRow[]>([]);
+const showSkipped = ref(false);
+
+// ===== 品种库校验：标注不在品种库中的品种（导入时后端会自动新建） =====
+const existingSpeciesNames = computed(() => {
+  const names = new Set<string>()
+  for (const sp of speciesList.value) {
+    names.add(normalizeSpeciesName(sp.name_zh))
+  }
+  return names
+});
+
+const isNewSpecies = (name: string) =>
+  !!name && !existingSpeciesNames.value.has(normalizeSpeciesName(name));
+
+const newSpeciesNames = computed(() => {
+  const names = new Set<string>()
+  for (const row of importRows.value as ParsedRow[]) {
+    const nm = normalizeSpeciesName(row.name_zh ?? "")
+    if (nm && !existingSpeciesNames.value.has(nm)) names.add(nm)
+  }
+  return Array.from(names)
+});
 
 onMounted(() => {
   // 进入页面时提前唤醒服务器，避免后续导入时因冷启动导致超时
   api.get("/health").catch(() => {});
+  // 预取品种库，用于预览区标注"将自动新建"的品种
+  fetchSpecies();
 });
 
 const keyLabels: Record<string, string> = {
@@ -484,6 +673,12 @@ const cancelImport = () => {
   importResult.value = null;
   feeMergeMap.value = new Map();
   importProgress.value = "";
+  importDone.value = 0;
+  importTotal.value = 0;
+  skippedRows.value = [];
+  showSkipped.value = false;
+  isDragging.value = false;
+  parsing.value = false;
 };
 
 // --- Matrix helpers ---
@@ -534,10 +729,7 @@ function buildMatrix(
   return { matrix, lastRow: lastNonEmpty };
 }
 
-const handleFileUpload = (event) => {
-  const f = event.target.files?.[0];
-  if (!f) return;
-
+const processFile = (f: File) => {
   // 提取文件名中的年份作为强力兜底（例如："2025年账单.xlsx" -> 2025）
   let fileYear: number | null = null;
   const fileYearMatch = f.name.match(/(20\d{2})/);
@@ -546,12 +738,16 @@ const handleFileUpload = (event) => {
   }
 
   const reader = new FileReader();
-  reader.onload = (e) => {
+  reader.onload = async (e) => {
+    parsing.value = true;
+    // 让浏览器先渲染"正在解析"提示，再执行同步解析（大文件解析会占用主线程）
+    await new Promise((resolve) => setTimeout(resolve, 30));
     try {
       const wb = XLSX.read(new Uint8Array(e.target?.result as ArrayBuffer), {
         type: "array",
       });
       const allValid = [];
+      const allSkipped = [];
       let firstCols = null;
 
       for (const sn of wb.SheetNames) {
@@ -687,6 +883,25 @@ const handleFileUpload = (event) => {
         });
         const result = parseImportRows(jsonData, cols, sd);
 
+        // 收款区逐笔行按出现顺序对应到当天单据（第 1 笔→第 1 张、第 2 笔→第 2 张……），
+        // 不依赖行号对齐（有些模板收款区从表头行开始，与数据行错开一行）
+        // 同时把收款类型写到单据的"随喜类型"上，列表里类型和金额才能对得上
+        const receipts = extractRowPayments(matrix);
+        receipts.forEach((pay, i) => {
+          const target = result.validRows[i];
+          if (!target) return;
+          if (pay.kind === "alipay") {
+            target.alipay_amount = pay.amount;
+            target.payment_method = "支付宝";
+          } else if (pay.kind === "wechat") {
+            target.wechat_amount = pay.amount;
+            target.payment_method = "微信";
+          } else {
+            target.suixi_amount = pay.amount;
+            target.payment_method = "随喜放生";
+          }
+        });
+
         console.log(
           `validRows: ${result.validRows.length}, skippedRows: ${result.skippedRows.length}`,
         );
@@ -708,8 +923,10 @@ const handleFileUpload = (event) => {
         console.log("first jsonData row keys:", Object.keys(jsonData[0] || {}));
         console.log("first jsonData row:", JSON.stringify(jsonData[0] || {}));
         allValid.push(...result.validRows);
+        allSkipped.push(...result.skippedRows);
       }
       importRows.value = allValid;
+      skippedRows.value = allSkipped;
       // 服务费合并单元格：连续相同的 fee_value > 0 归为一组，首行保留原值，其余行清零
       {
         const m = new Map<number, number>();
@@ -743,9 +960,33 @@ const handleFileUpload = (event) => {
     } catch (err) {
       console.error(err);
       toast.error("解析 Excel 失败，请检查文件格式");
+    } finally {
+      parsing.value = false;
     }
   };
   reader.readAsArrayBuffer(f);
+};
+
+const handleFileUpload = (event: Event) => {
+  const target = event.target as HTMLInputElement;
+  const f = target.files?.[0];
+  if (!f) return;
+  processFile(f);
+};
+
+const onDrop = (event: DragEvent) => {
+  isDragging.value = false;
+  const f = event.dataTransfer?.files?.[0];
+  if (!f) return;
+  processFile(f);
+};
+
+const onDragLeave = (event: DragEvent) => {
+  const target = event.currentTarget as HTMLElement | null;
+  const related = event.relatedTarget as Node | null;
+  if (!target || !related || !target.contains(related)) {
+    isDragging.value = false;
+  }
 };
 
 const confirmImport = async () => {
@@ -753,11 +994,20 @@ const confirmImport = async () => {
   importing.value = true;
   importResult.value = null;
   currentStep.value = 3;
+  importDone.value = 0;
+  importTotal.value = 0;
   importProgress.value = "正在连接服务器...";
+  window.scrollTo({ top: 0 });
   try {
-    const result = await saveImportedRowsChunked(importRows.value, (done, total) => {
-      importProgress.value = `正在导入 ${done}/${total} 批...`;
-    });
+    const result = await saveImportedRowsChunked(
+      importRows.value,
+      (done, total) => {
+        importDone.value = done;
+        importTotal.value = total;
+        importProgress.value = `正在导入 ${done}/${total} 批...`;
+      },
+      { replace: overwriteSameDate.value },
+    );
     importResult.value = {
       success_count: result.success_count,
       skip_count: result.skip_count,

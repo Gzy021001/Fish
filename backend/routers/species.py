@@ -24,7 +24,7 @@ router = APIRouter(prefix="/api", tags=["species"])
 @router.get("/species", response_model=List[schemas.Species])
 def list_species_route(
     q: Optional[str] = Query(None, description="搜索品种名称"),
-    include_images: bool = Query(True, description="是否在列表中包含图片字段"),
+    include_images: bool = Query(False, description="是否在列表中包含图片字段（base64 图片不会进列表）"),
     db: Session = Depends(get_db),
     current_user: models.User = Depends(auth.get_current_user),
 ):
@@ -36,6 +36,25 @@ def list_species_route(
     result = serialize_species_list(list_species(db, q), include_images=include_images)
     species_cache.set(cache_key, result)
     return result
+
+
+@router.get("/species/export")
+def export_species_route(
+    species_ids: str = None,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(auth.get_current_user),
+):
+    """导出品种库 xlsx（勾选品种则只导选中的，否则全量）。"""
+    from fastapi.responses import StreamingResponse
+    from services.export_service import build_species_export
+
+    ids = [int(x) for x in (species_ids or "").split(",") if x.strip().isdigit()] or None
+    content, quoted_filename = build_species_export(db, ids)
+    return StreamingResponse(
+        content,
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={"Content-Disposition": f"attachment; filename*=UTF-8''{quoted_filename}"},
+    )
 
 
 @router.get("/species/{species_id}", response_model=schemas.Species)
