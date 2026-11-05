@@ -27,3 +27,8 @@ backend/export_sql.py
 backend/main.py
 
 # Root-level redundant files
+
+# Local temp files from browser automation / recovery, and business data
+_tmp_chrome*/
+_billing_recover.txt
+慈悲组2026品种导入.xlsx
