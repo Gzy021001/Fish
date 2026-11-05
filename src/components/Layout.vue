@@ -1,8 +1,16 @@
 <template>
   <div class="h-screen flex overflow-hidden bg-dunhuang-bg font-sans">
-    <!-- 侧边栏 -->
+    <!-- 移动端侧边栏遮罩 -->
+    <div
+      v-if="sidebarOpen"
+      class="fixed inset-0 bg-black/40 z-30 lg:hidden"
+      @click="sidebarOpen = false"
+    ></div>
+
+    <!-- 侧边栏（小屏为抽屉） -->
     <aside
-      class="w-60 flex flex-col z-10"
+      class="w-60 shrink-0 flex flex-col z-40 fixed inset-y-0 left-0 transition-transform duration-300 lg:static lg:translate-x-0"
+      :class="sidebarOpen ? 'translate-x-0' : '-translate-x-full'"
       style="
         background: linear-gradient(
           180deg,
@@ -124,16 +132,32 @@
     <main class="flex-1 flex flex-col min-w-0">
       <!-- 顶栏 — 禅净简素 -->
       <header
-        class="h-20 flex items-center justify-between px-6 border-b border-[#f0e0b5]/12"
+        class="h-14 lg:h-20 flex items-center justify-between px-3 sm:px-4 lg:px-6 border-b border-[#f0e0b5]/12 shrink-0"
         style="background: linear-gradient(180deg, #947660 0%, #82644a 100%)"
       >
-        <h2
-          class="text-base font-serif font-bold tracking-[0.15em] text-[#f0e0b5]"
-        >
-          {{ routeName }}
-        </h2>
+        <div class="flex items-center gap-2 min-w-0">
+          <button
+            class="lg:hidden p-2 -ml-1 rounded-lg text-[#f0e0b5] hover:bg-white/10 active:scale-95 transition-all"
+            aria-label="打开菜单"
+            @click="sidebarOpen = !sidebarOpen"
+          >
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M4 6h16M4 12h16M4 18h16"
+              />
+            </svg>
+          </button>
+          <h2
+            class="text-sm sm:text-base font-serif font-bold tracking-[0.15em] text-[#f0e0b5] truncate"
+          >
+            {{ routeName }}
+          </h2>
+        </div>
 
-        <div class="flex items-center gap-4">
+        <div class="flex items-center gap-2 sm:gap-4 shrink-0">
           <input
             ref="avatarInputRef"
             type="file"
@@ -168,7 +192,7 @@
 
           <button
             @click="handleLogout"
-            class="inline-flex items-center gap-1.5 px-4 py-1.5 rounded-full text-sm text-[#f5e6c8] bg-[#c89b6c]/15 hover:bg-[#c89b6c]/30 active:scale-95 transition-all duration-300"
+            class="inline-flex items-center gap-1.5 px-2.5 sm:px-4 py-1.5 rounded-full text-sm text-[#f5e6c8] bg-[#c89b6c]/15 hover:bg-[#c89b6c]/30 active:scale-95 transition-all duration-300"
           >
             <svg
               class="w-3.5 h-3.5"
@@ -183,13 +207,13 @@
                 d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"
               />
             </svg>
-            退出登录
+            <span class="hidden sm:inline">退出登录</span>
           </button>
         </div>
       </header>
 
       <!-- 页面内容 -->
-      <div class="flex-1 p-6 overflow-auto custom-scrollbar">
+      <div class="flex-1 p-3 sm:p-4 lg:p-6 overflow-auto custom-scrollbar">
         <router-view v-slot="{ Component }">
           <transition name="fade" mode="out-in">
             <component :is="Component" />
@@ -201,7 +225,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref } from "vue";
+import { computed, ref, watch } from "vue";
 import { useI18n } from "vue-i18n";
 import { useRoute, useRouter } from "vue-router";
 import { useAuthStore } from "../stores/auth";
@@ -210,6 +234,15 @@ const { t } = useI18n();
 const route = useRoute();
 const router = useRouter();
 const authStore = useAuthStore();
+
+/** 小屏侧边栏抽屉开关 */
+const sidebarOpen = ref(false);
+watch(
+  () => route.fullPath,
+  () => {
+    sidebarOpen.value = false;
+  }
+);
 
 const avatarInputRef = ref<HTMLInputElement | null>(null);
 const avatarUrl = ref<string | null>(localStorage.getItem("user_avatar"));

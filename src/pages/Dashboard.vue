@@ -1,9 +1,9 @@
 <template>
   <div class="h-full flex flex-col space-y-6 overflow-y-auto no-page-scrollbar">
     <div
-      class="bg-white rounded-2xl shadow-md border border-dunhuang-yellow/30 p-8 flex flex-col card-no-scroll"
+      class="bg-white rounded-2xl shadow-md border border-dunhuang-yellow/30 p-4 sm:p-6 lg:p-8 flex flex-col card-no-scroll"
     >
-      <div class="flex items-center justify-between mb-6 flex-none">
+      <div class="flex flex-wrap items-center justify-between gap-3 mb-6 flex-none">
         <div class="flex items-center gap-4">
           <h3 class="text-2xl font-serif text-dunhuang-blue font-bold">
             {{ t("dashboard.price_trend") }}
@@ -71,7 +71,7 @@
         </div>
       </div>
 
-      <div class="relative flex-1" style="min-height: 500px">
+      <div class="relative flex-1 min-h-[360px] lg:min-h-[500px]">
         <Transition name="fade">
           <div
             v-if="trendsLoading"
@@ -87,7 +87,7 @@
             v-if="!trendsLoading && !hasTrendData && !trendErrorMsg"
             class="absolute inset-0 flex items-center justify-center text-dunhuang-text/50"
           >
-            最近暂无价格走势数据
+            {{ emptyTrendText }}
           </div>
         </Transition>
         <Transition name="fade">
@@ -107,7 +107,7 @@
             class="flex-1 min-w-0 overflow-y-auto pr-1 trend-scroll-left"
             ref="cardScrollEl"
           >
-            <div v-if="priceTrendAll.length > 0" class="grid grid-cols-2 gap-3">
+            <div v-if="priceTrendAll.length > 0" class="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div
                 v-for="item in priceTrendAll"
                 :key="item.speciesId"
@@ -185,20 +185,50 @@
     </div>
 
     <div
-      class="bg-white rounded-2xl shadow-md border border-dunhuang-yellow/30 p-8 flex flex-col"
+      class="bg-white rounded-2xl shadow-md border border-dunhuang-yellow/30 p-4 sm:p-6 lg:p-8 flex flex-col"
     >
-      <div class="flex items-center justify-between mb-6 flex-none">
+      <div class="flex flex-wrap items-center justify-between gap-3 mb-6 flex-none">
         <h3
           class="text-2xl font-serif text-dunhuang-blue flex items-center gap-3 font-bold"
         >
           放生统计
         </h3>
+        <div class="flex items-center gap-3">
+          <span class="text-[11px] text-dunhuang-text/50"
+            >统计口径：已归档单据（不含草稿）</span
+          >
+          <button
+            class="flex items-center gap-2 bg-dunhuang-bg/50 rounded-lg border border-dunhuang-yellow/20 h-9 px-4 text-sm font-bold text-dunhuang-blue hover:border-dunhuang-yellow/40 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            :disabled="trendsLoading || billsLoading"
+            @click="refreshAll"
+          >
+            <svg
+              class="w-3.5 h-3.5"
+              :class="{ 'animate-spin': trendsLoading || billsLoading }"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+            >
+              <path d="M21 12a9 9 0 1 1-2.64-6.36" stroke-linecap="round" />
+              <path
+                d="M21 3v6h-6"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              />
+            </svg>
+            刷新
+          </button>
+        </div>
       </div>
 
-      <div v-if="hasBillData" class="flex gap-5 mb-5 flex-none">
+      <div
+        v-if="hasBillData"
+        class="flex flex-col sm:flex-row flex-wrap gap-3 sm:gap-5 mb-5 flex-none"
+      >
         <div
-          class="bg-[#f9f9f6] rounded-2xl px-5 py-3 border-l-[3px] border-[#5c4033]/40 flex flex-col justify-center"
-          style="flex: 0.82"
+          class="bg-[#f9f9f6] rounded-2xl px-5 py-3 border-l-[3px] border-[#5c4033]/40 flex flex-col justify-center flex-1 sm:flex-none"
+          style="min-width: 0"
         >
           <div class="text-xs text-gray-500 mb-1.5 font-medium">总重量</div>
           <div class="flex items-baseline gap-1.5">
@@ -209,8 +239,8 @@
           </div>
         </div>
         <div
-          class="bg-[#f9f9f6] rounded-2xl px-5 py-3 border-l-[3px] border-[#c49b4a]/50 flex flex-col justify-center"
-          style="flex: 0.82"
+          class="bg-[#f9f9f6] rounded-2xl px-5 py-3 border-l-[3px] border-[#c49b4a]/50 flex flex-col justify-center flex-1 sm:flex-none"
+          style="min-width: 0"
         >
           <div class="text-xs text-gray-500 mb-1.5 font-medium">总金额</div>
           <div class="flex items-baseline gap-1.5">
@@ -219,9 +249,15 @@
             }}</span>
             <span class="text-sm text-gray-500">元</span>
           </div>
+          <div
+            v-if="summaryTotals && summaryTotals.bill_count > 0"
+            class="text-[10px] text-gray-400 mt-0.5 tabular-nums"
+          >
+            共 {{ summaryTotals.bill_count }} 单
+          </div>
         </div>
         <div
-          class="flex-1 bg-[#f9f9f6] rounded-2xl px-5 py-3 border-l-[3px] border-dunhuang-blue/25"
+          class="flex-1 min-w-[220px] bg-[#f9f9f6] rounded-2xl px-5 py-3 border-l-[3px] border-dunhuang-blue/25"
         >
           <div class="flex items-baseline text-xs text-gray-500 mb-1.5">
             <span class="w-12 shrink-0"></span>
@@ -259,8 +295,10 @@
         </div>
       </div>
 
-      <div class="flex gap-5 mb-5" style="aspect-ratio: 3/1; max-height: 400px">
-        <div class="relative" style="flex: 0 0 58%">
+      <div
+        class="flex flex-col md:flex-row gap-3 md:gap-5 mb-5 md:h-[340px]"
+      >
+        <div class="relative w-full md:w-[58%] h-[240px] md:h-full">
           <Transition name="fade">
             <div
               v-if="billsLoading"
@@ -276,7 +314,7 @@
               v-if="!billsLoading && !hasBillData && !billsErrorMsg"
               class="absolute inset-0 flex items-center justify-center text-dunhuang-text/50"
             >
-              暂无放生统计数据
+              {{ emptyBillText }}
             </div>
           </Transition>
           <Transition name="fade">
@@ -293,7 +331,7 @@
             class="absolute inset-0 w-full h-full"
           ></div>
         </div>
-        <div class="relative" style="flex: 0 0 38%">
+        <div class="relative w-full md:w-[38%] h-[220px] md:h-full">
           <div
             v-show="hasBillData"
             ref="pieChart"
@@ -302,7 +340,11 @@
         </div>
       </div>
 
-      <div class="relative" style="height: 480px">
+      <div class="text-[11px] text-dunhuang-text/40 -mt-2 mb-1">
+        注：分类统计（饼图 / 分类走势）不含冰、打包、袋等耗材
+      </div>
+
+      <div class="relative h-[300px] md:h-[480px]">
         <Transition name="fade">
           <div
             v-if="speciesWeightLoading"
@@ -320,7 +362,7 @@
             "
             class="absolute inset-0 flex items-center justify-center text-dunhuang-text/50"
           >
-            暂无物命重量数据
+            {{ emptyBillText }}
           </div>
         </Transition>
         <Transition name="fade">
@@ -400,19 +442,27 @@ const billsLoading = ref(false);
 const speciesWeightLoading = ref(false);
 const trendErrorMsg = ref("");
 const billsErrorMsg = ref("");
-
 let fetchGeneration = 0;
 const billsCache = new Map<
   number,
   {
     billWeekMap: Map<string, { total_amount: number; total_weight: number }>;
     speciesWeekWeightMap: Map<string, Map<number, number>>;
+    totals: { weight: number; amount: number; bill_count: number } | null;
   }
 >();
 
 const currentYear = new Date().getFullYear();
 const selectedYear = ref(currentYear);
 const yearDropdownOpen = ref(false);
+/** 后端聚合接口返回的有数据年份（下拉框不再写死范围） */
+const dashboardYears = shallowRef<number[]>([]);
+/** 后端返回的年度合计（金额/重量在后端用 Decimal 聚合，避免前端 float 累加误差） */
+const summaryTotals = ref<{
+  weight: number;
+  amount: number;
+  bill_count: number;
+} | null>(null);
 
 const toggleYearDropdown = () => {
   yearDropdownOpen.value = !yearDropdownOpen.value;
@@ -423,11 +473,10 @@ const closeYearDropdown = () => {
 };
 
 const availableYears = computed(() => {
-  const years: number[] = [];
-  for (let y = 2024; y <= currentYear + 3; y++) {
-    years.push(y);
-  }
-  return years;
+  const years = new Set<number>(dashboardYears.value);
+  years.add(selectedYear.value);
+  if (years.size <= 1) years.add(currentYear);
+  return [...years].sort((a, b) => b - a);
 });
 
 const hasTrendData = computed(() => {
@@ -442,7 +491,25 @@ const hasSpeciesWeightData = computed(() => {
   return speciesWeekWeightMap.value.size > 0;
 });
 
+/** 空状态文案：区分“该年没有已归档单据”和“有单据但没有对应数据” */
+const emptyBillText = computed(() =>
+  hasBillData.value
+    ? "该年没有可展示的放生数据"
+    : "该年暂无已归档单据"
+);
+const emptyTrendText = computed(() =>
+  hasBillData.value
+    ? "该年有单据，但暂无价格走势数据"
+    : "该年暂无已归档单据"
+);
+
 const grandTotals = computed(() => {
+  if (summaryTotals.value) {
+    return {
+      weight: Number(summaryTotals.value.weight || 0),
+      amount: Number(summaryTotals.value.amount || 0),
+    };
+  }
   let weight = 0;
   let amount = 0;
   billWeekMap.value.forEach((v) => {
@@ -793,7 +860,9 @@ const fetchSpecies = async () => {
     const res = await api.get("/species");
     speciesList.value = Array.isArray(res.data) ? res.data : [];
     if (speciesList.value.length > 0) {
-      await Promise.all([fetchAllTrends(), fetchBills()]);
+      // 先取后端聚合（顺带得到本年度有单据的品种），再只为这些品种请求价格走势
+      await fetchBills();
+      await fetchAllTrends();
     }
     if (hasBillData.value) {
       renderBillsChart();
@@ -810,17 +879,33 @@ const fetchSpecies = async () => {
   }
 };
 
+/** 只请求本年度有单据的品种（避免把全库品种 id 都塞进 URL；无数据时回退全部品种） */
+const trendSpeciesIds = (): number[] => {
+  const ids = new Set<number>();
+  speciesWeekWeightMap.value.forEach((spMap) => {
+    spMap.forEach((_, spId) => ids.add(spId));
+  });
+  if (ids.size > 0) return [...ids];
+  return speciesList.value.map((sp: any) => Number(sp.id));
+};
+
 const fetchAllTrends = async (gen?: number) => {
   if (!Array.isArray(speciesList.value) || speciesList.value.length === 0) {
     trendDataMap.value = {};
     return;
   }
 
+  const ids = trendSpeciesIds();
+  if (ids.length === 0) {
+    trendDataMap.value = {};
+    trendsLoading.value = false;
+    return;
+  }
+
   trendsLoading.value = true;
   try {
-    const ids = speciesList.value.map((sp) => sp.id).join(",");
     const res = await api.get(
-      `/stats/price-trend-batch?species_ids=${ids}&year=${selectedYear.value}`,
+      `/stats/price-trend-batch?species_ids=${ids.join(",")}&year=${selectedYear.value}`,
     );
 
     if (gen !== undefined && gen !== fetchGeneration) return;
@@ -850,37 +935,45 @@ const fetchBills = async (gen?: number) => {
   billsLoading.value = true;
   speciesWeightLoading.value = true;
   try {
-    const dateFrom = `${selectedYear.value}-01-01`;
-    const dateTo = `${selectedYear.value}-12-31`;
-    const res = await api.get(
-      `/bills?limit=0&page_size=-1&date_from=${dateFrom}&date_to=${dateTo}`,
-    );
-    let bills = [];
-    if (res.data && typeof res.data.total === "number") {
-      bills = res.data.items || [];
-    } else {
-      bills = Array.isArray(res.data) ? res.data : [];
-    }
-
+    // 后端聚合接口：不再拉取整年全部单据（原 /bills?page_size=-1 会随时间线性变慢）
+    const res = await api.get(`/stats/summary?year=${selectedYear.value}`);
     if (gen !== undefined && gen !== fetchGeneration) return;
+
+    const summary = res.data || {};
+    if (Array.isArray(summary.available_years) && summary.available_years.length > 0) {
+      dashboardYears.value = summary.available_years as number[];
+    }
+    if (summary.totals) {
+      summaryTotals.value = {
+        weight: Number(summary.totals.weight || 0),
+        amount: Number(summary.totals.amount || 0),
+        bill_count: Number(summary.totals.bill_count || 0),
+      };
+    } else {
+      summaryTotals.value = null;
+    }
 
     const map = new Map<
       string,
       { total_amount: number; total_weight: number }
     >();
-    const spWeightMap = new Map<string, Map<number, number>>();
-    for (const b of bills) {
-      if (!b.release_date) continue;
-      const key = b.release_date.slice(0, 10);
-      const cur = map.get(key) || { total_amount: 0, total_weight: 0 };
-      cur.total_amount += Number(b.total_amount || 0);
-      cur.total_weight += Number(b.weight || 0);
-      map.set(key, cur);
+    for (const d of summary.by_date || []) {
+      const key = String(d.date || "").slice(0, 10);
+      if (!key) continue;
+      map.set(key, {
+        total_amount: Number(d.amount || 0),
+        total_weight: Number(d.weight || 0),
+      });
+    }
 
+    const spWeightMap = new Map<string, Map<number, number>>();
+    for (const row of summary.by_date_species || []) {
+      const key = String(row.date || "").slice(0, 10);
+      if (!key) continue;
       if (!spWeightMap.has(key)) spWeightMap.set(key, new Map());
-      const spMap = spWeightMap.get(key)!;
-      const spId = Number(b.species_id);
-      spMap.set(spId, (spMap.get(spId) || 0) + Number(b.weight || 0));
+      spWeightMap
+        .get(key)!
+        .set(Number(row.species_id), Number(row.weight || 0));
     }
     billWeekMap.value = map;
     speciesWeekWeightMap.value = spWeightMap;
@@ -895,6 +988,28 @@ const fetchBills = async (gen?: number) => {
       speciesWeightLoading.value = false;
     }
   }
+};
+
+// ---- 手动刷新 ----
+
+const refreshAll = async () => {
+  const gen = ++fetchGeneration;
+  trendErrorMsg.value = "";
+  billsErrorMsg.value = "";
+  await fetchBills(gen);
+  if (gen !== fetchGeneration) return;
+  await fetchAllTrends(gen);
+  if (gen !== fetchGeneration) return;
+  billsCache.set(selectedYear.value, {
+    billWeekMap: billWeekMap.value,
+    speciesWeekWeightMap: speciesWeekWeightMap.value,
+    totals: summaryTotals.value,
+  });
+  if (hasBillData.value) {
+    renderBillsChart();
+    renderPieChart();
+  }
+  if (hasSpeciesWeightData.value) renderSpeciesWeightChart();
 };
 
 // ---- 年份切换 ----
@@ -916,15 +1031,18 @@ const onYearChange = async () => {
   if (cached) {
     billWeekMap.value = cached.billWeekMap;
     speciesWeekWeightMap.value = cached.speciesWeekWeightMap;
+    summaryTotals.value = cached.totals;
     billsLoading.value = false;
     speciesWeightLoading.value = false;
     await fetchAllTrends(gen);
   } else {
-    await Promise.all([fetchAllTrends(gen), fetchBills(gen)]);
+    await fetchBills(gen);
+    if (gen === fetchGeneration) await fetchAllTrends(gen);
     if (gen === fetchGeneration) {
       billsCache.set(selectedYear.value, {
         billWeekMap: billWeekMap.value,
         speciesWeekWeightMap: speciesWeekWeightMap.value,
+        totals: summaryTotals.value,
       });
     }
   }

@@ -8,7 +8,7 @@
         <div
           class="shrink-0 flex items-center justify-between mb-2 border-b-2 border-dunhuang-yellow/30 pb-2 px-6 pt-6"
         >
-          <div class="flex items-center gap-4">
+          <div class="flex flex-wrap items-center gap-2 sm:gap-4">
             <button
               @click="goBackToList"
               class="text-dunhuang-text/60 hover:text-dunhuang-blue transition-colors flex items-center justify-center w-8 h-8 rounded-full hover:bg-dunhuang-yellow/20"
@@ -690,10 +690,10 @@
     <Transition name="switch-fade" mode="out-in">
       <div
         v-if="!showForm"
-        class="bg-white rounded-2xl shadow-md border border-dunhuang-yellow/30 p-8"
+        class="bg-white rounded-2xl shadow-md border border-dunhuang-yellow/30 p-4 sm:p-6 lg:p-8"
       >
-        <div class="flex items-center justify-between mb-6">
-          <div class="flex items-center gap-4">
+        <div class="flex flex-wrap items-center justify-between gap-3 mb-6">
+          <div class="flex flex-wrap items-center gap-2 sm:gap-4">
             <div
               class="flex items-center gap-6 border-b border-dunhuang-yellow/30 pb-2"
             >
@@ -755,7 +755,7 @@
                   class="absolute top-full mt-2 left-0 z-50"
                 >
                   <div
-                    class="bg-white rounded-2xl shadow-xl border border-dunhuang-yellow/20 w-[320px]"
+                    class="bg-white rounded-2xl shadow-xl border border-dunhuang-yellow/20 w-[min(320px,calc(100vw-2rem))]"
                     style="
                       box-shadow:
                         0 12px 36px rgba(92, 64, 51, 0.12),
@@ -1274,11 +1274,11 @@
     <Transition name="slide-up">
       <div
         v-if="showViewModal"
-        class="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-50 bg-white rounded-2xl shadow-2xl border border-dunhuang-yellow/30 w-full max-w-4xl max-h-[85vh] flex flex-col overflow-hidden"
+        class="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-50 bg-white rounded-2xl shadow-2xl border border-dunhuang-yellow/30 w-[calc(100vw-1.5rem)] max-w-4xl max-h-[85vh] flex flex-col overflow-hidden"
       >
         <!-- 标题栏 -->
         <div
-          class="flex items-center justify-between px-8 pt-6 pb-4 border-b border-dunhuang-yellow/20 shrink-0"
+          class="flex items-center justify-between px-4 sm:px-8 pt-6 pb-4 border-b border-dunhuang-yellow/20 shrink-0"
         >
           <div class="flex items-center gap-3">
             <div class="w-1 h-6 bg-dunhuang-red rounded-full"></div>
@@ -1311,7 +1311,7 @@
           class="grid grid-cols-1 md:grid-cols-2 gap-0 overflow-hidden flex-1"
         >
           <!-- 左侧：单据信息 -->
-          <div class="flex flex-col p-8 md:border-r border-dunhuang-yellow/20">
+          <div class="flex flex-col p-4 sm:p-8 md:border-r border-dunhuang-yellow/20">
             <h4
               class="text-base font-serif text-dunhuang-blue font-bold mb-5 flex items-center gap-2"
             >
@@ -1452,7 +1452,7 @@
           </div>
 
           <!-- 右侧：操作记录 -->
-          <div class="flex flex-col p-8 overflow-hidden min-h-0">
+          <div class="flex flex-col p-4 sm:p-8 overflow-hidden min-h-0">
             <h4
               class="text-base font-serif text-dunhuang-blue font-bold mb-5 flex items-center gap-2"
             >

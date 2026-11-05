@@ -1,6 +1,6 @@
 <template>
   <div
-    class="bg-white rounded-2xl shadow-md border border-dunhuang-yellow/30 p-8 relative"
+    class="bg-white rounded-2xl shadow-md border border-dunhuang-yellow/30 p-4 sm:p-6 lg:p-8 relative"
   >
     <Transition name="fade">
       <div
@@ -10,7 +10,7 @@
         {{ errorMsg }}
       </div>
     </Transition>
-    <div class="flex items-center justify-between mb-6">
+    <div class="flex flex-wrap items-center justify-between gap-3 mb-6">
       <div class="flex items-center gap-4">
         <SearchInput
           v-model="speciesSearchText"
@@ -59,9 +59,9 @@
     </div>
 
     <div
-      class="overflow-y-scroll overflow-x-hidden custom-scrollbar border border-dunhuang-yellow/30 rounded-lg bg-white h-[494px]"
+      class="overflow-y-scroll overflow-x-auto custom-scrollbar border border-dunhuang-yellow/30 rounded-lg bg-white h-[494px]"
     >
-      <table class="w-full text-left border-collapse whitespace-nowrap">
+      <table class="w-full min-w-[720px] text-left border-collapse whitespace-nowrap">
         <thead
           class="sticky top-0 bg-white/90 backdrop-blur z-20 flex w-full transform-gpu h-[42px]"
         >
@@ -257,7 +257,7 @@
         <Transition name="modal" appear>
           <div
             v-if="showAddModal"
-            class="bg-white rounded-2xl shadow-2xl border border-dunhuang-yellow w-full max-w-lg p-8"
+            class="bg-white rounded-2xl shadow-2xl border border-dunhuang-yellow w-full max-w-lg p-4 sm:p-8"
           >
             <div class="mb-6 border-b border-dunhuang-yellow/20 pb-4">
               <h4 class="text-xl font-serif text-dunhuang-blue font-bold">
@@ -500,7 +500,7 @@
         <Transition name="modal" appear>
           <div
             v-if="showImportModal"
-            class="bg-white rounded-2xl shadow-2xl border border-dunhuang-yellow w-full max-w-2xl p-8 max-h-[90vh] flex flex-col"
+            class="bg-white rounded-2xl shadow-2xl border border-dunhuang-yellow w-full max-w-2xl p-4 sm:p-8 max-h-[90vh] flex flex-col"
           >
             <div
               class="flex items-center gap-3 mb-6 border-b border-dunhuang-yellow/20 pb-4 shrink-0"

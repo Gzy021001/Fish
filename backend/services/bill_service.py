@@ -426,26 +426,30 @@ def get_price_trend(species_id: int, db: Session, year: int = None):
     if not species:
         raise HTTPException(status_code=404, detail="未找到该品种")
 
+    # 放生日期口径与列表/看板一致：单据日期缺失时回退品种日期
+    bill_day = func.coalesce(models.Bill.release_date, models.Species.release_date)
     query = (
         db.query(
-            models.Bill.release_date.label("date"),
+            bill_day.label("date"),
             func.avg(models.Bill.unit_price).label("avg_price"),
         )
+        .join(models.Species, models.Bill.species_id == models.Species.id)
         .filter(models.Bill.species_id == species.id)
-        .filter(models.Bill.release_date.isnot(None))
+        .filter(bill_day.isnot(None))
         .filter(models.Bill.is_deleted.is_(False))
+        .filter(models.Bill.status == "COMPLETED")
     )
 
     if year:
         query = query.filter(
-            models.Bill.release_date >= date(year, 1, 1),
-            models.Bill.release_date < date(year + 1, 1, 1),
+            bill_day >= date(year, 1, 1),
+            bill_day < date(year + 1, 1, 1),
         )
     else:
         thirty_days_ago = date.today() - timedelta(days=30)
-        query = query.filter(models.Bill.release_date >= thirty_days_ago)
+        query = query.filter(bill_day >= thirty_days_ago)
 
-    results = query.group_by(models.Bill.release_date).all()
+    results = query.group_by(bill_day).all()
 
     return [{"date": r.date.strftime('%Y-%m-%d'), "avg_price": float(r.avg_price)} for r in results]
 
@@ -454,27 +458,30 @@ def get_price_trends_batch(species_ids: list[int], db: Session, year: int = None
     if not species_ids:
         return {}
 
+    bill_day = func.coalesce(models.Bill.release_date, models.Species.release_date)
     query = (
         db.query(
             models.Bill.species_id,
-            models.Bill.release_date.label("date"),
+            bill_day.label("date"),
             func.avg(models.Bill.unit_price).label("avg_price"),
         )
+        .join(models.Species, models.Bill.species_id == models.Species.id)
         .filter(models.Bill.species_id.in_(species_ids))
-        .filter(models.Bill.release_date.isnot(None))
+        .filter(bill_day.isnot(None))
         .filter(models.Bill.is_deleted.is_(False))
+        .filter(models.Bill.status == "COMPLETED")
     )
 
     if year:
         query = query.filter(
-            models.Bill.release_date >= date(year, 1, 1),
-            models.Bill.release_date < date(year + 1, 1, 1),
+            bill_day >= date(year, 1, 1),
+            bill_day < date(year + 1, 1, 1),
         )
     else:
         thirty_days_ago = date.today() - timedelta(days=30)
-        query = query.filter(models.Bill.release_date >= thirty_days_ago)
+        query = query.filter(bill_day >= thirty_days_ago)
 
-    results = query.group_by(models.Bill.species_id, models.Bill.release_date).all()
+    results = query.group_by(models.Bill.species_id, bill_day).all()
 
     trends = {}
     for r in results:

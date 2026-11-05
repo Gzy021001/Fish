@@ -1,7 +1,7 @@
 <template>
   <div class="h-full flex flex-col">
     <div
-      class="bg-white rounded-2xl shadow-md border border-dunhuang-yellow/30 p-8 flex-1 flex flex-col min-h-0"
+      class="bg-white rounded-2xl shadow-md border border-dunhuang-yellow/30 p-4 sm:p-6 lg:p-8 flex-1 flex flex-col min-h-0"
     >
       <div
         class="flex items-center justify-between mb-8 border-b-2 border-dunhuang-yellow/30 pb-4 shrink-0"
@@ -382,7 +382,7 @@
         >
           <div v-if="importing" class="w-full max-w-md">
             <div
-              class="bg-white rounded-2xl border border-dunhuang-yellow/30 shadow-sm px-8 py-10 flex flex-col items-center gap-5"
+              class="bg-white rounded-2xl border border-dunhuang-yellow/30 shadow-sm px-4 sm:px-8 py-10 flex flex-col items-center gap-5"
             >
               <div class="relative w-14 h-14">
                 <div class="absolute inset-0 rounded-full bg-dunhuang-blue/10"></div>

@@ -8,8 +8,19 @@ import auth
 from database import get_db
 from cache import trends_cache
 from services.bill_service import get_price_trend, get_price_trends_batch
+from services.stats_service import get_dashboard_summary
 
 router = APIRouter(prefix="/api", tags=["stats"])
+
+
+@router.get("/stats/summary")
+def get_summary_route(
+    year: int = Query(..., ge=2000, le=2100),
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(auth.get_current_user),
+):
+    """看板聚合数据（后端 GROUP BY，前端不再拉全量单据）。"""
+    return get_dashboard_summary(db, year)
 
 
 @router.get("/stats/price-trend")
