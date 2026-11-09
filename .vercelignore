@@ -23,5 +23,7 @@ uploads/
 CLAUDE.md
 tests/
 
-# 移动端是独立构建，桌面端部署不需要
-Fish-mobile/
+# 本地临时文件：浏览器自动化用户数据目录（文件常被锁定，打包会 EBUSY）、日志与恢复文件
+_tmp_chrome*/
+_tmp_backend.log
+_billing_recover.txt

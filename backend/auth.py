@@ -4,7 +4,7 @@ from typing import Optional
 
 import bcrypt
 from jose import JWTError, jwt
-from fastapi import Depends, HTTPException, status
+from fastapi import Depends, HTTPException, Request, status
 from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy.orm import Session
 
@@ -12,6 +12,9 @@ import models
 from database import get_db
 
 _DEV_SECRET_KEY = "dunhuang-fish-platform-super-secret-key"
+
+# 未改密用户只放行这两个接口（改密本身 + 查询自身信息），其余一律 403
+_PASSWORD_CHANGE_EXEMPT_PATHS = {"/api/change-password", "/api/me"}
 
 
 def _is_production() -> bool:
@@ -53,7 +56,7 @@ def create_access_token(data: dict, expires_delta: Optional[timedelta] = None):
     encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
     return encoded_jwt
 
-def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)):
+def get_current_user(request: Request, token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)):
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
         detail="无法验证身份信息",
@@ -70,6 +73,13 @@ def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(
     user = db.query(models.User).filter(models.User.username == username).first()
     if user is None:
         raise credentials_exception
+
+    # 未改密的初始账号只能访问改密页相关接口（后端强制，前端路由守卫只是 UI 辅助）
+    if user.must_change_password and request.url.path not in _PASSWORD_CHANGE_EXEMPT_PATHS:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="请先修改初始密码后再使用系统",
+        )
     return user
 
 def require_admin(current_user: models.User = Depends(get_current_user)):
@@ -77,5 +87,15 @@ def require_admin(current_user: models.User = Depends(get_current_user)):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="权限不足：仅管理员可执行此操作",
+        )
+    return current_user
+
+
+def require_write(current_user: models.User = Depends(get_current_user)):
+    """写操作依赖：非 admin 账号为只读，禁止新增/修改/删除（业务约定：只有 admin 能改数据）。"""
+    if current_user.role != "admin":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="权限不足：非管理员账号为只读，不能新增、修改或删除数据",
         )
     return current_user

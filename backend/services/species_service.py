@@ -7,6 +7,7 @@ from sqlalchemy.exc import IntegrityError
 
 import models
 import schemas
+from utils import money
 from services.audit_service import record_create, record_update, record_delete
 from services.image_storage import store_image_asset
 
@@ -25,6 +26,24 @@ def list_species(db: Session, q: Optional[str] = None):
         )
         .all()
     )
+
+
+def list_species_paginated(db: Session, q: Optional[str], page: int, page_size: int):
+    """服务端分页版品种列表（page/page_size 均 > 0 时使用），返回 (items, total)。"""
+    query = db.query(models.Species).filter(models.Species.is_deleted.is_(False))
+    if q:
+        query = query.filter(models.Species.name_zh.ilike(f"%{q}%"))
+    total = query.count()
+    items = (
+        query.order_by(
+            models.Species.release_date.desc().nullslast(),
+            models.Species.id.desc(),
+        )
+        .offset((page - 1) * page_size)
+        .limit(page_size)
+        .all()
+    )
+    return items, total
 
 
 def serialize_species_list(items, include_images: bool = True):
@@ -134,7 +153,7 @@ def update_species(species_id: int, data: schemas.SpeciesUpdate, user: models.Us
     new_data = {
         "name_zh": species.name_zh,
         "default_unit": species.default_unit,
-        "default_price": species.default_price,
+        "default_price": money(species.default_price),
         "supplier_name": species.supplier_name,
         "supplier_note": species.supplier_note,
         "release_date": species.release_date,

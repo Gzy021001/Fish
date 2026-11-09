@@ -25,6 +25,26 @@ export function formatMoney(value: number | undefined | null): string {
   })
 }
 
+/**
+ * 解析 JWT payload（兼容 base64url 无 padding 的情况）。
+ * 仅用于读取服务端签发的展示字段（sub/role/mcp），不校验签名——校验在后端完成。
+ */
+export function decodeJwtPayload(token: string): Record<string, unknown> {
+  const part = token.split(".")[1] ?? ""
+  const b64 = part.replace(/-/g, "+").replace(/_/g, "/")
+  const padded = b64 + "=".repeat((4 - (b64.length % 4)) % 4)
+  const decoded = atob(padded)
+  const uriDecoded = decoded
+    .split("")
+    .map((c) => "%" + ("00" + c.charCodeAt(0).toString(16)).slice(-2))
+    .join("")
+  try {
+    return JSON.parse(decodeURIComponent(uriDecoded))
+  } catch {
+    return {}
+  }
+}
+
 // ============================================================
 //  操作记录差异对比
 // ============================================================

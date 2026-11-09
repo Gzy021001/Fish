@@ -411,7 +411,7 @@
               </div>
             </template>
           </div>
-          <div v-if="isEditing" class="flex justify-end gap-3 mt-6 shrink-0">
+          <div v-if="isEditing && authStore.isAdmin" class="flex justify-end gap-3 mt-6 shrink-0">
             <button
               @click="saveEdit"
               :disabled="saving"
@@ -469,6 +469,7 @@
 import { computed, onMounted, reactive, ref, watch } from "vue";
 import { onBeforeRouteLeave, useRoute, useRouter } from "vue-router";
 import api from "../api";
+import { useAuthStore } from "../stores/auth";
 import { apiErrorMessage, isAuthError } from "../lib/error";
 import {
   dateStr,
@@ -493,6 +494,7 @@ interface SpeciesItem {
 
 const route = useRoute();
 const router = useRouter();
+const authStore = useAuthStore();
 
 const loading = ref(true);
 const errorMsg = ref("");
@@ -680,6 +682,11 @@ watch(
 );
 
 watch(isEditing, (editing) => {
+  // 非 admin 为只读：即使直接通过 URL 进入编辑模式也强制退回查看模式
+  if (editing && !authStore.isAdmin) {
+    router.replace({ name: "SpeciesDetail", params: { id: route.params.id } });
+    return;
+  }
   if (editing && species.value) {
     initEditForm();
   }
@@ -687,6 +694,10 @@ watch(isEditing, (editing) => {
 
 onMounted(async () => {
   await fetchSpeciesDetail();
+  if (isEditing.value && !authStore.isAdmin) {
+    router.replace({ name: "SpeciesDetail", params: { id: route.params.id } });
+    return;
+  }
   if (isEditing.value && species.value) {
     initEditForm();
   }

@@ -29,7 +29,7 @@
           批量导出 ({{ selectedIds.length }})
         </button>
         <button
-          v-if="selectedIds.length > 0"
+          v-if="selectedIds.length > 0 && authStore.isAdmin"
           @click="confirmBatchRemoveSpecies"
           class="bg-dunhuang-red/90 hover:bg-dunhuang-red text-white px-4 py-2 rounded-lg text-sm transition-colors"
         >
@@ -50,6 +50,7 @@
           导出
         </button>
         <button
+          v-if="authStore.isAdmin"
           @click="showAddModal = true"
           class="bg-dunhuang-blue hover:bg-dunhuang-green text-white px-4 py-2 rounded-lg text-sm transition-colors"
         >
@@ -181,12 +182,14 @@
                   查看
                 </button>
                 <button
+                  v-if="authStore.isAdmin"
                   @click="openDetail(sp.id, true)"
                   class="px-2 py-1.5 rounded text-sm whitespace-nowrap shrink-0 transition-colors text-dunhuang-green hover:bg-dunhuang-green/10 border border-transparent hover:border-dunhuang-green/30"
                 >
                   编辑
                 </button>
                 <button
+                  v-if="authStore.isAdmin"
                   @click="confirmRemoveSpecies(sp.id)"
                   class="px-2 py-1.5 rounded text-sm whitespace-nowrap shrink-0 transition-colors text-dunhuang-red hover:bg-dunhuang-red/10 border border-transparent hover:border-dunhuang-red/30"
                 >
@@ -786,21 +789,30 @@ const pageSize = ref(10);
 // 品种库列表显示全部品种（含冰块、打包袋等耗材，不再隐藏）
 const displaySpecies = computed(() => species.value);
 
-const totalItems = computed(() => displaySpecies.value.length);
+// 服务端分页：总数以后端 X-Total-Count 为准，翻页/改条数触发重新拉取
+const totalItems = ref(0);
 const totalPages = computed(() => Math.ceil(totalItems.value / pageSize.value));
 
-// 删除/筛选后当前页可能越界：自动回退到最后一页，避免表格空白、分页器无高亮
+watch(currentPage, () => {
+  fetchSpecies();
+});
+
+watch(pageSize, () => {
+  if (currentPage.value !== 1) {
+    currentPage.value = 1; // watch(currentPage) 统一拉取
+  } else {
+    fetchSpecies();
+  }
+});
+
+// 删除后当前页可能越界：自动回退到最后一页（watch(currentPage) 会重新拉取）
 watch(totalPages, (t) => {
   if (t > 0 && currentPage.value > t) {
     currentPage.value = t;
   }
 });
 
-const paginatedSpecies = computed(() => {
-  const start = (currentPage.value - 1) * pageSize.value;
-  const end = start + pageSize.value;
-  return displaySpecies.value.slice(start, end);
-});
+const paginatedSpecies = computed(() => displaySpecies.value);
 
 const deleteConfirm = ref({
   show: false,
@@ -966,11 +978,18 @@ const fetchSpecies = async () => {
     const params = new URLSearchParams();
     const q = speciesSearch.value.trim();
     if (q) params.set("q", q);
+    params.set("page", String(currentPage.value));
+    params.set("page_size", String(pageSize.value));
     const url = params.toString()
       ? `/species?${params.toString()}`
       : "/species";
     const res = await api.get(url);
     species.value = Array.isArray(res.data) ? res.data : [];
+    const headerTotal = Number(res.headers?.["x-total-count"]);
+    totalItems.value =
+      Number.isFinite(headerTotal) && headerTotal > 0
+        ? headerTotal
+        : species.value.length;
   } catch (error: any) {
     if (isAuthError(error)) return;
     console.error("Failed to fetch species", error);
@@ -979,16 +998,22 @@ const fetchSpecies = async () => {
 };
 
 const handleSearch = () => {
-  currentPage.value = 1;
   speciesSearch.value = speciesSearchText.value.trim();
-  fetchSpecies();
+  if (currentPage.value !== 1) {
+    currentPage.value = 1; // watch(currentPage) 统一拉取
+  } else {
+    fetchSpecies();
+  }
 };
 
 const handleClearSearch = () => {
   speciesSearch.value = "";
   speciesSearchText.value = "";
-  currentPage.value = 1;
-  fetchSpecies();
+  if (currentPage.value !== 1) {
+    currentPage.value = 1; // watch(currentPage) 统一拉取
+  } else {
+    fetchSpecies();
+  }
 };
 
 const addSpecies = async () => {
@@ -1029,6 +1054,7 @@ const addSpecies = async () => {
 
     closeAddModal();
     await invalidateCache();
+    await fetchSpecies();
   } catch (error: any) {
     if (isAuthError(error)) return;
     errorMsg.value = apiErrorMessage(error, "保存品种");
@@ -1063,11 +1089,13 @@ const executeDeleteSpecies = async () => {
       selectedIds.value = [];
       deleteConfirm.value.show = false;
       await invalidateCache();
+      await fetchSpecies();
     } catch (error: any) {
       if (isAuthError(error)) return;
       errorMsg.value = apiErrorMessage(error, "批量删除");
       deleteConfirm.value.show = false;
       await invalidateCache();
+      await fetchSpecies();
     }
   } else {
     const id = deleteConfirm.value.id;
@@ -1079,6 +1107,7 @@ const executeDeleteSpecies = async () => {
       );
       deleteConfirm.value.show = false;
       await invalidateCache();
+      await fetchSpecies();
     } catch (error: any) {
       if (isAuthError(error)) return;
       errorMsg.value = apiErrorMessage(error, "删除品种");
@@ -1258,6 +1287,7 @@ const confirmImportSpecies = async () => {
     importPreview.value = [];
     showImportModal.value = false;
     await invalidateCache();
+    await fetchSpecies();
   } catch (error: any) {
     if (isAuthError(error)) return;
     errorMsg.value = apiErrorMessage(error, "导入品种");

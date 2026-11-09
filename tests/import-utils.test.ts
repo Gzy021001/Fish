@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest"
-import { detectColumns, extractRowPayments, normalizeSpeciesName, parseImportRows } from "../src/lib/importUtils"
+import {
+  detectColumns,
+  evalSimpleFormula,
+  extractRowPayments,
+  normalizeSpeciesName,
+  parseImportRows,
+} from "../src/lib/importUtils"
 
 const COLUMNS = {
   species: "品种",
@@ -47,15 +53,26 @@ describe("parseImportRows", () => {
     expect(result.skippedRows).toHaveLength(0)
   })
 
-  it("斤自动换算为公斤，名称别名归一化", () => {
+  it("斤制表格：重量×0.5 转公斤、单价×2 转元/公斤，总计不变", () => {
     const rows = [
       { 品种: "大头（鳙鱼）", "重量(斤)": 200, "单价(元)": 8, 服务费: 0, 放生日期: "2026-01-03" },
       { 品种: "小油锥", "重量(斤)": 10.5, "单价(元)": 50, 服务费: 0, 放生日期: "2026-01-03" },
     ]
     const result = parseImportRows(rows, COLUMNS, "2026-01-03")
     expect(result.validRows).toHaveLength(2)
-    expect(result.validRows[0]).toMatchObject({ name_zh: "鳙鱼", weight: 100 })
-    expect(result.validRows[1]).toMatchObject({ name_zh: "油锥", weight: 5.25 })
+    // 200斤×8元/斤 = 1600元；换算后 100公斤×16元/公斤 = 1600元（总计不变）
+    expect(result.validRows[0]).toMatchObject({ name_zh: "鳙鱼", weight: 100, unit_price: 16 })
+    expect(result.validRows[1]).toMatchObject({ name_zh: "油锥", weight: 5.25, unit_price: 100 })
+  })
+
+  it("公斤制表格（重量/单价都按公斤）不做换算", () => {
+    const cols = { species: "品种", weight: "重量(公斤)", unit_price: "单价(元/公斤)", fee_value: "服务费", release_date: "放生日期" }
+    const rows = [
+      { 品种: "草鱼", "重量(公斤)": 100, "单价(元/公斤)": 6, 服务费: 0, 放生日期: "2026-01-03" },
+    ]
+    const result = parseImportRows(rows, cols, "2026-01-03")
+    expect(result.validRows).toHaveLength(1)
+    expect(result.validRows[0]).toMatchObject({ weight: 100, unit_price: 6 })
   })
 
   it("列名自动识别（含括号/空格差异）", () => {
@@ -75,6 +92,28 @@ describe("parseImportRows", () => {
     expect(normalizeSpeciesName("大冰块（块）")).toBe("冰块")
     expect(normalizeSpeciesName("带子（个）")).toBe("带子")
     expect(normalizeSpeciesName("带子(件)")).toBe("带子")
+  })
+})
+
+describe("evalSimpleFormula", () => {
+  it("多次称重相加的重量公式能求值", () => {
+    expect(evalSimpleFormula("79+77")).toBe(156)
+    expect(evalSimpleFormula("=61.3+60.8+63.6")).toBe(185.7)
+    expect(evalSimpleFormula("40+40+40+40+40+40+40+40+40+33.5")).toBe(393.5)
+  })
+
+  it("支持括号与四则运算，消除浮点尾差", () => {
+    expect(evalSimpleFormula("(2+3)*4")).toBe(20)
+    expect(evalSimpleFormula("10/4")).toBe(2.5)
+    expect(evalSimpleFormula("1.1+2.2")).toBe(3.3)
+  })
+
+  it("SUM 等函数、单元格引用、非法字符返回 null（回退为空）", () => {
+    expect(evalSimpleFormula("SUM(D4:D27)")).toBeNull()
+    expect(evalSimpleFormula("D10+1")).toBeNull()
+    expect(evalSimpleFormula("1+abc")).toBeNull()
+    expect(evalSimpleFormula("")).toBeNull()
+    expect(evalSimpleFormula(null)).toBeNull()
   })
 })
 

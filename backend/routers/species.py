@@ -1,6 +1,6 @@
 from typing import List, Optional
 
-from fastapi import APIRouter, Depends, File, Query, UploadFile
+from fastapi import APIRouter, Depends, File, Query, UploadFile, Response
 from sqlalchemy.orm import Session
 
 import models
@@ -10,6 +10,7 @@ from database import get_db
 from cache import species_cache
 from services.species_service import (
     list_species,
+    list_species_paginated,
     get_species,
     create_species,
     update_species,
@@ -25,16 +26,38 @@ router = APIRouter(prefix="/api", tags=["species"])
 def list_species_route(
     q: Optional[str] = Query(None, description="搜索品种名称"),
     include_images: bool = Query(False, description="是否在列表中包含图片字段（base64 图片不会进列表）"),
+    page: int = 0,
+    page_size: int = 0,
+    response: Response = None,
     db: Session = Depends(get_db),
     current_user: models.User = Depends(auth.get_current_user),
 ):
+    # 服务端分页参数（0 表示不分页返回全部，保持旧行为）；page_size 上限 200
+    if page < 0:
+        page = 0
+    if page_size < 0:
+        page_size = 0
+    if page_size > 200:
+        page_size = 200
+
+    if page > 0 and page_size > 0:
+        # 服务端分页模式：总数放 X-Total-Count 头，分页结果不进缓存
+        items, total = list_species_paginated(db, q, page, page_size)
+        if response is not None:
+            response.headers["X-Total-Count"] = str(total)
+        return serialize_species_list(items, include_images=include_images)
+
     cache_key = f"species_list_{q or 'all'}_{'with_images' if include_images else 'lite'}"
     cached_result = species_cache.get(cache_key)
     if cached_result is not None:
+        if response is not None:
+            response.headers["X-Total-Count"] = str(len(cached_result))
         return cached_result
-        
+
     result = serialize_species_list(list_species(db, q), include_images=include_images)
     species_cache.set(cache_key, result)
+    if response is not None:
+        response.headers["X-Total-Count"] = str(len(result))
     return result
 
 
@@ -70,7 +93,7 @@ def get_species_route(
 def create_species_route(
     species: schemas.SpeciesCreate,
     db: Session = Depends(get_db),
-    current_user: models.User = Depends(auth.get_current_user),
+    current_user: models.User = Depends(auth.require_write),
 ):
     result = create_species(species, current_user, db)
     species_cache.clear()
@@ -82,7 +105,7 @@ def update_species_route(
     species_id: int,
     species_update: schemas.SpeciesUpdate,
     db: Session = Depends(get_db),
-    current_user: models.User = Depends(auth.get_current_user),
+    current_user: models.User = Depends(auth.require_write),
 ):
     result = update_species(species_id, species_update, current_user, db)
     species_cache.clear()
@@ -94,7 +117,7 @@ def upload_species_image_route(
     species_id: int,
     image: UploadFile = File(...),
     db: Session = Depends(get_db),
-    current_user: models.User = Depends(auth.get_current_user),
+    current_user: models.User = Depends(auth.require_write),
 ):
     result = upload_image(species_id, image, db)
     species_cache.clear()
@@ -105,7 +128,7 @@ def upload_species_image_route(
 def delete_species_route(
     species_id: int,
     db: Session = Depends(get_db),
-    current_user: models.User = Depends(auth.get_current_user),
+    current_user: models.User = Depends(auth.require_write),
 ):
     result = delete_species(species_id, current_user, db)
     species_cache.clear()

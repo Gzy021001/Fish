@@ -4,6 +4,8 @@ import os
 import time
 import json
 import urllib.request
+import asyncio
+import threading
 from fastapi import FastAPI, Request, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
@@ -22,22 +24,39 @@ logger = logging.getLogger(__name__)
 
 _initialized = False
 _init_error = None
+_init_in_progress = False
+_last_init_attempt = 0.0
+_init_lock = threading.Lock()
+# 初始化失败后的重试间隔（秒）：冷启动时 DB 抖动导致的失败，后续请求会触发重试而不是永久 503
+_INIT_RETRY_INTERVAL = 10.0
 
 
 def _tables_exist():
-    """快速检查：users 表存在说明 DB 已初始化，跳过 create_all"""
-    try:
-        from sqlalchemy import inspect
-        inspector = inspect(engine)
-        return "users" in inspector.get_table_names()
-    except Exception:
-        return False
+    """快速检查：users 表存在说明 DB 已初始化，跳过 create_all。
+
+    单连接单查询（方言分支）：相比 inspector 的 information_schema 多表查询，
+    本地连远程库时把探测从多次往返降到一次 RTT。
+    连接失败不再吞掉返回 False（那会误判"没有表"而触发 create_all 加重远程库压力），
+    而是向上抛，让 init 快速失败并进入 10 秒重试。
+    """
+    from sqlalchemy import text
+
+    if engine.dialect.name == "postgresql":
+        sql = "SELECT to_regclass('public.users') IS NOT NULL"
+    else:
+        sql = "SELECT 1 FROM sqlite_master WHERE type='table' AND name='users'"
+    with engine.connect() as conn:
+        row = conn.execute(text(sql)).fetchone()
+        return bool(row and row[0])
 
 
 def init_app():
-    global _initialized, _init_error
-    if _initialized:
-        return
+    global _initialized, _init_error, _init_in_progress, _last_init_attempt
+    with _init_lock:
+        if _initialized or _init_in_progress:
+            return
+        _init_in_progress = True
+    _last_init_attempt = time.time()
 
     logger.info("Initializing application...")
     try:
@@ -59,14 +78,14 @@ def init_app():
         bootstrap.run()
         _initialized = True
         _init_error = None
-        logger.info("Application initialized successfully.")
+        logger.info("Application initialized successfully in %.2fs", time.time() - _last_init_attempt)
     except Exception as exc:
         _init_error = str(exc)
         logger.error("Initialization failed: %s", _init_error)
         logger.error(traceback.format_exc())
+    finally:
+        _init_in_progress = False
 
-
-import asyncio
 
 def create_app() -> FastAPI:
     app = FastAPI(title="Fish Price Platform API")
@@ -83,9 +102,11 @@ def create_app() -> FastAPI:
             init_app()
 
     app.add_middleware(GZipMiddleware, minimum_size=1000)
+    # 默认放开（本地 dev / 移动端跨域直连），生产可通过 CORS_ORIGINS 收紧（逗号分隔）
+    cors_origins = [o.strip() for o in os.getenv("CORS_ORIGINS", "*").split(",") if o.strip()]
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=["*"],
+        allow_origins=cors_origins,
         allow_methods=["*"],
         allow_headers=["*"],
     )
@@ -109,11 +130,23 @@ def create_app() -> FastAPI:
         if request.url.path.startswith("/api/health"):
             response = await call_next(request)
         elif not _initialized:
+            # 初始化失败后按间隔自动重试，避免该实例一直 503 到被回收
+            if (
+                not _init_in_progress
+                and time.time() - _last_init_attempt > _INIT_RETRY_INTERVAL
+            ):
+                loop = asyncio.get_running_loop()
+                loop.run_in_executor(None, init_app)
             response = JSONResponse(
                 status_code=503,
                 content={
-                    "detail": "服务器正在启动，请稍后重试",
-                    "error": _init_error if _init_error else None,
+                    # 初始化失败时给准确提示，避免用户误以为"服务器还在启动"
+                    "detail": (
+                        "服务暂时不可用：数据库连接失败，正在自动重试，请稍后刷新"
+                        if _init_error
+                        else "服务器正在启动，请稍后重试"
+                    ),
+                    "error": "初始化失败，请检查数据库连接配置" if _init_error else None,
                 },
             )
         else:
@@ -138,10 +171,17 @@ def create_app() -> FastAPI:
 
     @app.get("/api/health")
     def health_check():
+        # 健康检查对外只暴露状态，不泄露内部异常细节（error 只给一句笼统提示）
+        if _initialized:
+            status_text = "ok"
+        elif _init_error:
+            status_text = "error"
+        else:
+            status_text = "warming_up"
         return {
-            "status": "ok" if _initialized else ("error" if _init_error else "warming_up"),
+            "status": status_text,
             "initialized": _initialized,
-            "error": _init_error,
+            "error": "初始化失败，请检查数据库连接配置" if _init_error else None,
         }
 
     @app.exception_handler(Exception)

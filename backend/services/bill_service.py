@@ -2,18 +2,27 @@ import json
 from datetime import date, timedelta
 
 from fastapi import HTTPException
-from sqlalchemy import func, cast, String
+from sqlalchemy import func, or_
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
 
 import models
 import schemas
-from utils import calculate_bill_amounts, get_bill_or_404
-from services.audit_service import record_create, record_update, record_delete
+from utils import calculate_bill_amounts, get_bill_or_404, money
+from services.audit_service import record_create, record_update, record_delete, record_replace
 
 
-def create_bill(data: schemas.BillCreate, user: models.User, db: Session, commit: bool = True):
-    if data.weight <= 0 or data.unit_price <= 0:
+def _money_or_none(value):
+    """金额归一为 Decimal 字符串化；None 保持 None（与列值语义一致）。"""
+    if value is None:
+        return None
+    return money(value)
+
+
+def create_bill(data: schemas.BillCreate, user: models.User, db: Session, commit: bool = True, allow_zero_weight: bool = False):
+    # 批量导入兼容源表"重量未填"的行：仅批量路径（allow_zero_weight=True）允许重量为 0 的单据入账，
+    # 手工录入路径保持"重量必须大于 0"的原有校验不变。
+    if data.unit_price <= 0 or (data.weight <= 0 and not allow_zero_weight):
         raise HTTPException(status_code=400, detail="重量和单价必须大于0")
 
     species = db.query(models.Species).filter(
@@ -68,56 +77,7 @@ def create_bill(data: schemas.BillCreate, user: models.User, db: Session, commit
     return bill
 
 
-def sync_bills(date_str: str, user: models.User, db: Session):
-    draft_bills = (
-        db.query(models.Bill)
-        .filter(models.Bill.status == "DRAFT", models.Bill.is_deleted.is_(False))
-        .all()
-    )
-    count = 0
-    today = date.today()
-    for bill in draft_bills:
-        if bill.release_date and bill.release_date < today:
-            bill.status = "COMPLETED"
-            count += 1
-
-            record_update(
-                db,
-                entity_type="BILL",
-                user_id=user.id,
-                bill_id=bill.id,
-                old_data={"status": "DRAFT"},
-                new_data={"status": "COMPLETED"},
-            )
-
-    db.commit()
-    return count
-
-
-def archive_bills(bill_ids: list[int], user: models.User, db: Session):
-    bills = db.query(models.Bill).filter(
-        models.Bill.id.in_(bill_ids),
-        models.Bill.status == "DRAFT",
-        models.Bill.is_deleted.is_(False),
-    ).all()
-    count = 0
-    for bill in bills:
-        bill.status = "COMPLETED"
-        count += 1
-        record_update(
-            db,
-            entity_type="BILL",
-            user_id=user.id,
-            bill_id=bill.id,
-            old_data={"status": "DRAFT"},
-            new_data={"status": "COMPLETED"},
-        )
-    db.commit()
-    return count
-
-
-def _apply_bill_filters(query, status=None, date_from=None, date_to=None, date_str=None, q=None):
-    from sqlalchemy import or_
+def _apply_bill_filters(query, status=None, date_from=None, date_to=None, date_str=None, q=None, exclude_packaging=False):
     try:
         if status:
             query = query.filter(models.Bill.status == status)
@@ -146,9 +106,18 @@ def _apply_bill_filters(query, status=None, date_from=None, date_to=None, date_s
         
     if q:
         query = query.filter(models.Species.name_zh.ilike(f"%{q}%"))
+    # 历史单据视图排除打包耗材（冰/打包/袋），与前端 isPackagingItem 口径一致
+    if exclude_packaging:
+        query = query.filter(
+            ~or_(
+                models.Species.name_zh.like("%冰%"),
+                models.Species.name_zh.like("%打包%"),
+                models.Species.name_zh.like("%袋%"),
+            )
+        )
     return query
 
-def list_bills(db: Session, page: int = 1, page_size: int = 10, limit: int = 100, status: str = None, date: str = None, date_from: str = None, date_to: str = None, q: str = None):
+def list_bills(db: Session, page: int = 1, page_size: int = 10, limit: int = 100, status: str = None, date: str = None, date_from: str = None, date_to: str = None, q: str = None, exclude_packaging: bool = False):
     from sqlalchemy.orm import joinedload
 
     # 单页硬上限 200 条；page_size=-1（全量）语义保留，供导出/历史页使用
@@ -158,7 +127,7 @@ def list_bills(db: Session, page: int = 1, page_size: int = 10, limit: int = 100
         limit = 200
 
     query = db.query(models.Bill).join(models.Species).options(joinedload(models.Bill.species)).filter(models.Bill.is_deleted.is_(False)).order_by(func.coalesce(models.Bill.release_date, models.Species.release_date).desc().nullslast(), models.Bill.created_at.desc(), models.Bill.id.desc())
-    query = _apply_bill_filters(query, status, date_from, date_to, date, q)
+    query = _apply_bill_filters(query, status, date_from, date_to, date, q, exclude_packaging)
 
     if limit > 0:
         query = query.limit(limit)
@@ -183,7 +152,7 @@ def list_bills(db: Session, page: int = 1, page_size: int = 10, limit: int = 100
         func.sum(models.Bill.subtotal),
         func.sum(models.Bill.total_amount)
     ).join(models.Species).filter(models.Bill.is_deleted.is_(False))
-    sum_query = _apply_bill_filters(sum_query, status, date_from, date_to, date, q)
+    sum_query = _apply_bill_filters(sum_query, status, date_from, date_to, date, q, exclude_packaging)
 
     sum_result = sum_query.first()
     sum_weight = (sum_result[0] or 0.0) if sum_result else 0.0
@@ -268,7 +237,7 @@ def update_bill(bill_id: int, data: schemas.BillCreate, user: models.User, db: S
     if data.release_date and data.release_date <= date.today() - timedelta(days=1):
         bill.status = "COMPLETED"
     else:
-        bill.status = data.status
+        bill.status = data.status or "DRAFT"
     bill.subtotal = subtotal
     bill.total_amount = total_amount
     if data.release_date is not None:
@@ -281,20 +250,21 @@ def update_bill(bill_id: int, data: schemas.BillCreate, user: models.User, db: S
 
     db.flush()
 
+    # 与 old_data 同口径归一（Decimal 化），避免日志里 "12.30"(str) 与 12.3(float) 混用
     new_data = {
         "species_id": bill.species_id,
-        "weight": bill.weight,
-        "unit_price": bill.unit_price,
-        "currency": bill.currency,
-        "fee_type": bill.fee_type,
-        "fee_value": bill.fee_value,
+        "weight": money(data.weight),
+        "unit_price": money(data.unit_price),
+        "currency": data.currency,
+        "fee_type": data.fee_type,
+        "fee_value": money(data.fee_value),
         "release_date": bill.release_date,
         "status": bill.status,
         "payment_method": bill.payment_method,
-        "weekly_donation": bill.weekly_donation,
-        "alipay_amount": bill.alipay_amount,
-        "wechat_amount": bill.wechat_amount,
-        "suixi_amount": bill.suixi_amount,
+        "weekly_donation": _money_or_none(data.weekly_donation),
+        "alipay_amount": _money_or_none(data.alipay_amount),
+        "wechat_amount": _money_or_none(data.wechat_amount),
+        "suixi_amount": _money_or_none(data.suixi_amount),
     }
     record_update(
         db,
@@ -347,7 +317,7 @@ def delete_bill(bill_id: int, user: models.User, db: Session):
 def batch_create_bills(data: schemas.BatchImportRequest, user: models.User, db: Session):
     success_count = 0
     skip_count = 0
-    bills = []
+    affected_species_ids: set[int] = set()
     errors = []
 
     if data.replace:
@@ -358,22 +328,37 @@ def batch_create_bills(data: schemas.BatchImportRequest, user: models.User, db: 
         for row in data.rows:
             if row.release_date:
                 dates_to_replace.add(row.release_date)
+        deleted_count = 0
         for d in dates_to_replace:
             # 软删除当天已有单据（保留审计引用），再插入新单据
-            db.query(models.Bill).filter(
+            result = db.query(models.Bill).filter(
                 models.Bill.release_date >= d,
                 models.Bill.release_date < (d + timedelta(days=1)),
                 models.Bill.is_deleted.is_(False),
             ).update({"is_deleted": True}, synchronize_session=False)
+            deleted_count += result or 0
         db.flush()
+        if dates_to_replace:
+            # 覆盖软删不走逐条 DELETE 审计，写一条汇总 REPLACE 审计保留追溯链
+            record_replace(
+                db,
+                entity_type="BILL",
+                user_id=user.id,
+                details={
+                    "action": "导入覆盖",
+                    "dates": sorted(d.isoformat() for d in dates_to_replace),
+                    "deleted_bills": deleted_count,
+                },
+            )
 
     existing_species = {s.name_zh: s for s in db.query(models.Species).filter(models.Species.is_deleted.is_(False)).all()}
 
     for row in data.rows:
         name_zh = row.name_zh.strip()
-        if not name_zh or row.unit_price <= 0:
+        # 兼容源表「重量未填」的行：重量为 0 照常入账（金额=服务费），仅负数重量视为无效跳过。
+        if not name_zh or row.unit_price <= 0 or (row.weight or 0) < 0:
             skip_count += 1
-            errors.append(f'跳过 "{name_zh or "(空)"}": 名称无效或单价 <= 0')
+            errors.append(f'跳过 "{name_zh or "(空)"}": 名称无效、单价 <= 0 或重量为负')
             continue
 
         species = existing_species.get(name_zh)
@@ -407,8 +392,8 @@ def batch_create_bills(data: schemas.BatchImportRequest, user: models.User, db: 
             wechat_amount=row.wechat_amount,
             suixi_amount=row.suixi_amount,
         )
-        bill = create_bill(bill_create, user, db, commit=False)
-        bills.append(bill)
+        create_bill(bill_create, user, db, commit=False, allow_zero_weight=True)
+        affected_species_ids.add(species.id)
         success_count += 1
 
     db.commit()
@@ -416,7 +401,7 @@ def batch_create_bills(data: schemas.BatchImportRequest, user: models.User, db: 
     return schemas.BatchImportResult(
         success_count=success_count,
         skip_count=skip_count,
-        bills=bills,
+        affected_species_ids=sorted(affected_species_ids),
         errors=errors,
     )
 

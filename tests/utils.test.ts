@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { dateStr, formatMoney, isPackagingItem, getSpeciesCategory, dayLabel, diffFields } from '../src/lib/utils'
+import { dateStr, formatMoney, isPackagingItem, getSpeciesCategory, dayLabel, diffFields, decodeJwtPayload } from '../src/lib/utils'
 
 describe('dateStr', () => {
   it('returns empty string for null/undefined/empty', () => {
@@ -99,5 +99,32 @@ describe('diffFields', () => {
       [{ key: 'name', label: '名称' }],
     )
     expect(result).toHaveLength(0)
+  })
+})
+
+describe('decodeJwtPayload', () => {
+  it('decodes a standard base64 payload', () => {
+    const payload = Buffer.from(JSON.stringify({ role: 'admin', mcp: true })).toString('base64')
+    const token = `header.${payload}.sig`
+    const decoded = decodeJwtPayload(token)
+    expect(decoded.role).toBe('admin')
+    expect(decoded.mcp).toBe(true)
+  })
+
+  it('decodes a base64url payload without padding', () => {
+    const payload = Buffer.from(JSON.stringify({ sub: 'admin', role: 'operator', mcp: false }))
+      .toString('base64')
+      .replace(/\+/g, '-')
+      .replace(/\//g, '_')
+      .replace(/=+$/, '')
+    const token = `header.${payload}.sig`
+    const decoded = decodeJwtPayload(token)
+    expect(decoded.sub).toBe('admin')
+    expect(decoded.role).toBe('operator')
+    expect(decoded.mcp).toBe(false)
+  })
+
+  it('returns empty object for malformed token', () => {
+    expect(decodeJwtPayload('not-a-jwt')).toEqual({})
   })
 })

@@ -57,6 +57,74 @@ export function normalizeSpeciesName(raw: string): string {
 
 // 删除了多余的函数
 
+/**
+ * 对 Excel 里的简单算术公式求值（如 "79+77"、"61.3+60.8+63.6"、"(2+3)*4"）。
+ * 背景：有些表格由程序生成、公式没有缓存值，SheetJS 读不到 cell.v（读成 0/空），
+ * 供应商把多次称重写成「=79+77」这类公式，直接读会丢重量。
+ * 只接受数字、+ - * /、括号、空格；SUM(...)、单元格引用等一律返回 null（调用方回退为空）。
+ */
+export function evalSimpleFormula(formula: unknown): number | null {
+  if (formula == null) return null
+  const src = String(formula).trim().replace(/^=/, "").replace(/\s+/g, "")
+  if (!src || !/^[\d+\-*/().]+$/.test(src)) return null
+
+  let i = 0
+  function parseExpr(): number | null {
+    let left = parseTerm()
+    if (left === null) return null
+    while (i < src.length && (src[i] === "+" || src[i] === "-")) {
+      const op = src[i++]
+      const right = parseTerm()
+      if (right === null) return null
+      left = op === "+" ? left + right : left - right
+    }
+    return left
+  }
+  function parseTerm(): number | null {
+    let left = parseFactor()
+    if (left === null) return null
+    while (i < src.length && (src[i] === "*" || src[i] === "/")) {
+      const op = src[i++]
+      const right = parseFactor()
+      if (right === null) return null
+      if (op === "*") left = left * right
+      else {
+        if (right === 0) return null
+        left = left / right
+      }
+    }
+    return left
+  }
+  function parseFactor(): number | null {
+    if (src[i] === "+") {
+      i++
+      return parseFactor()
+    }
+    if (src[i] === "-") {
+      i++
+      const v = parseFactor()
+      return v === null ? null : -v
+    }
+    if (src[i] === "(") {
+      i++
+      const v = parseExpr()
+      if (v === null || src[i] !== ")") return null
+      i++
+      return v
+    }
+    const start = i
+    while (i < src.length && /[0-9.]/.test(src[i])) i++
+    if (start === i) return null
+    const n = Number(src.slice(start, i))
+    return Number.isFinite(n) ? n : null
+  }
+
+  const value = parseExpr()
+  if (value === null || i !== src.length || !Number.isFinite(value)) return null
+  // 消除浮点尾差（如 185.70000000000002）
+  return Math.round(value * 1e6) / 1e6
+}
+
 export function parseExcelDate(raw: unknown, fallbackYear?: number): string | null {
   if (raw == null) return null
   if (raw instanceof Date) {
@@ -157,9 +225,6 @@ export function parseImportRows(jsonData: Record<string, unknown>[], columns: Re
   const skippedRows: SkippedRow[] = []
   const fallbackYear = fallbackReleaseDate ? parseInt(fallbackReleaseDate.substring(0, 4)) : undefined
 
-  console.log("[parseImportRows] input rows:", jsonData.length, "| columns:", JSON.stringify(columns), "| fallbackDate:", fallbackReleaseDate);
-  let debugCount = 0;
-
   for (const [idx, raw] of jsonData.entries()) {
     const rs = columns.species ? raw[columns.species] : null
     const rw = columns.weight ? raw[columns.weight] : null
@@ -167,10 +232,6 @@ export function parseImportRows(jsonData: Record<string, unknown>[], columns: Re
     const rf = columns.fee_value ? raw[columns.fee_value] : null
     let rd = columns.release_date ? raw[columns.release_date] : null
     if (!rd && fallbackReleaseDate) rd = fallbackReleaseDate
-
-    if (debugCount < 5) {
-      console.log(`[parseImportRows] row[${idx}]: rs="${rs}" rw="${rw}" rp="${rp}" rf="${rf}" rd="${rd}"`);
-    }
 
     // 完全空白的行（品种/重量/单价/服务费都为空）直接忽略，不计入"跳过"统计
     const isBlankRow = [rs, rw, rp, rf].every(
@@ -184,17 +245,17 @@ export function parseImportRows(jsonData: Record<string, unknown>[], columns: Re
     if (isNonBillRow(nm) || isNonBillRow(String(rs ?? ""))) { continue }
     // 打包耗材（冰块/打包袋等）不是物命品种，直接忽略（与物命列表/导出的过滤规则一致）
     if (isPackagingItem(nm)) { continue }
-    const up = parseFloat(String(rp ?? 0))
+    let up = parseFloat(String(rp ?? 0))
     if (isNaN(up) || up <= 0) { skippedRows.push({ rowIndex: idx + 2, reason: "\u5355\u4ef7\u65e0\u6548", rawData: raw }); continue }
     let wt = isNaN(parseFloat(String(rw ?? ""))) ? 0 : parseFloat(String(rw ?? ""))
-    if (detectJinUnit(columns.weight) && wt > 0) wt = wt * JIN_TO_KG
+    // 系统内部单位：重量=公斤、单价=元/公斤；模板表头「重量(斤)」「单价(元)」是斤制。
+    // 只换算重量会导致 总计=公斤×元/斤 少一半，单价必须同步 ×2（斤价 → 公斤价）。
+    const isJinUnit = detectJinUnit(columns.weight)
+    if (isJinUnit && wt > 0) wt = wt * JIN_TO_KG
+    if (isJinUnit) up = up * 2
     const fv = isNaN(parseFloat(String(rf ?? ""))) ? 0 : parseFloat(String(rf ?? ""))
     const rd2 = parseExcelDate(rd, fallbackYear)
     validRows.push({ name_zh: nm, weight: wt, unit_price: up, fee_value: fv, release_date: rd2, matrixRow: idx })
-    if (debugCount < 5) {
-      console.log(`[parseImportRows] row[${idx}] → VALID: nm="${nm}" weight=${wt} up=${up} fee=${fv} date=${rd2}`);
-    }
-    debugCount++;
   }
   return { validRows, skippedRows }
 }

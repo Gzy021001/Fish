@@ -91,6 +91,7 @@ import { useRouter } from 'vue-router'
 import { useAuthStore } from '../stores/auth'
 import api from '../api'
 import { apiErrorMessage } from '../lib/error'
+import { decodeJwtPayload } from '../lib/utils'
 
 const router = useRouter()
 const authStore = useAuthStore()
@@ -114,8 +115,8 @@ const handleLogin = async () => {
     })
 
     const token = response.data.access_token;
-    const payload = JSON.parse(atob(token.split('.')[1]));
-    const userRole = payload.role || 'operator';
+    const payload = decodeJwtPayload(token);
+    const userRole = (payload.role as string) || 'operator';
     const mustChange = !!payload.mcp;
 
     authStore.login(token, username.value, userRole, mustChange);

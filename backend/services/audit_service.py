@@ -80,3 +80,27 @@ def record_delete(
         new_data=None,
     )
     db.add(log)
+
+
+def record_replace(
+    db: Session,
+    entity_type: str,
+    user_id: int,
+    *,
+    details: dict,
+):
+    """批量导入「覆盖同日已有单据」的汇总审计：一条记录写清被软删的日期与数量。
+
+    覆盖会一次性软删除整日单据，逐条写 DELETE 会刷屏且引用关系复杂，
+    这里用 REPLACE 动作记录汇总信息，保留"谁在何时覆盖了哪些日期"的追溯链。
+    """
+    log = models.AuditLog(
+        bill_id=None,
+        species_id=None,
+        entity_type=entity_type,
+        user_id=user_id,
+        action="REPLACE",
+        old_data=json.dumps(details, default=_json_default),
+        new_data=None,
+    )
+    db.add(log)

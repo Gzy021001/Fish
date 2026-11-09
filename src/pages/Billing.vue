@@ -712,6 +712,15 @@
               </button>
             </div>
 
+            <!-- 品种搜索（常驻工具栏，不藏在筛选面板里） -->
+            <SearchInput
+              v-model="billingSearch"
+              placeholder="搜索品种..."
+              class="self-center mb-2"
+              @search="refetchFromFirstPage"
+              @clear="clearBillingSearch"
+            />
+
             <!-- 筛选面板 -->
             <div class="relative self-center mb-2 z-[60]" ref="filterWrapperRef">
               <button
@@ -776,34 +785,6 @@
                     </div>
 
                     <div class="px-5 py-4 space-y-4">
-                      <!-- 品种搜索 -->
-                      <div>
-                        <label
-                          class="block text-[11px] text-dunhuang-text/40 mb-1.5 tracking-wider font-medium"
-                          >搜索品种</label
-                        >
-                        <div
-                          class="flex items-center bg-dunhuang-bg/30 border border-dunhuang-yellow/30 rounded-lg px-2.5 h-9 focus-within:border-dunhuang-blue focus-within:bg-white transition-all duration-200"
-                        >
-                          <svg
-                            class="w-3.5 h-3.5 text-dunhuang-blue/40 shrink-0"
-                            fill="none"
-                            stroke="currentColor"
-                            viewBox="0 0 24 24"
-                          >
-                            <circle cx="11" cy="11" r="8"></circle>
-                            <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
-                          </svg>
-                          <input
-                            type="text"
-                            v-model="pickerSearchText"
-                            placeholder="输入品种名称..."
-                            class="flex-1 w-full bg-transparent border-none text-sm text-dunhuang-blue font-medium focus:outline-none focus:ring-0 px-2 placeholder:text-dunhuang-text/30"
-                            @keydown.enter="applyFilters"
-                          />
-                        </div>
-                      </div>
-
                       <!-- 日期范围 -->
                       <div>
                         <label
@@ -905,7 +886,7 @@
           <div class="flex gap-2 items-center">
             <!-- 批量删除 -->
             <button
-              v-if="activeTab === 'current' && selectedBillIds.length > 0"
+              v-if="activeTab === 'current' && selectedBillIds.length > 0 && authStore.isAdmin"
               @click="confirmBatchDeleteBills"
               class="h-10 px-5 rounded-lg text-sm font-medium transition-all duration-200 text-dunhuang-red hover:bg-dunhuang-red/8 border border-dunhuang-red/25 hover:border-dunhuang-red/40"
             >
@@ -941,8 +922,8 @@
               导出
             </button>
 
-            <!-- current tab 专有按钮 -->
-            <template v-if="activeTab === 'current'">
+            <!-- current tab 专有按钮：新增（仅管理员可写，其他账号只读） -->
+            <template v-if="activeTab === 'current' && authStore.isAdmin">
               <button
                 @click="
                   initNewBill();
@@ -1127,12 +1108,14 @@
                       查看
                     </button>
                     <button
+                      v-if="authStore.isAdmin"
                       @click="editBill(b)"
                       class="px-2 py-1.5 rounded text-sm whitespace-nowrap shrink-0 transition-colors text-dunhuang-green hover:bg-dunhuang-green/10 border border-transparent hover:border-dunhuang-green/30"
                     >
                       编辑
                     </button>
                     <button
+                      v-if="authStore.isAdmin"
                       @click="confirmDeleteBill(b.id)"
                       class="px-2 py-1.5 rounded text-sm whitespace-nowrap shrink-0 transition-colors text-dunhuang-red hover:bg-dunhuang-red/10 border border-transparent hover:border-dunhuang-red/30"
                     >
@@ -1584,6 +1567,7 @@ import ConfirmDialog from "../components/ConfirmDialog.vue";
 import DateInput from "../components/DateInput.vue";
 import Pagination from "../components/Pagination.vue";
 import PaymentPicker from "../components/PaymentPicker.vue";
+import SearchInput from "../components/SearchInput.vue";
 import { useSpecies } from "../composables/useSpecies";
 import { useBillForm } from "../composables/useBillForm";
 import { useBillTable } from "../composables/useBillTable";
@@ -1595,7 +1579,6 @@ const authStore = useAuthStore();
 
 const showFilterDropdown = ref(false);
 const filterWrapperRef = ref<HTMLElement | null>(null);
-const pickerSearchText = ref("");
 const pickerStatus = ref("");
 
 const tableHeaderRef = ref<HTMLElement | null>(null);
@@ -1628,9 +1611,14 @@ const pickerToDate = ref("");
 const openFilterDropdown = () => {
   pickerFromDate.value = filterDateFrom.value;
   pickerToDate.value = filterDateTo.value;
-  pickerSearchText.value = billingSearch.value;
   pickerStatus.value = filterStatus.value;
   showFilterDropdown.value = true;
+};
+
+// 搜索框 ✕ 清空：SearchInput 只发 clear 事件，需要手动清词后再拉取
+const clearBillingSearch = async () => {
+  billingSearch.value = "";
+  await refetchFromFirstPage();
 };
 
 const applyFilters = async () => {
@@ -1642,7 +1630,6 @@ const applyFilters = async () => {
   filterDateFrom.value = from;
   filterDateTo.value = to;
 
-  billingSearch.value = pickerSearchText.value;
   filterStatus.value = pickerStatus.value;
 
   showFilterDropdown.value = false;
@@ -1652,7 +1639,6 @@ const applyFilters = async () => {
 const resetFilters = () => {
   pickerFromDate.value = "";
   pickerToDate.value = "";
-  pickerSearchText.value = "";
   pickerStatus.value = "";
   filterDateFrom.value = "";
   filterDateTo.value = "";

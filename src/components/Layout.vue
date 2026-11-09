@@ -229,6 +229,7 @@ import { computed, ref, watch } from "vue";
 import { useI18n } from "vue-i18n";
 import { useRoute, useRouter } from "vue-router";
 import { useAuthStore } from "../stores/auth";
+import { compressImage } from "../lib/utils";
 
 const { t } = useI18n();
 const route = useRoute();
@@ -251,17 +252,35 @@ const triggerAvatarUpload = () => {
   avatarInputRef.value?.click();
 };
 
-const handleAvatarChange = (e: Event) => {
+const handleAvatarChange = async (e: Event) => {
   const input = e.target as HTMLInputElement;
   const file = input.files?.[0];
   if (!file) return;
-  const reader = new FileReader();
-  reader.onload = () => {
-    const dataUrl = reader.result as string;
-    avatarUrl.value = dataUrl;
-    localStorage.setItem("user_avatar", dataUrl);
-  };
-  reader.readAsDataURL(file);
+  try {
+    // 头像压缩后再进 localStorage，避免大图挤爆 5MB 配额
+    let target: File | Blob = file;
+    if (file.size > 512 * 1024) {
+      target = await compressImage(file, 256, 256, 0.8);
+    }
+    const reader = new FileReader();
+    reader.onload = () => {
+      const dataUrl = reader.result as string;
+      avatarUrl.value = dataUrl;
+      try {
+        localStorage.setItem("user_avatar", dataUrl);
+      } catch {
+        // 存储满时静默降级：只展示本次会话内的头像
+      }
+    };
+    reader.readAsDataURL(target);
+  } catch {
+    // 压缩失败时退回原图
+    const reader = new FileReader();
+    reader.onload = () => {
+      avatarUrl.value = reader.result as string;
+    };
+    reader.readAsDataURL(file);
+  }
   input.value = "";
 };
 

@@ -86,13 +86,19 @@ if DATABASE_URL.startswith("postgresql"):
             "pool_size": 5,
             "max_overflow": 10,
             "connect_args": {
-                "connect_timeout": 15,
+                # 跨洋链路（本地 → Neon 新加坡）握手偶发 10s+，30s 超时避免好连接被误杀
+                "connect_timeout": 30,
                 "sslmode": "require",
             }
         }
 else:
     kwargs = {
-        "connect_args": {"check_same_thread": False}
+        "connect_args": {
+            "check_same_thread": False,
+            # SQLite 写锁冲突时最多等待 30s，而不是立即报 "database is locked"：
+            # dev 环境 uvicorn --reload 重启瞬间的短暂窗口不再把请求打成 OperationalError
+            "timeout": 30,
+        }
     }
 
 engine = create_engine(DATABASE_URL, **kwargs)

@@ -1,7 +1,7 @@
 import { ref, shallowRef, computed, watch, type Ref } from 'vue'
 import api from '../api'
 import { apiErrorMessage, isAuthError } from '../lib/error'
-import { formatMoney, isPackagingItem } from '../lib/utils'
+import { formatMoney } from '../lib/utils'
 import { useToast } from './useToast'
 import type { Species, Bill, ApiError } from '../types'
 
@@ -35,14 +35,13 @@ export function useBillTable(speciesList: Ref<Species[]>) {
   let fetchGen = 0
 
   watch(currentPage, () => {
-    if (activeTab.value !== 'history') {
-      fetchBills()
-    }
+    fetchBills()
   })
 
   watch(pageSize, () => {
-    currentPage.value = 1
-    if (activeTab.value !== 'history') {
+    if (currentPage.value !== 1) {
+      currentPage.value = 1 // watch(currentPage) 统一拉取
+    } else {
       fetchBills()
     }
   })
@@ -51,10 +50,7 @@ export function useBillTable(speciesList: Ref<Species[]>) {
   const totalPages = computed(() => Math.ceil(totalItems.value / pageSize.value))
 
   const paginatedBills = computed(() => {
-    if (activeTab.value === 'history') {
-      const start = (currentPage.value - 1) * pageSize.value
-      return bills.value.slice(start, start + pageSize.value)
-    }
+    // 历史 tab 已改为服务端分页（exclude_packaging 后端过滤），返回的即是当前页
     return bills.value
   })
 
@@ -121,15 +117,17 @@ export function useBillTable(speciesList: Ref<Species[]>) {
       const params = new URLSearchParams()
       params.set('limit', '0')
       if (activeTab.value === 'history') {
-        params.set('page_size', '-1')
+        params.set('status', 'COMPLETED')
+        params.set('page', currentPage.value.toString())
+        params.set('page_size', pageSize.value.toString())
+        // 历史视图排除打包耗材（冰/打包/袋），后端过滤，不再全量拉到前端
+        params.set('exclude_packaging', '1')
       } else {
         params.set('page', currentPage.value.toString())
         params.set('page_size', pageSize.value.toString())
-      }
-      if (activeTab.value === 'history') {
-        params.set('status', 'COMPLETED')
-      } else if (filterStatus.value) {
-        params.set('status', filterStatus.value)
+        if (filterStatus.value) {
+          params.set('status', filterStatus.value)
+        }
       }
 
       if (filterDateFrom.value) {
@@ -146,12 +144,8 @@ export function useBillTable(speciesList: Ref<Species[]>) {
       if (gen !== fetchGen) return
 
       if (res.data && typeof res.data.total === 'number') {
-        let items: Bill[] = res.data.items || []
-        if (activeTab.value === 'history') {
-          items = items.filter((b) => !isPackagingItem(getSpeciesName(b.species_id)))
-        }
-        bills.value = items
-        totalItems.value = activeTab.value === 'history' ? items.length : res.data.total
+        bills.value = res.data.items || []
+        totalItems.value = res.data.total
 
         tableSumWeight.value = res.data.sum_weight || 0
         tableSumSubtotal.value = res.data.sum_subtotal || 0
@@ -163,16 +157,11 @@ export function useBillTable(speciesList: Ref<Species[]>) {
         tableSumSubtotal.value = Number(rawBills.reduce((s, b) => s + (b.subtotal || 0), 0).toFixed(2))
         tableSumTotal.value = Number(rawBills.reduce((s, b) => s + (b.total_amount || 0), 0).toFixed(2))
         tableSumFee.value = tableSumTotal.value - tableSumSubtotal.value
-
-        if (activeTab.value === 'history') {
-          bills.value = rawBills.filter((b) => !isPackagingItem(getSpeciesName(b.species_id)))
-        } else {
-          bills.value = rawBills
-        }
+        bills.value = rawBills
         totalItems.value = bills.value.length
       }
 
-      // 删除/筛选后当前页可能越界：回退到最后一页（watch 会自动重新拉取）
+      // 删除/筛选后当前页可能越界：回退到最后一页（watch(currentPage) 统一重新拉取）
       const maxPage = Math.max(1, Math.ceil(totalItems.value / pageSize.value))
       if (currentPage.value > maxPage) {
         currentPage.value = maxPage
@@ -195,15 +184,15 @@ export function useBillTable(speciesList: Ref<Species[]>) {
     }
 
     if (currentPage.value !== 1) {
-      currentPage.value = 1
+      currentPage.value = 1 // watch(currentPage) 统一拉取
+    } else {
+      fetchBills()
     }
-    // 历史 tab 下 watch(currentPage) 不会拉取，这里统一手动拉一次
-    fetchBills()
   }
 
   // 筛选变化后统一回到第一页重新拉取；避免依赖 watch 副作用导致漏拉或双拉
   const refetchFromFirstPage = async () => {
-    if (currentPage.value !== 1 && activeTab.value !== 'history') {
+    if (currentPage.value !== 1) {
       currentPage.value = 1 // 触发 watch(currentPage) 自动拉取
     } else {
       await fetchBills()
@@ -257,22 +246,6 @@ export function useBillTable(speciesList: Ref<Species[]>) {
     } catch (error: unknown) {
       if (isAuthError(error as ApiError)) return
       toast.error(apiErrorMessage(error as ApiError, '导出明细表'))
-    }
-  }
-
-  const syncBillsToHistory = async () => {
-    try {
-      const dateStr_new = new Date().toISOString().slice(0, 10)
-      const res = await api.post('/bills/sync', { date: dateStr_new })
-      if (res.data && res.data.count > 0) {
-        toast.success(res.data.message)
-        await fetchBills()
-      } else {
-        toast.info('当前没有符合归档条件的过期单据')
-      }
-    } catch (error: unknown) {
-      if (isAuthError(error as ApiError)) return
-      toast.error(apiErrorMessage(error as ApiError, '归档单据'))
     }
   }
 

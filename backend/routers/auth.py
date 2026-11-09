@@ -22,6 +22,21 @@ _LOGIN_FIRST_LOCK_SECONDS = 30
 _LOGIN_LOCK_MAX_SECONDS = 15 * 60
 # key: "ip|username" -> {"fails": n, "lock_until": t, "lock_step": k}
 _login_failures: dict = {}
+# 防止恶意随机用户名把内存字典无限撑大：超过上限先清过期项，仍超限则淘汰最早插入的一半
+_LOGIN_FAILURES_MAX_KEYS = 10000
+
+
+def _prune_login_failures():
+    if len(_login_failures) <= _LOGIN_FAILURES_MAX_KEYS:
+        return
+    now = time.time()
+    expired = [k for k, e in _login_failures.items() if e["lock_until"] and e["lock_until"] < now]
+    for k in expired:
+        _login_failures.pop(k, None)
+    if len(_login_failures) > _LOGIN_FAILURES_MAX_KEYS:
+        overflow = len(_login_failures) - _LOGIN_FAILURES_MAX_KEYS
+        for k in list(_login_failures)[:overflow]:
+            _login_failures.pop(k, None)
 
 
 def _login_key(username: str, request: Request) -> str:
@@ -39,6 +54,7 @@ def _login_lock_remaining(key: str) -> int:
 
 
 def _record_login_failure(key: str):
+    _prune_login_failures()
     entry = _login_failures.get(key)
     if not entry:
         entry = {"fails": 0, "lock_until": 0.0, "lock_step": 0}
@@ -81,6 +97,7 @@ def register(
         username=user.username.strip(),
         password_hash=hashed_password,
         role=user.role if user.role in ("admin", "operator") else "operator",
+        must_change_password=True,  # 管理员新建的账号同样首次登录强制改密
     )
     db.add(new_user)
     try:

@@ -95,14 +95,16 @@ def _payment_columns(has_fee: bool):
     return 9, 10
 
 
-def _build_sheet(wb: openpyxl.Workbook, d: date, bills: list, carry_in):
+def _build_sheet(wb: openpyxl.Workbook, d: date, bills: list, carry_in, multi_year: bool = False):
     """构建单日 sheet，返回本周余款（供下一 sheet 的「上周余款」使用）。"""
     has_fee = any((b.fee_value is not None and _dec(b.fee_value) > 0) for b in bills)
     end_col = 8 if has_fee else 7  # H(8) / G(7)
     end_letter = get_column_letter(end_col)
     label_col, amount_col = _payment_columns(has_fee)
 
-    ws = wb.create_sheet(title=f"{d.month}月{d.day}日")
+    # 跨年导出时 sheet 名与标题带年份，避免出现两个「1月1日」重名 sheet
+    sheet_title = f"{d.year}年{d.month}月{d.day}日" if multi_year else f"{d.month}月{d.day}日"
+    ws = wb.create_sheet(title=sheet_title)
 
     for col_letter, width in COL_WIDTHS.items():
         ws.column_dimensions[col_letter].width = width
@@ -136,8 +138,10 @@ def _build_sheet(wb: openpyxl.Workbook, d: date, bills: list, carry_in):
         row = 3 + idx
         _write(ws, row, 2, idx, align=CENTER_WRAP)
         _write(ws, row, 3, b.species.name_zh if b.species else "", align=CENTER_WRAP)
-        _write(ws, row, 4, _q(_dec(b.weight)), align=CENTER, number_format=MONEY_FMT)
-        _write(ws, row, 5, _q(_dec(b.unit_price)), align=CENTER, number_format=MONEY_FMT)
+        # 模板「重量(斤)」「单价(元)」是斤制；系统内部存公斤、元/公斤，导出必须换算，
+        # 否则重量/单价数值与表头单位不匹配（往返导入还会再减半）。
+        _write(ws, row, 4, _q(_dec(b.weight) * Decimal("2")), align=CENTER, number_format=MONEY_FMT)
+        _write(ws, row, 5, _q(_dec(b.unit_price) / Decimal("2")), align=CENTER, number_format=MONEY_FMT)
         _write(ws, row, 6, f"=D{row}*E{row}", align=CENTER, number_format=MONEY_FMT)
         if has_fee:
             fee = b.fee_value if b.fee_value is not None else 0
@@ -307,17 +311,19 @@ def _build_workbook(bills: list):
     for b in bills:
         groups.setdefault(b.release_date, []).append(b)
 
+    dates = sorted(groups.keys())
+    multi_year = len({d.year for d in dates}) > 1
+
     wb = openpyxl.Workbook()
     wb.remove(wb.active)
     carry = None
-    for d in sorted(groups.keys()):
-        carry = _build_sheet(wb, d, groups[d], carry)
+    for d in dates:
+        carry = _build_sheet(wb, d, groups[d], carry, multi_year=multi_year)
 
     content = BytesIO()
     wb.save(content)
     content.seek(0)
 
-    dates = sorted(groups.keys())
     if len(dates) == 1:
         filename = f"慈悲组购生明细表_{dates[0].strftime('%Y%m%d')}.xlsx"
     else:

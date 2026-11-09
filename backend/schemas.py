@@ -29,7 +29,16 @@ class SpeciesCreate(SpeciesBase):
     pass
 
 class SpeciesUpdate(SpeciesBase):
-    pass
+    # 图片只能走 /species/{id}/image 上传接口（有大小/格式校验），
+    # 禁止通过 PUT 直接覆盖 image_url（exclude=True 使其不进 model_dump，前端传了也会被忽略）
+    image_url: Optional[str] = Field(None, exclude=True)
+
+    @field_validator('default_price', mode='before')
+    @classmethod
+    def check_price(cls, v):
+        if v is None or v == '':
+            raise ValueError('单价必须大于0')
+        return v
 
 class Species(SpeciesBase):
     id: int
@@ -72,6 +81,30 @@ class BillBase(BaseModel):
     alipay_amount: Optional[float] = None
     wechat_amount: Optional[float] = None
     suixi_amount: Optional[float] = None
+
+    @field_validator('currency')
+    @classmethod
+    def check_currency(cls, v):
+        if v != 'CNY':
+            raise ValueError('币种仅支持 CNY')
+        return v
+
+    @field_validator('fee_type')
+    @classmethod
+    def check_fee_type(cls, v):
+        if v != 'FIXED':
+            raise ValueError('服务费类型仅支持 FIXED')
+        return v
+
+    @field_validator('status', mode='before')
+    @classmethod
+    def check_status(cls, v):
+        # None 表示"由后端按放生日期自动判定"（批量导入路径），保持原语义
+        if v is None or v == '':
+            return None
+        if v not in ('DRAFT', 'COMPLETED'):
+            raise ValueError('单据状态仅支持 DRAFT/COMPLETED')
+        return v
 
     @field_validator('payment_method', mode='before')
     @classmethod
@@ -136,12 +169,6 @@ class TokenData(BaseModel):
 class ChangePasswordRequest(BaseModel):
     password: str = Field(..., min_length=6, max_length=100)
 
-class SyncRequest(BaseModel):
-    date: str
-
-class ArchiveRequest(BaseModel):
-    bill_ids: list[int]
-
 
 class BatchImportRow(BaseModel):
     name_zh: str = Field(..., max_length=100)
@@ -190,5 +217,6 @@ class BatchImportRequest(BaseModel):
 class BatchImportResult(BaseModel):
     success_count: int
     skip_count: int
-    bills: list[Bill]
+    # 不再回传完整 bills（会触发每行一次 species 懒加载 N+1，且前端只用数量/错误）
+    affected_species_ids: list[int] = []
     errors: list[str] = []

@@ -278,7 +278,7 @@
                     <th class="px-3 py-2.5 border-b border-dunhuang-yellow/40 text-center text-xs font-semibold">#</th>
                     <th class="px-4 py-2.5 border-b border-dunhuang-yellow/40 text-center text-xs font-semibold">品种</th>
                     <th class="px-4 py-2.5 border-b border-dunhuang-yellow/40 text-center text-xs font-semibold">重量（公斤）</th>
-                    <th class="px-4 py-2.5 border-b border-dunhuang-yellow/40 text-center text-xs font-semibold">单价（元）</th>
+                    <th class="px-4 py-2.5 border-b border-dunhuang-yellow/40 text-center text-xs font-semibold">单价（元/公斤）</th>
                     <th class="px-4 py-2.5 border-b border-dunhuang-yellow/40 text-center text-xs font-semibold">服务费（元）</th>
                     <th class="px-4 py-2.5 border-b border-dunhuang-yellow/40 text-center text-xs font-semibold">放生日期</th>
                   </tr>
@@ -537,6 +537,7 @@ import {
   parseExcelDate,
   normalizeSpeciesName,
   extractRowPayments,
+  evalSimpleFormula,
   type ParsedRow,
   type SkippedRow,
 } from "../lib/importUtils";
@@ -688,7 +689,15 @@ const GAP_CUTOFF = 5;
 function cellVal(ws: XLSX.WorkSheet, r: number, c: number): any {
   const cell = ws[XLSX.utils.encode_cell({ r, c })];
 
-  return cell && cell.v !== undefined ? cell.v : "";
+  if (!cell) return "";
+  // 公式单元格若没有缓存值（表格由程序生成、未在 Excel/WPS 中重算保存），
+  // SheetJS 读不到 cell.v（sheetStubs 下为 t:"z"、v:0），此时对简单算术公式求值，
+  // 否则「重量 = =79+77」这类行会被当成重量为空而跳过。
+  if (cell.f && (cell.v === undefined || cell.v === null || cell.t === "z")) {
+    const computed = evalSimpleFormula(cell.f);
+    if (computed !== null) return computed;
+  }
+  return cell.v !== undefined ? cell.v : "";
 }
 
 function buildMatrix(
@@ -745,6 +754,8 @@ const processFile = (f: File) => {
     try {
       const wb = XLSX.read(new Uint8Array(e.target?.result as ArrayBuffer), {
         type: "array",
+        // 保留无缓存值的公式单元格（cell.f），供 cellVal 求值还原「=79+77」这类重量
+        sheetStubs: true,
       });
       const allValid = [];
       const allSkipped = [];
@@ -850,14 +861,6 @@ const processFile = (f: File) => {
         const cols = detectColumns(headers);
         const hasValidCols = Object.values(cols).some((v) => v !== null);
 
-        // ====== 诊断日志 ======
-        console.log(`\n=== Sheet: "${sn}" ===`);
-        console.log("headers:", headers);
-        console.log("headerRow:", headerRow);
-        console.log("cols:", cols);
-        console.log("sd:", sd);
-        console.log("matrix rows:", matrix.length, "cols:", matrix[0]?.length);
-
         // 累积列映射：跨 Sheet 合并列信息，不会因为第一个 Sheet 缺少某列就永远"未识别"
         if (!firstCols) {
           firstCols = { ...cols };
@@ -902,26 +905,6 @@ const processFile = (f: File) => {
           }
         });
 
-        console.log(
-          `validRows: ${result.validRows.length}, skippedRows: ${result.skippedRows.length}`,
-        );
-        if (result.validRows.length > 0) {
-          console.log("first valid row:", JSON.stringify(result.validRows[0]));
-          console.log(
-            "last valid row:",
-            JSON.stringify(result.validRows[result.validRows.length - 1]),
-          );
-        }
-        if (result.skippedRows.length > 0) {
-          console.log(
-            "first 5 skipped reasons:",
-            result.skippedRows
-              .slice(0, 5)
-              .map((s) => `[${s.rowIndex}] ${s.reason}`),
-          );
-        }
-        console.log("first jsonData row keys:", Object.keys(jsonData[0] || {}));
-        console.log("first jsonData row:", JSON.stringify(jsonData[0] || {}));
         allValid.push(...result.validRows);
         allSkipped.push(...result.skippedRows);
       }
@@ -933,11 +916,15 @@ const processFile = (f: File) => {
         let i = 0;
         while (i < allValid.length) {
           const fee = (allValid[i] as any).fee_value;
+          const curDate = (allValid[i] as any).release_date;
           if (fee > 0) {
             let span = 1;
+            // 同日 + 同服务费才归为一组：服务费是整天合并单元格，跨 sheet（放生日期不同）
+            // 即使数值相同也不能合并，否则会把后一天首行的服务费清 0。
             while (
               i + span < allValid.length &&
-              (allValid[i + span] as any).fee_value === fee
+              (allValid[i + span] as any).fee_value === fee &&
+              (allValid[i + span] as any).release_date === curDate
             ) {
               span++;
             }
