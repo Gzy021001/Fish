@@ -65,6 +65,58 @@ describe("parseImportRows", () => {
     expect(result.validRows[1]).toMatchObject({ name_zh: "油锥", weight: 5.25, unit_price: 100 })
   })
 
+  it("以件计价的行（蛏子（件））先按 1 件=10 斤 折成斤，再换算公斤，金额不变", () => {
+    const rows = [
+      { 品种: "蛏子（件）", "重量(斤)": 2, "单价(元)": 120, 服务费: 0, 放生日期: "2026-08-08" },
+    ]
+    const result = parseImportRows(rows, COLUMNS, "2026-08-08")
+    expect(result.validRows).toHaveLength(1)
+    // 2 件 × 120 元/件 = 240 元；折成 20 斤 × 12 元/斤 → 10 公斤 × 24 元/公斤
+    expect(result.validRows[0]).toMatchObject({ name_zh: "蛏子", weight: 10, unit_price: 24, unit: "件", unit_jin: 10 })
+    expect(result.validRows[0].weight * result.validRows[0].unit_price).toBeCloseTo(240, 6)
+  })
+
+  it("普通「蛏子」按斤报价时不做件换算，也不记单位", () => {
+    const rows = [
+      { 品种: "蛏子", "重量(斤)": 47, "单价(元)": 12, 服务费: 0, 放生日期: "2026-10-24" },
+    ]
+    const result = parseImportRows(rows, COLUMNS, "2026-10-24")
+    expect(result.validRows[0]).toMatchObject({ name_zh: "蛏子", weight: 23.5, unit_price: 24, unit: null, unit_jin: null })
+  })
+
+  it("按个卖的带子（无论有没有写「（个）」）按 1 个=1 斤 折成斤，金额不变并记下单位", () => {
+    const rows = [
+      { 品种: "带子", "重量(斤)": 300, "单价(元)": 2.8, 服务费: 0, 放生日期: "2026-01-10" },
+      { 品种: "带子（个）", "重量(斤)": 100, "单价(元)": 4.5, 服务费: 0, 放生日期: "2026-08-08" },
+    ]
+    const result = parseImportRows(rows, COLUMNS, "2026-01-10")
+    expect(result.validRows).toHaveLength(2)
+    // 300 个 × 2.8 元/个 = 840 元；折成 300 斤 × 2.8 元/斤 → 150 公斤 × 5.6 元/公斤
+    expect(result.validRows[0]).toMatchObject({ name_zh: "带子", weight: 150, unit_price: 5.6, unit: "个", unit_jin: 1 })
+    expect(result.validRows[0].weight * result.validRows[0].unit_price).toBeCloseTo(840, 6)
+    // 100 个 × 4.5 元/个 = 450 元；折成 100 斤 × 4.5 元/斤 → 50 公斤 × 9 元/公斤
+    expect(result.validRows[1]).toMatchObject({ name_zh: "带子", weight: 50, unit_price: 9, unit: "个", unit_jin: 1 })
+    expect(result.validRows[1].weight * result.validRows[1].unit_price).toBeCloseTo(450, 6)
+  })
+
+  it("小草龟（个）按市场价反推的 1 个=0.22 斤 折成斤，金额不变", () => {
+    const rows = [
+      { 品种: "小草龟（个）", "重量(斤)": 30, "单价(元)": 5.5, 服务费: 0, 放生日期: "2026-05-23" },
+    ]
+    const result = parseImportRows(rows, COLUMNS, "2026-05-23")
+    // 30 个 × 5.5 元/个 = 165 元；6.6 斤 × 25 元/斤（市场 50 元/千克）→ 3.3 公斤 × 50 元/公斤
+    expect(result.validRows[0]).toMatchObject({ name_zh: "草龟", weight: 3.3, unit_price: 50, unit: "个", unit_jin: 0.22 })
+    expect(result.validRows[0].weight * result.validRows[0].unit_price).toBeCloseTo(165, 6)
+  })
+
+  it("品种写了别的单位（带子（件））时不猜，保持按表头斤处理", () => {
+    const rows = [
+      { 品种: "带子（件）", "重量(斤)": 2, "单价(元)": 120, 服务费: 0, 放生日期: "2026-08-08" },
+    ]
+    const result = parseImportRows(rows, COLUMNS, "2026-08-08")
+    expect(result.validRows[0]).toMatchObject({ name_zh: "带子", weight: 1, unit_price: 240 })
+  })
+
   it("公斤制表格（重量/单价都按公斤）不做换算", () => {
     const cols = { species: "品种", weight: "重量(公斤)", unit_price: "单价(元/公斤)", fee_value: "服务费", release_date: "放生日期" }
     const rows = [

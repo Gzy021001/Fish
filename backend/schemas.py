@@ -71,6 +71,9 @@ class BillBase(BaseModel):
     species_id: int
     weight: float
     unit_price: float
+    # 原始计价单位（件/个）与折算斤数；None 表示按斤录入/导入
+    unit: Optional[str] = Field(None, max_length=10)
+    unit_jin: Optional[float] = None
     currency: str = Field("CNY", max_length=10)
     fee_type: str = Field("FIXED", max_length=20)
     fee_value: float
@@ -174,6 +177,9 @@ class BatchImportRow(BaseModel):
     name_zh: str = Field(..., max_length=100)
     weight: float = 0.0
     unit_price: float = 0.0
+    # 源表按「件/个」报价时带上，导出还原「品种（件/个）」写法用
+    unit: Optional[str] = Field(None, max_length=10)
+    unit_jin: Optional[float] = None
     fee_value: float = 0.0
     release_date: Optional[date] = None
     alipay_amount: Optional[float] = None

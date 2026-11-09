@@ -137,11 +137,24 @@ def _build_sheet(wb: openpyxl.Workbook, d: date, bills: list, carry_in, multi_ye
     for idx, b in enumerate(bills, start=1):
         row = 3 + idx
         _write(ws, row, 2, idx, align=CENTER_WRAP)
-        _write(ws, row, 3, b.species.name_zh if b.species else "", align=CENTER_WRAP)
+        # 模板里按「件/个」报价的行（蛏子（件）、带子（个））要原样写回，
+        # 否则统一折成「斤」与源表对不上：单据记了 unit/unit_jin 时按原单位还原数量与单价，
+        # 没记（手工录入/按斤导入）就仍按斤换算。
+        unit = (b.unit or "").strip()
+        unit_jin = _dec(b.unit_jin) if b.unit_jin is not None else Decimal("0")
+        if unit and unit_jin > 0:
+            name = f"{b.species.name_zh}（{unit}）" if b.species else unit
+            qty = _dec(b.weight) * Decimal("2") / unit_jin
+            price = _dec(b.unit_price) / Decimal("2") * unit_jin
+        else:
+            name = b.species.name_zh if b.species else ""
+            qty = _dec(b.weight) * Decimal("2")
+            price = _dec(b.unit_price) / Decimal("2")
+        _write(ws, row, 3, name, align=CENTER_WRAP)
         # 模板「重量(斤)」「单价(元)」是斤制；系统内部存公斤、元/公斤，导出必须换算，
         # 否则重量/单价数值与表头单位不匹配（往返导入还会再减半）。
-        _write(ws, row, 4, _q(_dec(b.weight) * Decimal("2")), align=CENTER, number_format=MONEY_FMT)
-        _write(ws, row, 5, _q(_dec(b.unit_price) / Decimal("2")), align=CENTER, number_format=MONEY_FMT)
+        _write(ws, row, 4, _q(qty), align=CENTER, number_format=MONEY_FMT)
+        _write(ws, row, 5, _q(price), align=CENTER, number_format=MONEY_FMT)
         _write(ws, row, 6, f"=D{row}*E{row}", align=CENTER, number_format=MONEY_FMT)
         if has_fee:
             fee = b.fee_value if b.fee_value is not None else 0

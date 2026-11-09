@@ -47,6 +47,8 @@ def create_bill(data: schemas.BillCreate, user: models.User, db: Session, commit
         species_id=data.species_id,
         weight=data.weight,
         unit_price=data.unit_price,
+        unit=data.unit,
+        unit_jin=data.unit_jin,
         currency=data.currency,
         subtotal=subtotal,
         fee_type=data.fee_type,
@@ -212,6 +214,8 @@ def update_bill(bill_id: int, data: schemas.BillCreate, user: models.User, db: S
         "species_id": bill.species_id,
         "weight": bill.weight,
         "unit_price": bill.unit_price,
+        "unit": bill.unit,
+        "unit_jin": bill.unit_jin,
         "currency": bill.currency,
         "fee_type": bill.fee_type,
         "fee_value": bill.fee_value,
@@ -231,6 +235,8 @@ def update_bill(bill_id: int, data: schemas.BillCreate, user: models.User, db: S
     bill.species_id = data.species_id
     bill.weight = data.weight
     bill.unit_price = data.unit_price
+    bill.unit = data.unit
+    bill.unit_jin = data.unit_jin
     bill.currency = data.currency
     bill.fee_type = data.fee_type
     bill.fee_value = data.fee_value
@@ -255,6 +261,8 @@ def update_bill(bill_id: int, data: schemas.BillCreate, user: models.User, db: S
         "species_id": bill.species_id,
         "weight": money(data.weight),
         "unit_price": money(data.unit_price),
+        "unit": data.unit,
+        "unit_jin": money(data.unit_jin) if data.unit_jin is not None else None,
         "currency": data.currency,
         "fee_type": data.fee_type,
         "fee_value": money(data.fee_value),
@@ -287,6 +295,8 @@ def delete_bill(bill_id: int, user: models.User, db: Session):
         "species_id": bill.species_id,
         "weight": bill.weight,
         "unit_price": bill.unit_price,
+        "unit": bill.unit,
+        "unit_jin": bill.unit_jin,
         "currency": bill.currency,
         "fee_type": bill.fee_type,
         "fee_value": bill.fee_value,
@@ -384,6 +394,8 @@ def batch_create_bills(data: schemas.BatchImportRequest, user: models.User, db: 
             species_id=species.id,
             weight=row.weight or 0,
             unit_price=row.unit_price,
+            unit=row.unit,
+            unit_jin=row.unit_jin,
             fee_value=row.fee_value or 0,
             release_date=row.release_date,
             status=None,

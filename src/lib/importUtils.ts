@@ -161,12 +161,52 @@ function isNonBillRow(name: string): boolean { return NON_BILL_KW.some(k => name
 const JIN_TO_KG = 0.5
 function detectJinUnit(wc: string | null): boolean { return !!wc && wc.includes("\u65a4") && !wc.includes("\u516c\u65a4") }
 
+// 明细表里按「件/个」报价的品种：1 件（个）= N 斤。
+// 模板把这些单位写在品种名上（「蛏子（件）」「带子（个）」），若直接按表头「重量(斤)」处理，
+// 会被当成「2 斤 × 120 元/斤」入库（重量缩小、单价放大，金额虽对得上，但均价/重量统计全被带偏）。
+// 处理方式：先把件数/个数折成斤、元/件（个）折成元/斤，再统一走斤→公斤换算，金额不变。
+//   · 蛏子：1 件 = 10 斤（2026-11-05 确认；只在写了「（件）」的行生效，其余行仍按斤）
+//   · 带子：整年按个卖（「（个）」标注时有时无），默认就按个折算；江珧/大带子按个卖，
+//     大的一个约一斤、小的半斤（青岛早报：40 多个约 50 斤），取 1 个 ≈ 1 斤，
+//     与惠农网「带子 2.6 元/斤」及本表 2.3~5.5 元/个 的价格区间对得上
+//   · 草龟：只有「小草龟（个）」这类标注行按个；水产市场中华草龟批发价 50 元/千克
+//     （2026-09 佛山南海环球水产市场）＝25 元/斤，5.5 元/个 ÷ 25 ≈ 0.22 斤/个
+// 件重/个重与实际不符时只改这张表，别处不用动。
+interface UnitRule { unit: string; jin: number; always?: boolean }
+const UNIT_RULES: Record<string, UnitRule> = {
+  "\u86cf\u5b50": { unit: "\u4ef6", jin: 10 },
+  "\u5e26\u5b50": { unit: "\u4e2a", jin: 1, always: true },
+  "\u8349\u9f9f": { unit: "\u4e2a", jin: 0.22 },
+}
+
+/** 取品种单元格里的单位标注（「蛏子（件）」→ 件），全角/半角括号都认 */
+function detectUnit(raw: string): string | null {
+  const m = raw.match(/[（(]\s*([\u4ef6\u4e2a\u7bb1\u5757\u6761\u53ea\u5305\u888b\u6876\u76d2\u4e32\u7c92\u9897\u6839\u4efd\u7247\u679a\u5bf9\u53cc\u6253\u677f\u63d0\u5934])\s*[）)]/)
+  return m ? m[1] : null
+}
+
+/** 该品种这一行按哪条单位规则折算；没有返回 null（保持按表头斤处理） */
+function resolveUnit(name: string, marker: string | null): { unit: string; jin: number } | null {
+  const rule = UNIT_RULES[name]
+  if (!rule) return null
+  // always=true 的品种（带子）默认就是按个卖，允许没写「（个）」；
+  // 但若写的是别的单位（如「带子（件）」）就不猜，交给原有逻辑
+  const matched = rule.always ? marker === null || marker === rule.unit : marker === rule.unit
+  return matched ? { unit: rule.unit, jin: rule.jin } : null
+}
+
+function round6(v: number): number { return Math.round(v * 1e6) / 1e6 }
+
 export interface ParsedRow {
   name_zh: string
   weight: number
   unit_price: number
   fee_value: number
   release_date: string | null
+  /** 源表原始计价单位（件/个）；null 表示按斤。导出时据此还原模板写法 */
+  unit?: string | null
+  /** 1 件/个 合多少斤（与 unit 配套，导出还原数量/单价用） */
+  unit_jin?: number | null
   alipay_amount?: number | null
   wechat_amount?: number | null
   suixi_amount?: number | null
@@ -239,7 +279,8 @@ export function parseImportRows(jsonData: Record<string, unknown>[], columns: Re
     )
     if (isBlankRow) continue
 
-    const nm = normalizeSpeciesName(String(rs ?? ""))
+    const rawName = String(rs ?? "")
+    const nm = normalizeSpeciesName(rawName)
     if (!nm) { skippedRows.push({ rowIndex: idx + 2, reason: "\u54c1\u79cd\u540d\u79f0\u4e3a\u7a7a\u6216\u65e0\u6cd5\u8bc6\u522b", rawData: raw }); continue }
     // 汇总行（本周现场随喜/累计等）不是错误，直接忽略，不进入"查看原因"列表
     if (isNonBillRow(nm) || isNonBillRow(String(rs ?? ""))) { continue }
@@ -248,6 +289,12 @@ export function parseImportRows(jsonData: Record<string, unknown>[], columns: Re
     let up = parseFloat(String(rp ?? 0))
     if (isNaN(up) || up <= 0) { skippedRows.push({ rowIndex: idx + 2, reason: "\u5355\u4ef7\u65e0\u6548", rawData: raw }); continue }
     let wt = isNaN(parseFloat(String(rw ?? ""))) ? 0 : parseFloat(String(rw ?? ""))
+    // 按件/个报价的行先折成斤：件数 × 斤/件 → 斤、元/件 ÷ 斤/件 → 元/斤，后面再统一走斤→公斤换算
+    const pieceUnit = resolveUnit(nm, detectUnit(rawName))
+    if (pieceUnit) {
+      if (wt > 0) wt = round6(wt * pieceUnit.jin)
+      up = round6(up / pieceUnit.jin)
+    }
     // 系统内部单位：重量=公斤、单价=元/公斤；模板表头「重量(斤)」「单价(元)」是斤制。
     // 只换算重量会导致 总计=公斤×元/斤 少一半，单价必须同步 ×2（斤价 → 公斤价）。
     const isJinUnit = detectJinUnit(columns.weight)
@@ -255,7 +302,12 @@ export function parseImportRows(jsonData: Record<string, unknown>[], columns: Re
     if (isJinUnit) up = up * 2
     const fv = isNaN(parseFloat(String(rf ?? ""))) ? 0 : parseFloat(String(rf ?? ""))
     const rd2 = parseExcelDate(rd, fallbackYear)
-    validRows.push({ name_zh: nm, weight: wt, unit_price: up, fee_value: fv, release_date: rd2, matrixRow: idx })
+    validRows.push({
+      name_zh: nm, weight: wt, unit_price: up, fee_value: fv, release_date: rd2,
+      matrixRow: idx,
+      unit: pieceUnit ? pieceUnit.unit : null,
+      unit_jin: pieceUnit ? pieceUnit.jin : null,
+    })
   }
   return { validRows, skippedRows }
 }

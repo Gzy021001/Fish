@@ -7,6 +7,9 @@ export interface ImportRow {
   unit_price: number
   fee_value: number
   release_date?: string
+  /** 源表原始计价单位（件/个），导出还原模板写法用；null/缺省=按斤 */
+  unit?: string | null
+  unit_jin?: number | null
 }
 
 export interface BillEntryInput {
@@ -15,6 +18,8 @@ export interface BillEntryInput {
   unit_price: number
   fee_value: number
   release_date?: string
+  unit?: string | null
+  unit_jin?: number | null
   payment_method?: string | null
   weekly_donation?: number | null
   alipay_amount?: number | null
@@ -52,6 +57,8 @@ export function buildBillPayload(entry: BillEntryInput) {
     currency: 'CNY',
     status: 'DRAFT',
     release_date: entry.release_date || null,
+    unit: entry.unit ?? null,
+    unit_jin: entry.unit_jin ?? null,
     payment_method: entry.payment_method || null,
     weekly_donation: entry.weekly_donation ?? null,
     alipay_amount: entry.alipay_amount ?? null,
@@ -79,6 +86,8 @@ export async function saveImportedRows(
       unit_price: row.unit_price,
       fee_value: row.fee_value || 0,
       release_date: row.release_date,
+      unit: row.unit ?? null,
+      unit_jin: row.unit_jin ?? null,
     }
     await saveEntry(payload)
     saved++
