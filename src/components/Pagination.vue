@@ -1,5 +1,5 @@
 <template>
-  <div class="flex items-center gap-4 flex-wrap justify-end">
+  <div class="flex items-center gap-3 sm:gap-4 flex-wrap justify-end max-w-full">
     <!-- 每页条数下拉框 (自定义下拉样式) -->
     <div class="flex items-center gap-2" v-if="showPageSizeSelect" ref="dropdownRef">
       <div class="relative group">
@@ -98,7 +98,7 @@
       </button>
 
       <!-- 跳转 -->
-      <div class="flex items-center gap-1 ml-3">
+      <div class="hidden sm:flex items-center gap-1 ml-3">
         <span class="text-[11px] text-dunhuang-text/25">跳至</span>
         <input
           v-model.number="jumpInput"

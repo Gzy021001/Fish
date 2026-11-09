@@ -970,7 +970,7 @@
                   品种
                 </div>
                 <div
-                  class="col-th flex-1 min-w-[72px] flex items-center justify-center"
+                  class="col-th flex-1 min-w-[72px] hidden sm:flex items-center justify-center"
                 >
                   归档状态
                 </div>
@@ -1004,12 +1004,12 @@
                 <div class="col-th flex-1 min-w-[96px] flex items-center">
                   放生日期
                 </div>
-                <div class="col-th flex-1 min-w-[140px] flex items-center">
+                <div class="col-th flex-1 min-w-[140px] hidden lg:flex items-center">
                   添加时间
                 </div>
                 <div
                   v-if="activeTab === 'current'"
-                  class="col-th flex items-center justify-center w-[168px] shrink-0 sticky right-0 bg-[#fbf6ec] z-50 shadow-[-2px_0_5px_-2px_rgba(0,0,0,0.05)]"
+                  class="col-th flex items-center justify-center w-[112px] sm:w-[168px] shrink-0 sticky right-0 bg-[#fbf6ec] z-50 shadow-[-2px_0_5px_-2px_rgba(0,0,0,0.05)]"
                 >
                   操作
                 </div>
@@ -1050,7 +1050,7 @@
                   {{ getSpeciesName(b.species_id) }}
                 </div>
                 <div
-                  class="col-td flex-1 min-w-[72px] flex items-center justify-center"
+                  class="col-td flex-1 min-w-[72px] hidden sm:flex items-center justify-center"
                 >
                   <span
                     v-if="b.status === 'COMPLETED'"
@@ -1093,31 +1093,31 @@
                 <div class="col-td flex-1 min-w-[96px] flex items-center">
                   {{ dateStr(b.release_date || b.species?.release_date) }}
                 </div>
-                <div class="col-td-time flex-1 min-w-[140px] flex items-center">
+                <div class="col-td-time flex-1 min-w-[140px] hidden lg:flex items-center">
                   {{ dateTimeStr(b.created_at) }}
                 </div>
                 <div
                   v-if="activeTab === 'current'"
-                  class="px-3 py-2 flex items-center justify-center w-[168px] shrink-0 sticky right-0 bg-white group-hover:bg-[#fcf8f0] transition-colors z-30 shadow-[-2px_0_5px_-2px_rgba(0,0,0,0.05)]"
+                  class="px-3 py-2 flex items-center justify-center w-[112px] sm:w-[168px] shrink-0 sticky right-0 bg-white group-hover:bg-[#fcf8f0] transition-colors z-30 shadow-[-2px_0_5px_-2px_rgba(0,0,0,0.05)]"
                 >
                   <div class="flex items-center justify-center gap-1">
                     <button
                       @click="viewBill(b)"
-                      class="px-2 py-1.5 rounded text-sm whitespace-nowrap shrink-0 transition-colors text-dunhuang-blue hover:bg-dunhuang-blue/10 border border-transparent hover:border-dunhuang-blue/30"
+                      class="px-1.5 sm:px-2 py-1.5 rounded text-xs sm:text-sm whitespace-nowrap shrink-0 transition-colors text-dunhuang-blue hover:bg-dunhuang-blue/10 border border-transparent hover:border-dunhuang-blue/30"
                     >
                       查看
                     </button>
                     <button
                       v-if="authStore.isAdmin"
                       @click="editBill(b)"
-                      class="px-2 py-1.5 rounded text-sm whitespace-nowrap shrink-0 transition-colors text-dunhuang-green hover:bg-dunhuang-green/10 border border-transparent hover:border-dunhuang-green/30"
+                      class="px-1.5 sm:px-2 py-1.5 rounded text-xs sm:text-sm whitespace-nowrap shrink-0 transition-colors text-dunhuang-green hover:bg-dunhuang-green/10 border border-transparent hover:border-dunhuang-green/30"
                     >
                       编辑
                     </button>
                     <button
                       v-if="authStore.isAdmin"
                       @click="confirmDeleteBill(b.id)"
-                      class="px-2 py-1.5 rounded text-sm whitespace-nowrap shrink-0 transition-colors text-dunhuang-red hover:bg-dunhuang-red/10 border border-transparent hover:border-dunhuang-red/30"
+                      class="px-1.5 sm:px-2 py-1.5 rounded text-xs sm:text-sm whitespace-nowrap shrink-0 transition-colors text-dunhuang-red hover:bg-dunhuang-red/10 border border-transparent hover:border-dunhuang-red/30"
                     >
                       删除
                     </button>
@@ -1141,7 +1141,7 @@
                     class="col-td font-medium flex-1 min-w-[100px] flex items-center bg-white z-30 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.05)] sticky left-[112px]"
                   ></div>
                   <div
-                    class="col-td flex-1 min-w-[72px] flex items-center justify-center"
+                    class="col-td flex-1 min-w-[72px] hidden sm:flex items-center justify-center"
                   ></div>
                   <div
                     class="col-td tabular-nums flex-1 min-w-[104px] flex items-center"
@@ -1161,7 +1161,7 @@
                     class="col-td-mono-red flex-1 min-w-[104px] flex items-center"
                   ></div>
                   <div class="col-td flex-1 min-w-[96px] flex items-center"></div>
-                  <div class="col-td-time flex-1 min-w-[140px] flex items-center"></div>
+                  <div class="col-td-time flex-1 min-w-[140px] hidden lg:flex items-center"></div>
                   <div
                     v-if="activeTab === 'current'"
                     class="px-3 py-2 flex items-center justify-center w-[168px] shrink-0 sticky right-0 bg-white z-30 shadow-[-2px_0_5px_-2px_rgba(0,0,0,0.05)]"

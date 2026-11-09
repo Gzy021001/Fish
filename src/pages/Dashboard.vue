@@ -71,7 +71,7 @@
         </div>
       </div>
 
-      <div class="relative flex-1 min-h-[360px] lg:min-h-[500px]">
+      <div class="relative flex-1 min-h-[560px] sm:min-h-[360px] lg:min-h-[500px]">
         <Transition name="fade">
           <div
             v-if="trendsLoading"
@@ -100,11 +100,11 @@
         </Transition>
         <div
           v-show="hasTrendData"
-          class="absolute inset-0 flex gap-4 trend-scroll-container"
+          class="absolute inset-0 flex flex-col sm:flex-row gap-3 sm:gap-4 trend-scroll-container"
           @mousedown="onCardScrollMouseDown"
         >
           <div
-            class="flex-1 min-w-0 overflow-y-auto pr-1 trend-scroll-left"
+            class="flex-1 min-h-0 min-w-0 overflow-y-auto pr-1 trend-scroll-left"
             ref="cardScrollEl"
           >
             <div v-if="priceTrendAll.length > 0" class="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -164,7 +164,7 @@
           </div>
           <div
             v-if="priceFluctuationData.length > 0"
-            class="w-56 shrink-0 flex flex-col bg-gradient-to-b from-dunhuang-bg/50 to-dunhuang-bg/20 rounded-xl border border-dunhuang-yellow/15"
+            class="w-full sm:w-56 shrink-0 flex flex-col max-h-[240px] sm:max-h-none bg-gradient-to-b from-dunhuang-bg/50 to-dunhuang-bg/20 rounded-xl border border-dunhuang-yellow/15"
           >
             <div
               class="px-3 py-2 border-b border-dunhuang-yellow/10 text-xs font-bold text-dunhuang-blue flex-none"
@@ -172,7 +172,7 @@
               单价浮动
               <span class="text-dunhuang-text/40 font-normal">(元)</span>
             </div>
-            <div class="flex-1 overflow-y-auto">
+            <div class="flex-1 overflow-y-auto max-h-[192px] sm:max-h-none">
               <div
                 ref="fluctuationChartRef"
                 class="w-full"
@@ -1202,7 +1202,14 @@ const renderBillsChart = async () => {
     return b ? Number(b.total_amount.toFixed(2)) : 0;
   });
 
-  const labelOverflow2 = dayLabels.length > 20;
+  // 小屏不再硬挤 24 个日期标签：按容器宽度算最多能放几个（每个标签约 44px）
+  const chartW = billsChartRef.value.clientWidth || 600;
+  const maxLabels = Math.max(3, Math.floor(chartW / 44));
+  const labelOverflow2 = dayLabels.length > maxLabels;
+  const labelInterval2 = Math.max(
+    0,
+    Math.ceil(dayLabels.length / maxLabels) - 1,
+  );
   const xDataCount = dayLabels.length;
   const showDataZoom = xDataCount > 25;
   // 自适应柱宽：数据越少柱子越宽
@@ -1272,9 +1279,7 @@ const renderBillsChart = async () => {
         color: "#9ca3af",
         fontSize: 10,
         rotate: labelOverflow2 ? 35 : 0,
-        interval: labelOverflow2
-          ? Math.ceil(dayLabels.length / 20) - 1
-          : "auto",
+        interval: labelOverflow2 ? labelInterval2 : "auto",
       },
       axisTick: { show: false },
     },
@@ -1492,7 +1497,14 @@ const renderSpeciesWeightChart = async () => {
     data: c.data,
   }));
 
-  const labelOverflow3 = dayLabels.length > 20;
+  // 同样按容器宽度算标签密度，避免手机上一排日期挤成一团
+  const speciesChartW = speciesWeightChartRef.value.clientWidth || 600;
+  const maxLabels3 = Math.max(3, Math.floor(speciesChartW / 44));
+  const labelOverflow3 = dayLabels.length > maxLabels3;
+  const labelInterval3 = Math.max(
+    0,
+    Math.ceil(dayLabels.length / maxLabels3) - 1,
+  );
   const legendNames = activeCats.map((c) => c.label);
 
   const option: any = {
@@ -1546,9 +1558,7 @@ const renderSpeciesWeightChart = async () => {
         color: "#9ca3af",
         fontSize: 10,
         rotate: labelOverflow3 ? 35 : 0,
-        interval: labelOverflow3
-          ? Math.ceil(dayLabels.length / 20) - 1
-          : "auto",
+        interval: labelOverflow3 ? labelInterval3 : "auto",
       },
       axisTick: { show: false },
     },

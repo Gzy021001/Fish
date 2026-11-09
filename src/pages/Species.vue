@@ -62,7 +62,7 @@
     <div
       class="overflow-y-scroll overflow-x-auto custom-scrollbar border border-dunhuang-yellow/30 rounded-lg bg-white h-[494px]"
     >
-      <table class="w-full min-w-[720px] text-left border-collapse whitespace-nowrap">
+      <table class="w-full min-w-full sm:min-w-[720px] text-left border-collapse whitespace-nowrap">
         <thead
           class="sticky top-0 bg-white/90 backdrop-blur z-20 flex w-full transform-gpu h-[42px]"
         >
@@ -80,7 +80,7 @@
               />
             </th>
             <th
-              class="px-4 py-2 border-b border-dunhuang-yellow/40 flex-1 flex items-center"
+              class="px-4 py-2 border-b border-dunhuang-yellow/40 flex-1 hidden sm:flex items-center"
             >
               序号
             </th>
@@ -92,25 +92,25 @@
             <th
               class="px-4 py-2 border-b border-dunhuang-yellow/40 flex-1 flex items-center"
             >
-              单价（元）
+              单价<span class="hidden sm:inline">（元）</span>
             </th>
             <th
-              class="px-4 py-2 border-b border-dunhuang-yellow/40 flex-1 flex items-center"
+              class="px-4 py-2 border-b border-dunhuang-yellow/40 flex-1 hidden sm:flex items-center"
             >
               放生日期
             </th>
             <th
-              class="px-4 py-2 border-b border-dunhuang-yellow/40 flex-1 flex items-center"
+              class="px-4 py-2 border-b border-dunhuang-yellow/40 flex-1 hidden md:flex items-center"
             >
               默认单位
             </th>
             <th
-              class="px-4 py-2 border-b border-dunhuang-yellow/40 flex-1 flex items-center"
+              class="px-4 py-2 border-b border-dunhuang-yellow/40 flex-1 hidden md:flex items-center"
             >
               图片
             </th>
             <th
-              class="px-4 py-2 border-b border-dunhuang-yellow/40 flex items-center justify-center w-44 shrink-0 sticky right-0 bg-dunhuang-yellow/20 backdrop-blur z-30 sticky-col-right"
+              class="px-4 py-2 border-b border-dunhuang-yellow/40 flex items-center justify-center w-28 sm:w-44 shrink-0 sticky right-0 bg-dunhuang-yellow/20 backdrop-blur z-30 sticky-col-right"
             >
               操作
             </th>
@@ -133,7 +133,7 @@
               />
             </td>
             <td
-              class="px-4 py-1.5 text-dunhuang-text/80 flex-1 flex items-center"
+              class="px-4 py-1.5 text-dunhuang-text/80 flex-1 hidden sm:flex items-center"
             >
               {{ (currentPage - 1) * pageSize + index + 1 }}
             </td>
@@ -145,13 +145,13 @@
             >
               {{ formatMoney(sp.default_price) }}
             </td>
-            <td class="px-4 py-1.5 flex-1 flex items-center text-sm">
+            <td class="px-4 py-1.5 flex-1 hidden sm:flex items-center text-sm">
               {{ dateStr(sp.release_date || sp.created_at) || "-" }}
             </td>
-            <td class="px-4 py-1.5 flex-1 flex items-center">
+            <td class="px-4 py-1.5 flex-1 hidden md:flex items-center">
               {{ sp.default_unit }}
             </td>
-            <td class="px-4 py-1.5 flex-1 flex items-center">
+            <td class="px-4 py-1.5 flex-1 hidden md:flex items-center">
               <div class="flex items-center">
                 <img
                   v-if="sp.image_url"
@@ -172,26 +172,26 @@
               </div>
             </td>
             <td
-              class="px-3 py-1.5 flex items-center justify-center w-44 shrink-0 sticky right-0 bg-white/60 backdrop-blur-md group-hover:bg-dunhuang-yellow/10 transition-colors sticky-col-right"
+              class="px-3 py-1.5 flex items-center justify-center w-28 sm:w-44 shrink-0 sticky right-0 bg-white/60 backdrop-blur-md group-hover:bg-dunhuang-yellow/10 transition-colors sticky-col-right"
             >
               <div class="flex items-center justify-center gap-1">
                 <button
                   @click="openDetail(sp.id)"
-                  class="px-2 py-1.5 rounded text-sm whitespace-nowrap shrink-0 transition-colors text-dunhuang-blue hover:bg-dunhuang-blue/10 border border-transparent hover:border-dunhuang-blue/30"
+                  class="px-1 sm:px-2 py-1.5 rounded text-xs sm:text-sm whitespace-nowrap shrink-0 transition-colors text-dunhuang-blue hover:bg-dunhuang-blue/10 border border-transparent hover:border-dunhuang-blue/30"
                 >
                   查看
                 </button>
                 <button
                   v-if="authStore.isAdmin"
                   @click="openDetail(sp.id, true)"
-                  class="px-2 py-1.5 rounded text-sm whitespace-nowrap shrink-0 transition-colors text-dunhuang-green hover:bg-dunhuang-green/10 border border-transparent hover:border-dunhuang-green/30"
+                  class="px-1 sm:px-2 py-1.5 rounded text-xs sm:text-sm whitespace-nowrap shrink-0 transition-colors text-dunhuang-green hover:bg-dunhuang-green/10 border border-transparent hover:border-dunhuang-green/30"
                 >
                   编辑
                 </button>
                 <button
                   v-if="authStore.isAdmin"
                   @click="confirmRemoveSpecies(sp.id)"
-                  class="px-2 py-1.5 rounded text-sm whitespace-nowrap shrink-0 transition-colors text-dunhuang-red hover:bg-dunhuang-red/10 border border-transparent hover:border-dunhuang-red/30"
+                  class="px-1 sm:px-2 py-1.5 rounded text-xs sm:text-sm whitespace-nowrap shrink-0 transition-colors text-dunhuang-red hover:bg-dunhuang-red/10 border border-transparent hover:border-dunhuang-red/30"
                 >
                   删除
                 </button>
@@ -206,14 +206,14 @@
             <td
               class="px-3 py-1.5 w-10 shrink-0 sticky left-0 bg-white/60 sticky-col-left"
             ></td>
+            <td class="px-4 py-1.5 flex-1 hidden sm:flex"></td>
             <td class="px-4 py-1.5 flex-1"></td>
             <td class="px-4 py-1.5 flex-1"></td>
-            <td class="px-4 py-1.5 flex-1"></td>
-            <td class="px-4 py-1.5 flex-1"></td>
-            <td class="px-4 py-1.5 flex-1"></td>
-            <td class="px-4 py-1.5 flex-1"></td>
+            <td class="px-4 py-1.5 flex-1 hidden sm:flex"></td>
+            <td class="px-4 py-1.5 flex-1 hidden md:flex"></td>
+            <td class="px-4 py-1.5 flex-1 hidden md:flex"></td>
             <td
-              class="px-3 py-1.5 w-44 shrink-0 sticky right-0 bg-white/60 sticky-col-right"
+              class="px-3 py-1.5 w-28 sm:w-44 shrink-0 sticky right-0 bg-white/60 sticky-col-right"
             ></td>
           </tr>
           <tr
