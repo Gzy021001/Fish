@@ -224,11 +224,10 @@
 
       <div
         v-if="hasBillData"
-        class="flex flex-col sm:flex-row flex-wrap gap-3 sm:gap-5 mb-5 flex-none"
+        class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3 sm:gap-5 mb-5 flex-none"
       >
         <div
-          class="bg-[#f9f9f6] rounded-2xl px-5 py-3 border-l-[3px] border-[#5c4033]/40 flex flex-col justify-center flex-1 sm:flex-none"
-          style="min-width: 0"
+          class="bg-[#f9f9f6] rounded-2xl px-5 py-3 border-l-[3px] border-[#5c4033]/40 flex flex-col justify-center min-w-0"
         >
           <div class="text-xs text-gray-500 mb-1.5 font-medium">总重量</div>
           <div class="flex items-baseline gap-1.5">
@@ -239,8 +238,7 @@
           </div>
         </div>
         <div
-          class="bg-[#f9f9f6] rounded-2xl px-5 py-3 border-l-[3px] border-[#c49b4a]/50 flex flex-col justify-center flex-1 sm:flex-none"
-          style="min-width: 0"
+          class="bg-[#f9f9f6] rounded-2xl px-5 py-3 border-l-[3px] border-[#c49b4a]/50 flex flex-col justify-center min-w-0"
         >
           <div class="text-xs text-gray-500 mb-1.5 font-medium">总金额</div>
           <div class="flex items-baseline gap-1.5">
@@ -257,40 +255,41 @@
           </div>
         </div>
         <div
-          class="flex-1 min-w-[220px] bg-[#f9f9f6] rounded-2xl px-5 py-3 border-l-[3px] border-dunhuang-blue/25"
+          class="bg-[#f9f9f6] rounded-2xl px-5 py-3 border-l-[3px] border-dunhuang-blue/25 flex flex-col justify-center min-w-0"
         >
-          <div class="flex items-baseline text-xs text-gray-500 mb-1.5">
-            <span class="w-12 shrink-0"></span>
-            <span class="flex-1 text-right font-medium">总重量(公斤)</span>
-            <span class="w-28 text-right font-medium">总金额(元)</span>
+          <div class="text-xs text-gray-500 mb-1.5 font-medium">
+            上半年<span class="text-gray-400">（1–6 月）</span>
           </div>
-          <div class="flex items-baseline py-0.5">
-            <span class="text-xs text-gray-600 w-12 shrink-0 font-medium"
-              >上半年</span
-            >
-            <span
-              class="flex-1 text-right text-base font-bold text-gray-800 tabular-nums"
-              >{{ formatPrice(halfYearStats.h1Weight) }}</span
-            >
-            <span
-              class="w-28 text-right text-base font-bold text-dunhuang-red tabular-nums"
-              >{{ fmtYuan(halfYearStats.h1Amount) }}</span
-            >
+          <div class="flex items-baseline gap-1.5">
+            <span class="text-xl font-bold text-gray-800 tabular-nums">{{
+              formatPrice(halfYearStats.h1Weight)
+            }}</span>
+            <span class="text-xs text-gray-500">公斤</span>
           </div>
-          <div
-            class="flex items-baseline py-0.5 mt-1 border-t border-gray-200/80 pt-1.5"
-          >
-            <span class="text-xs text-gray-600 w-12 shrink-0 font-medium"
-              >下半年</span
-            >
-            <span
-              class="flex-1 text-right text-base font-bold text-gray-800 tabular-nums"
-              >{{ formatPrice(halfYearStats.h2Weight) }}</span
-            >
-            <span
-              class="w-28 text-right text-base font-bold text-dunhuang-red tabular-nums"
-              >{{ fmtYuan(halfYearStats.h2Amount) }}</span
-            >
+          <div class="flex items-baseline gap-1 mt-0.5">
+            <span class="text-sm font-bold text-dunhuang-red tabular-nums">{{
+              fmtYuan(halfYearStats.h1Amount)
+            }}</span>
+            <span class="text-[11px] text-gray-500">元</span>
+          </div>
+        </div>
+        <div
+          class="bg-[#f9f9f6] rounded-2xl px-5 py-3 border-l-[3px] border-dunhuang-blue/25 flex flex-col justify-center min-w-0"
+        >
+          <div class="text-xs text-gray-500 mb-1.5 font-medium">
+            下半年<span class="text-gray-400">（7–12 月）</span>
+          </div>
+          <div class="flex items-baseline gap-1.5">
+            <span class="text-xl font-bold text-gray-800 tabular-nums">{{
+              formatPrice(halfYearStats.h2Weight)
+            }}</span>
+            <span class="text-xs text-gray-500">公斤</span>
+          </div>
+          <div class="flex items-baseline gap-1 mt-0.5">
+            <span class="text-sm font-bold text-dunhuang-red tabular-nums">{{
+              fmtYuan(halfYearStats.h2Amount)
+            }}</span>
+            <span class="text-[11px] text-gray-500">元</span>
           </div>
         </div>
       </div>
@@ -331,7 +330,7 @@
             class="absolute inset-0 w-full h-full"
           ></div>
         </div>
-        <div class="relative w-full md:w-[38%] h-[220px] md:h-full">
+        <div class="relative w-full md:w-[38%] h-[240px] md:h-full">
           <div
             v-show="hasBillData"
             ref="pieChart"
@@ -692,6 +691,8 @@ const fluctuationChartRef = ref<HTMLElement | null>(null);
 let billsChartInstance: echarts.ECharts | null = null;
 let speciesWeightChartInstance: echarts.ECharts | null = null;
 let pieChartInstance: echarts.ECharts | null = null;
+/** 饼图当前是否处于窄屏布局（用于跨断点时重算图例位置） */
+let pieCompact = false;
 let fluctuationChartInstance: echarts.ECharts | null = null;
 const trendChartRefs = new Map<number, HTMLElement>();
 const trendChartInstances = new Map<number, echarts.ECharts>();
@@ -1617,8 +1618,11 @@ const renderPieChart = async () => {
   if (pieData.length === 0) return;
 
   const totalPct = pieData.reduce((s, d) => s + d.value, 0);
+  // 图例与标注统一保留 1 位小数，避免同一个占比出现「65.59% / 65.6%」两种写法
+  const pctOf = (v: number) => (totalPct > 0 ? Math.round((v / totalPct) * 1000) / 10 : 0);
 
   const containerWidth = pieChart.value.clientWidth || 350;
+  const containerHeight = pieChart.value.clientHeight || 240;
   const s = Math.min(1, containerWidth / 350);
   const fs = Math.max(7, Math.round(11 * s));
   const fsSm = Math.max(6, Math.round(9 * s));
@@ -1629,110 +1633,156 @@ const renderPieChart = async () => {
   const pctW = Math.max(28, Math.round(48 * s));
   const tooltipFs = Math.max(10, Math.round(13 * s));
 
-  const option: any = {
-    graphic: [],
-    legend: {
-      orient: "vertical",
-      right: "2%",
-      top: "center",
-      itemGap: gap,
-      itemWidth: itemSz,
-      itemHeight: itemSz,
-      borderRadius: Math.round(5 * s),
-      textStyle: {
-        color: "#374151",
-        fontSize: fs,
-        fontWeight: 500,
-        rich: {
-          name: { color: "#374151", fontSize: fs, fontWeight: 500, width: nameW },
-          pct: {
-            color: "#6b7280",
-            fontSize: fs,
-            fontWeight: 600,
-            width: pctW,
-            align: "right",
-          },
-        },
-      },
-      formatter: (name: string) => {
-        const d = pieData.find((p: any) => p.name === name);
-        if (!d || totalPct === 0) return name;
-        const pct = Math.round((d.value / totalPct) * 1000) / 10;
-        return `{name|${name}}  {pct|${pct}%}`;
-      },
+  // 窄屏/矮容器：饼图右侧的竖排图例和外圈标注会互相压字（标注被图例盖住、名称被截断），
+  // 改成「饼居中 + 图例横排到底部 + 关掉外圈标注」，把标注信息全部交给图例和 tooltip。
+  const compact = containerWidth < 560 || containerHeight < 240;
+  pieCompact = compact;
+
+  const tooltip = {
+    trigger: "item",
+    appendToBody: true,
+    backgroundColor: "#ffffff",
+    borderColor: "#e5e7eb",
+    borderWidth: Math.max(1, Math.round(s)),
+    padding: [Math.round(10 * s), Math.round(14 * s)],
+    textStyle: { color: "#374151", fontSize: tooltipFs },
+    formatter: (params: any) => {
+      return `<div style="font-size:${tooltipFs + 1}px;font-weight:bold;margin-bottom:5px;">${params.marker} ${params.name}</div>
+                <div style="color:#6b7280;">放生重量：<b style="color:#374151;">${formatPrice(params.value)}</b> 公斤</div>
+                <div style="color:#6b7280;">占比：<b style="color:#374151;">${pctOf(params.value)}%</b></div>`;
     },
-    tooltip: {
-      trigger: "item",
-      appendToBody: true,
-      backgroundColor: "#ffffff",
-      borderColor: "#e5e7eb",
-      borderWidth: Math.max(1, Math.round(s)),
-      padding: [Math.round(10 * s), Math.round(14 * s)],
-      textStyle: { color: "#374151", fontSize: tooltipFs },
-      formatter: (params: any) => {
-        return `<div style="font-size:${tooltipFs + 1}px;font-weight:bold;margin-bottom:5px;">${params.marker} ${params.name}</div>
-                  <div style="color:#6b7280;">放生重量：<b style="color:#374151;">${formatPrice(params.value)}</b> 公斤</div>
-                  <div style="color:#6b7280;">占比：<b style="color:#374151;">${params.percent}%</b></div>`;
-      },
-    },
-    series: [
-      {
-        type: "pie",
-        radius: ["46%", "76%"],
-        center: ["42%", "50%"],
-        avoidLabelOverlap: true,
-        itemStyle: {
-          borderRadius: Math.round(4 * s),
-          borderColor: "#fff",
-          borderWidth: Math.max(1, Math.round(2 * s)),
-        },
-        label: {
-          show: true,
-          position: "outside",
-          formatter: (p: any) => {
-            return `{name|${p.name}}\n{pct|${p.percent}%}`;
-          },
-          rich: {
-            name: {
-              fontSize: fsSm,
-              fontWeight: 600,
-              color: "#374151",
-              lineHeight: Math.round(16 * s),
-            },
-            pct: {
-              fontSize: fsXs,
-              color: "#6b7280",
-              lineHeight: Math.round(14 * s),
-            },
-          },
-        },
-        labelLine: {
-          show: true,
-          length: Math.round(18 * s),
-          length2: Math.round(14 * s),
-          lineStyle: { color: "#cbd5e1", width: Math.max(0.5, s) },
-        },
-        emphasis: {
-          scaleSize: Math.round(8 * s),
-          itemStyle: {
-            shadowBlur: Math.round(24 * s),
-            shadowOffsetX: 0,
-            shadowOffsetY: Math.round(8 * s),
-            shadowColor: "rgba(0,0,0,0.12)",
-          },
-          label: {
-            show: true,
-            fontSize: Math.round(12 * s),
-            fontWeight: "bold",
-          },
-        },
-        data: pieData,
-        animationType: "scale",
-        animationEasing: "cubicOut",
-        animationDelay: (idx: number) => idx * Math.round(120 * s),
-      },
-    ],
   };
+
+  const option: any = compact
+    ? {
+        legend: {
+          orient: "horizontal",
+          left: "center",
+          bottom: 2,
+          width: "96%",
+          icon: "circle",
+          itemGap: containerWidth < 340 ? 8 : 12,
+          itemWidth: 8,
+          itemHeight: 8,
+          textStyle: {
+            color: "#374151",
+            fontSize: containerWidth < 340 ? 10 : 11,
+            fontWeight: 500,
+            lineHeight: 16,
+          },
+          formatter: (name: string) => {
+            const d = pieData.find((p: any) => p.name === name);
+            return d ? `${name} ${pctOf(d.value)}%` : name;
+          },
+        },
+        tooltip,
+        series: [
+          {
+            type: "pie",
+            radius: ["38%", "64%"],
+            center: ["50%", "42%"],
+            avoidLabelOverlap: true,
+            itemStyle: { borderRadius: 4, borderColor: "#fff", borderWidth: 2 },
+            label: { show: false },
+            labelLine: { show: false },
+            emphasis: { scaleSize: 6, label: { show: false } },
+            data: pieData,
+            animationType: "scale",
+            animationEasing: "cubicOut",
+            animationDelay: (idx: number) => idx * 80,
+          },
+        ],
+      }
+    : {
+        graphic: [],
+        legend: {
+          orient: "vertical",
+          right: "2%",
+          top: "center",
+          itemGap: gap,
+          itemWidth: itemSz,
+          itemHeight: itemSz,
+          borderRadius: Math.round(5 * s),
+          textStyle: {
+            color: "#374151",
+            fontSize: fs,
+            fontWeight: 500,
+            rich: {
+              name: { color: "#374151", fontSize: fs, fontWeight: 500, width: nameW },
+              pct: {
+                color: "#6b7280",
+                fontSize: fs,
+                fontWeight: 600,
+                width: pctW,
+                align: "right",
+              },
+            },
+          },
+          formatter: (name: string) => {
+            const d = pieData.find((p: any) => p.name === name);
+            if (!d || totalPct === 0) return name;
+            return `{name|${name}}  {pct|${pctOf(d.value)}%}`;
+          },
+        },
+        tooltip,
+        series: [
+          {
+            type: "pie",
+            radius: ["46%", "76%"],
+            center: ["42%", "50%"],
+            avoidLabelOverlap: true,
+            itemStyle: {
+              borderRadius: Math.round(4 * s),
+              borderColor: "#fff",
+              borderWidth: Math.max(1, Math.round(2 * s)),
+            },
+            label: {
+              show: true,
+              position: "outside",
+              formatter: (p: any) => {
+                return `{name|${p.name}}\n{pct|${pctOf(p.value)}%}`;
+              },
+              rich: {
+                name: {
+                  fontSize: fsSm,
+                  fontWeight: 600,
+                  color: "#374151",
+                  lineHeight: Math.round(16 * s),
+                },
+                pct: {
+                  fontSize: fsXs,
+                  color: "#6b7280",
+                  lineHeight: Math.round(14 * s),
+                },
+              },
+            },
+            labelLine: {
+              show: true,
+              length: Math.round(18 * s),
+              length2: Math.round(14 * s),
+              lineStyle: { color: "#cbd5e1", width: Math.max(0.5, s) },
+            },
+            emphasis: {
+              scaleSize: Math.round(8 * s),
+              itemStyle: {
+                shadowBlur: Math.round(24 * s),
+                shadowOffsetX: 0,
+                shadowOffsetY: Math.round(8 * s),
+                shadowColor: "rgba(0,0,0,0.12)",
+              },
+              label: {
+                show: true,
+                fontSize: Math.round(12 * s),
+                fontWeight: "bold",
+              },
+            },
+            data: pieData,
+            animationType: "scale",
+            animationEasing: "cubicOut",
+            animationDelay: (idx: number) => idx * Math.round(120 * s),
+          },
+        ],
+      };
 
   pieChartInstance.setOption(option);
 };
@@ -1743,6 +1793,12 @@ const handleResize = () => {
   pieChartInstance?.resize();
   fluctuationChartInstance?.resize();
   trendChartInstances.forEach((c) => c.resize());
+  // resize() 只重排尺寸、不会切换图例布局：跨过窄屏阈值时（右侧竖排 ↔ 底部横排）重建一次
+  if (pieChart.value) {
+    const compactNow =
+      pieChart.value.clientWidth < 560 || pieChart.value.clientHeight < 240;
+    if (compactNow !== pieCompact) renderPieChart();
+  }
 };
 
 const cardScrollEl = ref<HTMLElement | null>(null);
