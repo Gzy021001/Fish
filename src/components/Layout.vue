@@ -9,21 +9,21 @@
 
     <!-- 侧边栏（小屏为抽屉） -->
     <aside
-      class="w-60 shrink-0 flex flex-col z-40 fixed inset-y-0 left-0 transition-transform duration-300 lg:static lg:translate-x-0"
+      class="w-60 shrink-0 flex flex-col z-40 fixed inset-y-0 left-0 transition-transform duration-300 lg:static lg:translate-x-0 lg:border-r lg:border-[#c9a96a]/20"
       :class="sidebarOpen ? 'translate-x-0' : '-translate-x-full'"
       style="
         background: linear-gradient(
           180deg,
-          #82644a 0%,
-          #947660 50%,
-          #82644a 100%
+          #3e2b22 0%,
+          #4b362b 50%,
+          #3e2b22 100%
         );
       "
     >
       <!-- 标题区 -->
       <div class="h-20 flex items-center justify-center gap-2.5 px-4">
         <svg
-          class="size-[1.125rem] text-[#f0e0b5]/30 shrink-0"
+          class="size-[1.125rem] text-[#e6d3a6]/30 shrink-0"
           fill="none"
           stroke="currentColor"
           stroke-width="1.5"
@@ -52,21 +52,21 @@
           <circle cx="16" cy="10.5" r="1.2" fill="currentColor" stroke="none" />
         </svg>
         <h1
-          class="text-sm font-serif font-bold tracking-[0.2em] text-[#f0e0b5]"
+          class="text-sm font-serif font-bold tracking-[0.2em] text-[#e6d3a6]"
         >
           鱼价管理平台
         </h1>
       </div>
 
       <!-- 分隔 -->
-      <div class="mx-6 border-t border-[#f0e0b5]/10"></div>
+      <div class="mx-6 border-t border-[#e6d3a6]/10"></div>
 
       <!-- 导航 -->
       <nav class="flex-1 px-3 py-4 space-y-0.5">
         <router-link
           to="/dashboard"
-          class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-[#cfc3a5] transition-all duration-300 hover:text-[#f0e0b5] hover:bg-white/5"
-          active-class="!text-[#f0e0b5] !bg-white/10 shadow-[inset_3px_0_0_#c89b6c]"
+          class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-[#cbba97] transition-all duration-300 hover:text-[#e6d3a6] hover:bg-[#c9a96a]/10"
+          active-class="!text-[#e6d3a6] !bg-[#c9a96a]/12 shadow-[inset_3px_0_0_#c9a96a]"
         >
           <svg
             class="w-4 h-4 shrink-0"
@@ -86,8 +86,8 @@
 
         <router-link
           to="/billing"
-          class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-[#cfc3a5] transition-all duration-300 hover:text-[#f0e0b5] hover:bg-white/5"
-          active-class="!text-[#f0e0b5] !bg-white/10 shadow-[inset_3px_0_0_#c89b6c]"
+          class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-[#cbba97] transition-all duration-300 hover:text-[#e6d3a6] hover:bg-[#c9a96a]/10"
+          active-class="!text-[#e6d3a6] !bg-[#c9a96a]/12 shadow-[inset_3px_0_0_#c9a96a]"
         >
           <svg
             class="w-4 h-4 shrink-0"
@@ -107,8 +107,8 @@
 
         <router-link
           to="/species"
-          class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-[#cfc3a5] transition-all duration-300 hover:text-[#f0e0b5] hover:bg-white/5"
-          active-class="!text-[#f0e0b5] !bg-white/10 shadow-[inset_3px_0_0_#c89b6c]"
+          class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-[#cbba97] transition-all duration-300 hover:text-[#e6d3a6] hover:bg-[#c9a96a]/10"
+          active-class="!text-[#e6d3a6] !bg-[#c9a96a]/12 shadow-[inset_3px_0_0_#c9a96a]"
         >
           <svg
             class="w-4 h-4 shrink-0"
@@ -132,12 +132,12 @@
     <main class="flex-1 flex flex-col min-w-0">
       <!-- 顶栏 — 禅净简素 -->
       <header
-        class="h-14 lg:h-20 flex items-center justify-between px-3 sm:px-4 lg:px-6 border-b border-[#f0e0b5]/12 shrink-0"
-        style="background: linear-gradient(180deg, #947660 0%, #82644a 100%)"
+        class="h-14 lg:h-20 flex items-center justify-between px-3 sm:px-4 lg:px-6 border-b border-[#c9a96a]/15 shrink-0"
+        style="background: linear-gradient(180deg, #4b362b 0%, #3e2b22 100%)"
       >
         <div class="flex items-center gap-2 min-w-0">
           <button
-            class="lg:hidden p-2 -ml-1 rounded-lg text-[#f0e0b5] hover:bg-white/10 active:scale-95 transition-all"
+            class="lg:hidden p-2 -ml-1 rounded-lg text-[#e6d3a6] hover:bg-white/10 active:scale-95 transition-all"
             aria-label="打开菜单"
             @click="sidebarOpen = !sidebarOpen"
           >
@@ -151,7 +151,7 @@
             </svg>
           </button>
           <h2
-            class="text-sm sm:text-base font-serif font-bold tracking-[0.15em] text-[#f0e0b5] truncate"
+            class="text-sm sm:text-base font-serif font-bold tracking-[0.15em] text-[#e6d3a6] truncate"
           >
             {{ routeName }}
           </h2>
@@ -168,7 +168,7 @@
 
           <div
             @click="triggerAvatarUpload"
-            class="w-8 h-8 rounded-full cursor-pointer transition-all duration-300 hover:opacity-80 overflow-hidden border border-[#f0e0b5]/25"
+            class="w-8 h-8 rounded-full cursor-pointer transition-all duration-300 hover:opacity-80 overflow-hidden border border-[#e6d3a6]/25"
             :class="avatarUrl ? '' : 'bg-white/10'"
             :title="avatarUrl ? '点击更换头像' : '点击上传头像'"
           >
@@ -180,7 +180,7 @@
             />
             <svg
               v-else
-              class="w-full h-full p-1.5 text-[#f0e0b5]/60"
+              class="w-full h-full p-1.5 text-[#e6d3a6]/60"
               fill="currentColor"
               viewBox="0 0 24 24"
             >
@@ -192,7 +192,7 @@
 
           <button
             @click="handleLogout"
-            class="inline-flex items-center gap-1.5 px-2.5 sm:px-4 py-1.5 rounded-full text-sm text-[#f5e6c8] bg-[#c89b6c]/15 hover:bg-[#c89b6c]/30 active:scale-95 transition-all duration-300"
+            class="inline-flex items-center gap-1.5 px-2.5 sm:px-4 py-1.5 rounded-full text-sm text-[#ead9b4] bg-[#c9a96a]/15 hover:bg-[#c9a96a]/30 active:scale-95 transition-all duration-300"
           >
             <svg
               class="w-3.5 h-3.5"

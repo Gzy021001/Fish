@@ -3,7 +3,7 @@
     class="min-h-screen flex items-center justify-center relative overflow-hidden"
     style="
       background:
-        linear-gradient(180deg, #fdf8f2 0%, #f8eee0 15%, #f2e4cc 35%, #ece0c4 55%, #e8d8b8 75%, #e5d2ac 100%);
+        linear-gradient(180deg, #fbf7ee 0%, #f7f0e0 15%, #f1e7d2 35%, #ebdfc6 55%, #e6d7bb 75%, #e1d0b0 100%);
     "
   >
     <Transition name="fade">
@@ -16,37 +16,37 @@
     </Transition>
 
     <div class="w-full max-w-sm z-10 px-4">
-      <div class="bg-white rounded-lg shadow-[0_4px_32px_rgba(139,69,19,0.1)] border border-amber-200/50 p-10">
+      <div class="bg-white/95 rounded-lg shadow-[0_10px_40px_rgba(74,52,40,0.12)] border border-[#d8c08a]/50 p-10">
         <div class="text-center mb-6">
-          <p class="text-lg font-serif font-bold tracking-[0.25em] text-amber-900">
+          <p class="text-lg font-serif font-bold tracking-[0.25em] text-[#4a3428]">
             修改初始密码
           </p>
-          <p class="text-xs text-amber-800/50 mt-2">
+          <p class="text-xs text-[#8a7659] mt-2">
             首次登录必须修改初始密码后才能继续使用
           </p>
-          <div class="w-12 h-px bg-amber-300/50 mx-auto mt-4"></div>
+          <div class="w-12 h-px bg-[#c9a96a]/60 mx-auto mt-4"></div>
         </div>
 
         <form @submit.prevent="handleChangePassword" class="space-y-5">
           <div>
-            <label class="block text-xs tracking-wider text-amber-800/60 mb-2">新密码</label>
+            <label class="block text-xs tracking-wider text-[#7a6850] mb-2">新密码</label>
             <input
               v-model="newPassword"
               type="password"
               required
               minlength="6"
-              class="w-full px-4 py-2.5 bg-amber-50/40 border border-amber-200/70 rounded text-amber-900 text-sm placeholder-amber-400/50 outline-none focus:border-amber-400/80 focus:bg-amber-50/80 transition-colors"
+              class="w-full px-4 py-2.5 bg-[#fbf7ee]/70 border border-[#d8c08a]/70 rounded text-[#3a2e22] text-sm placeholder-[#b3a389] outline-none focus:border-[#bfa05f] focus:bg-[#fdfaf2] transition-colors"
               placeholder="至少 6 位"
             />
           </div>
 
           <div>
-            <label class="block text-xs tracking-wider text-amber-800/60 mb-2">确认新密码</label>
+            <label class="block text-xs tracking-wider text-[#7a6850] mb-2">确认新密码</label>
             <input
               v-model="confirmPassword"
               type="password"
               required
-              class="w-full px-4 py-2.5 bg-amber-50/40 border border-amber-200/70 rounded text-amber-900 text-sm placeholder-amber-400/50 outline-none focus:border-amber-400/80 focus:bg-amber-50/80 transition-colors"
+              class="w-full px-4 py-2.5 bg-[#fbf7ee]/70 border border-[#d8c08a]/70 rounded text-[#3a2e22] text-sm placeholder-[#b3a389] outline-none focus:border-[#bfa05f] focus:bg-[#fdfaf2] transition-colors"
               placeholder="再次输入新密码"
             />
           </div>
@@ -54,8 +54,7 @@
           <button
             type="submit"
             :disabled="loading"
-            class="w-full py-2.5 rounded text-white font-serif tracking-[0.15em] text-sm transition-colors flex justify-center items-center disabled:opacity-50 disabled:cursor-not-allowed"
-            style="background: #8b6914;"
+            class="w-full py-2.5 rounded text-[#f7efe0] font-serif tracking-[0.18em] text-sm transition-colors flex justify-center items-center disabled:opacity-50 disabled:cursor-not-allowed bg-[#4a3428] hover:bg-[#5a4033]"
           >
             <svg v-if="loading" class="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
               <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
@@ -67,7 +66,7 @@
           <button
             type="button"
             @click="handleLogout"
-            class="w-full py-2 rounded text-amber-800/60 text-sm hover:text-amber-900 hover:bg-amber-50/60 transition-colors"
+            class="w-full py-2 rounded text-[#7a6850]/80 text-sm hover:text-[#4a3428] hover:bg-[#f6efe0] transition-colors"
           >
             退出登录
           </button>

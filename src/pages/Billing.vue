@@ -943,14 +943,14 @@
           <!-- Header (Synced Scroll) -->
           <div
             ref="tableHeaderRef"
-            class="overflow-hidden shrink-0 bg-[#fbf6ec] z-40 transform-gpu shadow-sm"
+            class="overflow-hidden shrink-0 bg-[#f9f3e7] z-40 transform-gpu shadow-sm"
           >
             <div class="flex min-w-[1558px] h-[42px] pr-[12px]">
               <div
                 class="bg-dunhuang-yellow/10 text-dunhuang-blue font-sans font-bold text-sm flex w-full h-full"
               >
                 <div
-                  class="px-3 py-2 border-b border-dunhuang-yellow/40 flex items-center justify-center w-12 shrink-0 sticky left-0 bg-[#fbf6ec] z-50"
+                  class="px-3 py-2 border-b border-dunhuang-yellow/40 flex items-center justify-center w-12 shrink-0 sticky left-0 bg-[#f9f3e7] z-50"
                 >
                   <input
                     type="checkbox"
@@ -960,12 +960,12 @@
                   />
                 </div>
                 <div
-                  class="col-th w-16 shrink-0 flex items-center z-50 bg-[#fbf6ec] sticky left-12"
+                  class="col-th w-16 shrink-0 flex items-center z-50 bg-[#f9f3e7] sticky left-12"
                 >
                   序号
                 </div>
                 <div
-                  class="col-th flex-1 min-w-[100px] flex items-center z-50 bg-[#fbf6ec] shadow-[2px_0_5px_-2px_rgba(0,0,0,0.05)] sticky left-[112px]"
+                  class="col-th flex-1 min-w-[100px] flex items-center z-50 bg-[#f9f3e7] shadow-[2px_0_5px_-2px_rgba(0,0,0,0.05)] sticky left-[112px]"
                 >
                   品种
                 </div>
@@ -1009,7 +1009,7 @@
                 </div>
                 <div
                   v-if="activeTab === 'current'"
-                  class="col-th flex items-center justify-center w-[112px] sm:w-[168px] shrink-0 sticky right-0 bg-[#fbf6ec] z-50 shadow-[-2px_0_5px_-2px_rgba(0,0,0,0.05)]"
+                  class="col-th flex items-center justify-center w-[112px] sm:w-[168px] shrink-0 sticky right-0 bg-[#f9f3e7] z-50 shadow-[-2px_0_5px_-2px_rgba(0,0,0,0.05)]"
                 >
                   操作
                 </div>
@@ -1027,10 +1027,10 @@
               <div
                 v-for="(b, index) in paginatedBills"
                 :key="b.id"
-                class="border-b border-dunhuang-yellow/20 hover:bg-[#fcf8f0] transition-colors text-sm group flex w-full shrink-0 h-[45px]"
+                class="border-b border-dunhuang-yellow/20 hover:bg-[#fbf6ec] transition-colors text-sm group flex w-full shrink-0 h-[45px]"
               >
                 <div
-                  class="px-3 py-2 flex items-center justify-center w-12 shrink-0 sticky left-0 bg-white group-hover:bg-[#fcf8f0] transition-colors z-30"
+                  class="px-3 py-2 flex items-center justify-center w-12 shrink-0 sticky left-0 bg-white group-hover:bg-[#fbf6ec] transition-colors z-30"
                 >
                   <input
                     type="checkbox"
@@ -1040,12 +1040,12 @@
                   />
                 </div>
                 <div
-                  class="col-td-muted w-16 shrink-0 flex items-center bg-white group-hover:bg-[#fcf8f0] transition-colors z-30 sticky left-12"
+                  class="col-td-muted w-16 shrink-0 flex items-center bg-white group-hover:bg-[#fbf6ec] transition-colors z-30 sticky left-12"
                 >
                   {{ (currentPage - 1) * pageSize + index + 1 }}
                 </div>
                 <div
-                  class="col-td font-medium flex-1 min-w-[100px] flex items-center truncate pr-2 bg-white group-hover:bg-[#fcf8f0] transition-colors z-30 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.05)] sticky left-[112px]"
+                  class="col-td font-medium flex-1 min-w-[100px] flex items-center truncate pr-2 bg-white group-hover:bg-[#fbf6ec] transition-colors z-30 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.05)] sticky left-[112px]"
                 >
                   {{ getSpeciesName(b.species_id) }}
                 </div>
@@ -1098,7 +1098,7 @@
                 </div>
                 <div
                   v-if="activeTab === 'current'"
-                  class="px-3 py-2 flex items-center justify-center w-[112px] sm:w-[168px] shrink-0 sticky right-0 bg-white group-hover:bg-[#fcf8f0] transition-colors z-30 shadow-[-2px_0_5px_-2px_rgba(0,0,0,0.05)]"
+                  class="px-3 py-2 flex items-center justify-center w-[112px] sm:w-[168px] shrink-0 sticky right-0 bg-white group-hover:bg-[#fbf6ec] transition-colors z-30 shadow-[-2px_0_5px_-2px_rgba(0,0,0,0.05)]"
                 >
                   <div class="flex items-center justify-center gap-1">
                     <button

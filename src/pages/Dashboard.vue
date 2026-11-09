@@ -227,7 +227,7 @@
         class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3 sm:gap-5 mb-5 flex-none"
       >
         <div
-          class="bg-[#f9f9f6] rounded-2xl px-5 py-3 border-l-[3px] border-[#5c4033]/40 flex flex-col justify-center min-w-0"
+          class="bg-[#faf6ec] rounded-2xl px-5 py-3 border-l-[3px] border-[#5c4033]/40 flex flex-col justify-center min-w-0"
         >
           <div class="text-xs text-gray-500 mb-1.5 font-medium">总重量</div>
           <div class="flex items-baseline gap-1.5">
@@ -238,7 +238,7 @@
           </div>
         </div>
         <div
-          class="bg-[#f9f9f6] rounded-2xl px-5 py-3 border-l-[3px] border-[#c49b4a]/50 flex flex-col justify-center min-w-0"
+          class="bg-[#faf6ec] rounded-2xl px-5 py-3 border-l-[3px] border-[#c49b4a]/50 flex flex-col justify-center min-w-0"
         >
           <div class="text-xs text-gray-500 mb-1.5 font-medium">总金额</div>
           <div class="flex items-baseline gap-1.5">
@@ -255,7 +255,7 @@
           </div>
         </div>
         <div
-          class="bg-[#f9f9f6] rounded-2xl px-5 py-3 border-l-[3px] border-dunhuang-blue/25 flex flex-col justify-center min-w-0"
+          class="bg-[#faf6ec] rounded-2xl px-5 py-3 border-l-[3px] border-dunhuang-blue/25 flex flex-col justify-center min-w-0"
         >
           <div class="text-xs text-gray-500 mb-1.5 font-medium">
             上半年<span class="text-gray-400">（1–6 月）</span>
@@ -274,7 +274,7 @@
           </div>
         </div>
         <div
-          class="bg-[#f9f9f6] rounded-2xl px-5 py-3 border-l-[3px] border-dunhuang-blue/25 flex flex-col justify-center min-w-0"
+          class="bg-[#faf6ec] rounded-2xl px-5 py-3 border-l-[3px] border-dunhuang-blue/25 flex flex-col justify-center min-w-0"
         >
           <div class="text-xs text-gray-500 mb-1.5 font-medium">
             下半年<span class="text-gray-400">（7–12 月）</span>
@@ -711,20 +711,20 @@ watch(priceFluctuationData, () => {
 const fluctuationChartHeight = ref(0);
 
 const categoryDefs = [
-  { key: "鱼类", label: "鱼类", color: "#5c4033" },
-  { key: "贝类", label: "贝类", color: "#c49b4a" },
-  { key: "螺类", label: "螺类", color: "#4a7c59" },
-  { key: "龟鳖类", label: "龟鳖类", color: "#8b5e3c" },
-  { key: "虾蟹类", label: "虾蟹类", color: "#c4633a" },
+  { key: "鱼类", label: "鱼类", color: "#4a3428" },
+  { key: "贝类", label: "贝类", color: "#bfa05f" },
+  { key: "螺类", label: "螺类", color: "#4e6a55" },
+  { key: "龟鳖类", label: "龟鳖类", color: "#7c5b41" },
+  { key: "虾蟹类", label: "虾蟹类", color: "#a9763f" },
   { key: "其他", label: "其他", color: "#6b7280" },
 ];
 
 const catLineColors: Record<string, string> = {
-  鱼类: "#5c4033",
-  贝类: "#c49b4a",
-  螺类: "#4a7c59",
-  龟鳖类: "#8b5e3c",
-  虾蟹类: "#c4633a",
+  鱼类: "#4a3428",
+  贝类: "#bfa05f",
+  螺类: "#4e6a55",
+  龟鳖类: "#7c5b41",
+  虾蟹类: "#a9763f",
   其他: "#6b7280",
 };
 
