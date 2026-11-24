@@ -11,6 +11,7 @@ from cache import species_cache
 from services.species_service import (
     list_species,
     list_species_paginated,
+    attach_species_last_release,
     get_species,
     create_species,
     update_species,
@@ -45,7 +46,10 @@ def list_species_route(
         items, total = list_species_paginated(db, q, page, page_size)
         if response is not None:
             response.headers["X-Total-Count"] = str(total)
-        return serialize_species_list(items, include_images=include_images)
+        # 品种库列表额外带上「放生日期」= 最近一次有单据的放生日期
+        return attach_species_last_release(
+            db, serialize_species_list(items, include_images=include_images)
+        )
 
     cache_key = f"species_list_{q or 'all'}_{'with_images' if include_images else 'lite'}"
     cached_result = species_cache.get(cache_key)

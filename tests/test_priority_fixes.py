@@ -236,6 +236,141 @@ class PriorityFixesTests(unittest.TestCase):
         self.assertEqual(result["total"], 1)
         self.assertEqual(result["items"][0].species_id, sp.id)
 
+    # ---- 随喜汇总：只留有随喜记录的单据，并回三分类合计 ----
+    def test_list_bills_has_suixi_filter_and_sums(self):
+        sp = self.db.query(models.Species).first()
+        # 有随喜金额的单据
+        create_bill(
+            schemas.BillCreate(
+                species_id=sp.id, weight=2, unit_price=10, fee_value=0,
+                release_date=date(2026, 11, 8), status="COMPLETED",
+                payment_method="微信", alipay_amount=0,
+                wechat_amount=25.5, suixi_amount=0,
+            ),
+            self.user, self.db, commit=True,
+        )
+        # 只填了随喜类型、没填金额的历史单据也要保留
+        create_bill(
+            schemas.BillCreate(
+                species_id=sp.id, weight=1, unit_price=10, fee_value=0,
+                release_date=date(2026, 11, 8), status="COMPLETED",
+                payment_method="支付宝",
+            ),
+            self.user, self.db, commit=True,
+        )
+        # 没有任何随喜记录的单据应被过滤
+        create_bill(
+            schemas.BillCreate(
+                species_id=sp.id, weight=1, unit_price=10, fee_value=0,
+                release_date=date(2026, 11, 8), status="COMPLETED",
+            ),
+            self.user, self.db, commit=True,
+        )
+        self.db.commit()
+
+        result = list_bills(
+            self.db, page=1, page_size=10, limit=0,
+            status="COMPLETED", has_suixi=True,
+        )
+        self.assertEqual(result["total"], 2)
+        self.assertEqual(float(result["sum_wechat"]), 25.5)
+        self.assertEqual(float(result["sum_alipay"]), 0.0)
+        self.assertEqual(float(result["sum_suixi"]), 0.0)
+
+        # 不带 has_suixi 时三张单据都在，合计口径不变
+        all_bills = list_bills(self.db, page=1, page_size=10, limit=0, status="COMPLETED")
+        self.assertEqual(all_bills["total"], 3)
+        self.assertEqual(float(all_bills["sum_wechat"]), 25.5)
+
+    # ---- 随喜汇总按放生日期聚合：一行一天，金额取当天合计，微信拆两列 ----
+    def test_list_bills_group_by_date(self):
+        sp = self.db.query(models.Species).first()
+        # 11-08 两张单据：支付宝 10 + 微信 25.5 + 随喜放生 1300
+        create_bill(
+            schemas.BillCreate(
+                species_id=sp.id, weight=2, unit_price=10, fee_value=0,
+                release_date=date(2026, 11, 8), status="COMPLETED",
+                payment_method="微信", alipay_amount=10,
+                wechat_amount=25.5, suixi_amount=0,
+            ),
+            self.user, self.db, commit=True,
+        )
+        create_bill(
+            schemas.BillCreate(
+                species_id=sp.id, weight=1, unit_price=10, fee_value=0,
+                release_date=date(2026, 11, 8), status="COMPLETED",
+                payment_method="随喜放生", alipay_amount=0,
+                wechat_amount=0, suixi_amount=1300,
+            ),
+            self.user, self.db, commit=True,
+        )
+        # 同一天的第二笔微信：进「微信2」，不与第一笔合并
+        create_bill(
+            schemas.BillCreate(
+                species_id=sp.id, weight=1, unit_price=10, fee_value=0,
+                release_date=date(2026, 11, 8), status="COMPLETED",
+                payment_method="微信", alipay_amount=0,
+                wechat_amount=40, suixi_amount=0,
+            ),
+            self.user, self.db, commit=True,
+        )
+        # 11-09 一张支付宝单据
+        create_bill(
+            schemas.BillCreate(
+                species_id=sp.id, weight=1, unit_price=10, fee_value=0,
+                release_date=date(2026, 11, 9), status="COMPLETED",
+                payment_method="支付宝", alipay_amount=5,
+                wechat_amount=0, suixi_amount=0,
+            ),
+            self.user, self.db, commit=True,
+        )
+        # 没有随喜记录的单据不进随喜汇总
+        create_bill(
+            schemas.BillCreate(
+                species_id=sp.id, weight=1, unit_price=10, fee_value=0,
+                release_date=date(2026, 11, 9), status="COMPLETED",
+            ),
+            self.user, self.db, commit=True,
+        )
+        self.db.commit()
+
+        result = list_bills(
+            self.db, page=1, page_size=10, limit=0,
+            status="COMPLETED", has_suixi=True, group_by_date=True,
+        )
+        # 两个放生日期 -> 两行，按日期倒序
+        self.assertEqual(result["total"], 2)
+        self.assertEqual(len(result["items"]), 2)
+        newest, older = result["items"]
+        self.assertEqual(newest["release_date"], "2026-11-09")
+        self.assertEqual(float(newest["alipay_amount"]), 5.0)
+        self.assertEqual(float(newest["wechat1_amount"]), 0.0)
+        self.assertEqual(float(newest["wechat2_amount"]), 0.0)
+        self.assertEqual(float(newest["suixi_amount"]), 0.0)
+        self.assertEqual(older["release_date"], "2026-11-08")
+        self.assertEqual(float(older["alipay_amount"]), 10.0)
+        # 当天第一笔微信 25.5 -> 微信1；第二笔 40 -> 微信2（不合并）
+        self.assertEqual(float(older["wechat1_amount"]), 25.5)
+        self.assertEqual(float(older["wechat2_amount"]), 40.0)
+        self.assertEqual(float(older["suixi_amount"]), 1300.0)
+
+        # 表尾合计仍按全量口径（与分页无关）
+        self.assertEqual(float(result["sum_alipay"]), 15.0)
+        self.assertEqual(float(result["sum_wechat"]), 65.5)
+        self.assertEqual(float(result["sum_wechat1"]), 25.5)
+        self.assertEqual(float(result["sum_wechat2"]), 40.0)
+        self.assertEqual(float(result["sum_suixi"]), 1300.0)
+
+        # 分页按天：第 2 页只剩更早的一天
+        paged = list_bills(
+            self.db, page=2, page_size=1, limit=0,
+            status="COMPLETED", has_suixi=True, group_by_date=True,
+        )
+        self.assertEqual(paged["total"], 2)
+        self.assertEqual(len(paged["items"]), 1)
+        self.assertEqual(paged["items"][0]["release_date"], "2026-11-08")
+        self.assertEqual(float(paged["items"][0]["wechat2_amount"]), 40.0)
+
     # ---- 品种服务端分页 ----
     def test_list_species_paginated(self):
         sp = self.db.query(models.Species).first()
@@ -249,6 +384,40 @@ class PriorityFixesTests(unittest.TestCase):
         items2, total2 = list_species_paginated(self.db, None, page=2, page_size=2)
         self.assertEqual(total2, 3)
         self.assertEqual(len(items2), 1)
+
+    # ---- 品种库列表补「放生日期」：取最近一次有单据的放生日期 ----
+    def test_attach_species_last_release(self):
+        from services.species_service import (
+            attach_species_last_release,
+            serialize_species_list,
+        )
+
+        sp = self.db.query(models.Species).first()
+        unused = self._mk_species("未使用品种")
+        unused.release_date = date(2026, 10, 1)
+        create_bill(
+            schemas.BillCreate(
+                species_id=sp.id, weight=1, unit_price=10, fee_value=0,
+                release_date=date(2026, 11, 7), status="COMPLETED",
+            ),
+            self.user, self.db, commit=True,
+        )
+        create_bill(
+            schemas.BillCreate(
+                species_id=sp.id, weight=1, unit_price=10, fee_value=0,
+                release_date=date(2026, 11, 14), status="COMPLETED",
+            ),
+            self.user, self.db, commit=True,
+        )
+        self.db.commit()
+
+        rows = serialize_species_list([sp, unused], include_images=False)
+        attach_species_last_release(self.db, rows)
+        by_name = {row["name_zh"]: row for row in rows}
+        # 有单据：取最近一单（最近一周）的放生日期
+        self.assertEqual(by_name[sp.name_zh]["last_release_date"], "2026-11-14")
+        # 没有单据：回退品种自身的放生日期
+        self.assertEqual(by_name["未使用品种"]["last_release_date"], "2026-10-01")
 
     # ---- 非 admin 账号只读 ----
     def test_require_write_blocks_operator(self):

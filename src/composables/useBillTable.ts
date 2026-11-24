@@ -7,11 +7,9 @@ import type { Species, Bill, ApiError } from '../types'
 
 export function useBillTable(speciesList: Ref<Species[]>) {
   const toast = useToast()
-  const activeTab = ref('current')
   const filterDateFrom = ref('')
   const filterDateTo = ref('')
   const billingSearch = ref('')
-  const filterStatus = ref('')
   const bills = shallowRef<Bill[]>([])
   const selectedBillIds = ref<number[]>([])
 
@@ -50,7 +48,7 @@ export function useBillTable(speciesList: Ref<Species[]>) {
   const totalPages = computed(() => Math.ceil(totalItems.value / pageSize.value))
 
   const paginatedBills = computed(() => {
-    // 历史 tab 已改为服务端分页（exclude_packaging 后端过滤），返回的即是当前页
+    // 列表已改为服务端分页（exclude_packaging 后端过滤），返回的即是当前页
     return bills.value
   })
 
@@ -85,9 +83,11 @@ export function useBillTable(speciesList: Ref<Species[]>) {
     isAllSelected.value = (e.target as HTMLInputElement).checked
   }
 
-  const getSpeciesName = (id: number) => {
+  const getSpeciesName = (id: number, fallbackName?: string | null) => {
     const sp = speciesMap.value.get(id)
-    return sp ? sp.name_zh : `未知品种(${id})`
+    // 品种列表没拿到时（接口失败/尚未返回）回退到单据自带的品种名，
+    // 兜底只留占位符——「未知品种」这种字样不允许出现在列表里
+    return sp?.name_zh || fallbackName || '—'
   }
 
   const formatFee = (b: Bill) => {
@@ -116,19 +116,8 @@ export function useBillTable(speciesList: Ref<Species[]>) {
     try {
       const params = new URLSearchParams()
       params.set('limit', '0')
-      if (activeTab.value === 'history') {
-        params.set('status', 'COMPLETED')
-        params.set('page', currentPage.value.toString())
-        params.set('page_size', pageSize.value.toString())
-        // 历史视图排除打包耗材（冰/打包/袋），后端过滤，不再全量拉到前端
-        params.set('exclude_packaging', '1')
-      } else {
-        params.set('page', currentPage.value.toString())
-        params.set('page_size', pageSize.value.toString())
-        if (filterStatus.value) {
-          params.set('status', filterStatus.value)
-        }
-      }
+      params.set('page', currentPage.value.toString())
+      params.set('page_size', pageSize.value.toString())
 
       if (filterDateFrom.value) {
         params.set('date_from', filterDateFrom.value)
@@ -173,23 +162,6 @@ export function useBillTable(speciesList: Ref<Species[]>) {
     }
   }
 
-  const switchTab = (tab: string) => {
-    if (activeTab.value === tab) return
-    bills.value = []
-    activeTab.value = tab
-    selectedBillIds.value = []
-    // 历史单据没有状态筛选，清掉避免徽标计数与面板不一致
-    if (tab === 'history') {
-      filterStatus.value = ''
-    }
-
-    if (currentPage.value !== 1) {
-      currentPage.value = 1 // watch(currentPage) 统一拉取
-    } else {
-      fetchBills()
-    }
-  }
-
   // 筛选变化后统一回到第一页重新拉取；避免依赖 watch 副作用导致漏拉或双拉
   const refetchFromFirstPage = async () => {
     if (currentPage.value !== 1) {
@@ -202,7 +174,6 @@ export function useBillTable(speciesList: Ref<Species[]>) {
   const clearDateFilter = () => {
     filterDateFrom.value = ''
     filterDateTo.value = ''
-    filterStatus.value = ''
     fetchBills()
   }
 
@@ -296,10 +267,8 @@ export function useBillTable(speciesList: Ref<Species[]>) {
   }
 
   return {
-    activeTab,
     filterDateFrom,
     filterDateTo,
-    filterStatus,
     dateRangeLabel,
     billingSearch,
     bills,
@@ -319,7 +288,6 @@ export function useBillTable(speciesList: Ref<Species[]>) {
     getSpeciesName,
     formatFee,
     fetchBills,
-    switchTab,
     refetchFromFirstPage,
     clearDateFilter,
     exportBills,

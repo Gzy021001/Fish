@@ -37,3 +37,9 @@ _billing_recover.txt
 # 本地记忆工具数据与测试数据库，不入库
 .mnemon/
 backend/test_*.db
+
+# 本地截图 / 运行日志 / 上传的业务图片，不入库
+uploads/
+_dev_*.png
+_dev_*.log
+_tmp_backend.err.log

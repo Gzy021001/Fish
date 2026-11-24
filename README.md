@@ -93,6 +93,14 @@ SECRET_KEY=your_secret_key
 RESET_DATABASE=false
 ```
 
+### 环境要求
+
+- **Node.js ≥ 20（推荐 24.x LTS）**：Vite 5 / Vitest 4 / vue-tsc 都不支持 Node 12。
+  本机用 nvm-windows 管理版本，若 `node -v` 显示 v12，请先执行 `nvm use 24.22.0` 并重开终端；
+  Trae / VS Code 的 Vitest 扩展（vitest.explorer）需再执行 `Developer: Reload Window`，
+  才会用新的 Node 重新拉起 worker，否则会一直报 `Vitest process exited with code 1`。
+- Python 3.10+（后端）。
+
 ### 本地运行
 1. **安装前端依赖**：
    ```bash

@@ -1,257 +1,337 @@
 <template>
-  <div
-    class="bg-white rounded-2xl shadow-md border border-dunhuang-yellow/30 p-4 sm:p-6 lg:p-8 relative"
-  >
-    <Transition name="fade">
-      <div
-        v-if="errorMsg"
-        class="absolute top-4 left-1/2 -translate-x-1/2 z-50 max-w-md w-auto px-5 py-2.5 bg-dunhuang-red/95 text-white rounded-lg text-sm shadow-lg backdrop-blur"
-      >
-        {{ errorMsg }}
-      </div>
-    </Transition>
-    <div class="flex flex-wrap items-center justify-between gap-3 mb-6">
-      <div class="flex items-center gap-4">
+  <div class="h-full flex flex-col min-h-0">
+    <div
+      class="bg-white rounded-2xl shadow-md border border-dunhuang-yellow/30 p-4 sm:p-6 relative flex-1 flex flex-col min-h-0"
+    >
+      <Transition name="fade">
+        <div
+          v-if="errorMsg"
+          class="absolute top-4 left-1/2 -translate-x-1/2 z-50 max-w-md w-auto px-5 py-2.5 bg-dunhuang-red/95 text-white rounded-lg text-sm shadow-lg backdrop-blur"
+        >
+          {{ errorMsg }}
+        </div>
+      </Transition>
+
+      <!-- 工具栏 -->
+      <div class="flex flex-wrap items-center justify-between gap-3 shrink-0 mb-3">
         <SearchInput
           v-model="speciesSearchText"
           placeholder="搜索品种..."
           @search="handleSearch"
           @clear="handleClearSearch"
         />
-      </div>
-      <div class="flex gap-3">
-        <button
-          v-if="selectedIds.length > 0"
-          @click="exportSpecies"
-          :disabled="exportingSpecies"
-          class="bg-dunhuang-blue/10 hover:bg-dunhuang-blue/20 text-dunhuang-blue border border-dunhuang-blue/20 px-4 py-2 rounded-lg text-sm transition-colors disabled:opacity-50"
-        >
-          批量导出 ({{ selectedIds.length }})
-        </button>
-        <button
-          v-if="selectedIds.length > 0 && authStore.isAdmin"
-          @click="confirmBatchRemoveSpecies"
-          class="bg-dunhuang-red/90 hover:bg-dunhuang-red text-white px-4 py-2 rounded-lg text-sm transition-colors"
-        >
-          批量删除 ({{ selectedIds.length }})
-        </button>
-        <button
-          v-if="authStore.isAdmin"
-          @click="showImportModal = true"
-          class="bg-dunhuang-yellow hover:bg-dunhuang-yellow/80 text-dunhuang-blue px-4 py-2 rounded-lg text-sm transition-colors"
-        >
-          导入
-        </button>
-        <button
-          @click="exportSpecies"
-          :disabled="exportingSpecies"
-          class="bg-dunhuang-blue/10 hover:bg-dunhuang-blue/20 text-dunhuang-blue border border-dunhuang-blue/20 px-4 py-2 rounded-lg text-sm transition-colors disabled:opacity-50"
-        >
-          导出
-        </button>
-        <button
-          v-if="authStore.isAdmin"
-          @click="showAddModal = true"
-          class="bg-dunhuang-blue hover:bg-dunhuang-green text-white px-4 py-2 rounded-lg text-sm transition-colors"
-        >
-          + 新增品种
-        </button>
-      </div>
-    </div>
-
-    <div
-      class="overflow-y-scroll overflow-x-auto custom-scrollbar border border-dunhuang-yellow/30 rounded-lg bg-white h-[494px]"
-    >
-      <table class="w-full min-w-full sm:min-w-[720px] text-left border-collapse whitespace-nowrap">
-        <thead
-          class="sticky top-0 bg-white/90 backdrop-blur z-20 flex w-full transform-gpu h-[42px]"
-        >
-          <tr
-            class="bg-dunhuang-yellow/20 text-dunhuang-blue font-serif text-sm flex w-full h-full"
+        <div class="flex flex-wrap items-center gap-2">
+          <button
+            v-if="selectedIds.length > 0"
+            @click="exportSpecies"
+            :disabled="exportingSpecies"
+            class="h-9 px-4 rounded-lg text-sm font-medium transition-colors bg-dunhuang-blue/8 text-dunhuang-blue border border-dunhuang-blue/25 hover:bg-dunhuang-blue/15 disabled:opacity-50"
           >
-            <th
-              class="px-3 py-2 border-b border-dunhuang-yellow/40 w-10 flex items-center justify-center shrink-0 sticky left-0 bg-dunhuang-yellow/20 backdrop-blur z-30 sticky-col-left"
-            >
-              <input
-                type="checkbox"
-                :checked="isAllSelected"
-                @change="toggleAll"
-                class="custom-checkbox text-dunhuang-red focus-visible:ring-2 focus-visible:ring-dunhuang-red/30 focus-visible:ring-offset-1 outline-none"
-              />
-            </th>
-            <th
-              class="px-4 py-2 border-b border-dunhuang-yellow/40 flex-1 hidden sm:flex items-center"
-            >
-              序号
-            </th>
-            <th
-              class="px-4 py-2 border-b border-dunhuang-yellow/40 flex-1 flex items-center"
-            >
-              品种
-            </th>
-            <th
-              class="px-4 py-2 border-b border-dunhuang-yellow/40 flex-1 flex items-center"
-            >
-              单价<span class="hidden sm:inline">（元）</span>
-            </th>
-            <th
-              class="px-4 py-2 border-b border-dunhuang-yellow/40 flex-1 hidden sm:flex items-center"
-            >
-              放生日期
-            </th>
-            <th
-              class="px-4 py-2 border-b border-dunhuang-yellow/40 flex-1 hidden md:flex items-center"
-            >
-              默认单位
-            </th>
-            <th
-              class="px-4 py-2 border-b border-dunhuang-yellow/40 flex-1 hidden md:flex items-center"
-            >
-              图片
-            </th>
-            <th
-              class="px-4 py-2 border-b border-dunhuang-yellow/40 flex items-center justify-center w-28 sm:w-44 shrink-0 sticky right-0 bg-dunhuang-yellow/20 backdrop-blur z-30 sticky-col-right"
-            >
-              操作
-            </th>
-          </tr>
-        </thead>
-        <tbody class="flex flex-col relative min-h-[450px]">
-          <tr
+            批量导出 ({{ selectedIds.length }})
+          </button>
+          <button
+            v-if="selectedIds.length > 0 && authStore.isAdmin"
+            @click="confirmBatchRemoveSpecies"
+            class="h-9 px-4 rounded-lg text-sm font-medium transition-colors text-dunhuang-red bg-dunhuang-red/8 border border-dunhuang-red/25 hover:bg-dunhuang-red/15"
+          >
+            批量删除 ({{ selectedIds.length }})
+          </button>
+          <button
+            @click="exportSpecies"
+            :disabled="exportingSpecies"
+            class="h-9 px-4 rounded-lg text-sm font-medium transition-colors text-dunhuang-blue/80 bg-white border border-dunhuang-blue/20 hover:text-dunhuang-blue hover:bg-dunhuang-blue/6 disabled:opacity-50"
+          >
+            导出
+          </button>
+          <button
+            v-if="authStore.isAdmin"
+            @click="showAddModal = true"
+            class="h-9 px-4 rounded-lg text-sm font-semibold transition-colors bg-dunhuang-blue text-white hover:bg-dunhuang-blue/90 shadow-sm"
+          >
+            新增品种
+          </button>
+        </div>
+      </div>
+
+      <!-- 品种列表：表头固定，行数多时表格内部滚动，操作列固定在右侧 -->
+      <div
+        class="flex-1 min-h-0 rounded-lg border border-dunhuang-yellow/30 overflow-hidden flex flex-col"
+      >
+        <div
+          class="shrink-0 grid species-grid h-11 bg-[#f7f0e2] text-dunhuang-blue font-sans font-bold text-sm border-b border-dunhuang-yellow/40"
+          :style="{ paddingRight: bodyGutter + 'px' }"
+        >
+          <div class="px-3 flex items-center justify-center">
+            <input
+              type="checkbox"
+              :checked="isAllSelected"
+              @change="toggleAll"
+              class="custom-checkbox text-dunhuang-red focus-visible:ring-2 focus-visible:ring-dunhuang-red/30 focus-visible:ring-offset-1 outline-none"
+            />
+          </div>
+          <div class="px-3 flex items-center justify-center whitespace-nowrap">
+            序号
+          </div>
+          <div class="px-3 flex items-center justify-center whitespace-nowrap">
+            品种
+          </div>
+          <div
+            class="px-3 flex items-center justify-center whitespace-nowrap"
+            title="该品种最近一次有单据的放生日期（最近一周的放生日）"
+          >
+            放生日期
+          </div>
+          <div class="px-3 flex items-center justify-center whitespace-nowrap">
+            单价（元）
+          </div>
+          <div class="px-3 flex items-center justify-center whitespace-nowrap">
+            单位
+          </div>
+          <div class="px-3 flex items-center justify-center whitespace-nowrap">
+            照片
+          </div>
+          <div class="px-3 flex items-center justify-center whitespace-nowrap">
+            备注
+          </div>
+          <div
+            class="sticky right-0 z-20 px-3 flex items-center justify-center whitespace-nowrap bg-[#f7f0e2] border-l border-dunhuang-yellow/25"
+            :class="
+              bodyScrollsX
+                ? 'shadow-[-8px_0_8px_-8px_rgba(74,52,40,0.22)]'
+                : ''
+            "
+          >
+            操作
+          </div>
+        </div>
+
+        <div
+          ref="rowsBodyRef"
+          class="species-rows panel-scrollbar flex flex-col flex-1 min-h-0 overflow-auto"
+        >
+          <div
             v-for="(sp, index) in paginatedSpecies"
             :key="sp.id"
-            class="border-b border-dunhuang-yellow/20 hover:bg-dunhuang-yellow/10 transition-colors text-sm group flex w-full shrink-0 h-[45px]"
+            class="grid species-grid h-11 shrink-0 text-sm border-b border-dunhuang-yellow/15 transition-colors"
+            :class="
+              index % 2 === 1
+                ? 'bg-[#fcfaf3] hover:bg-[#f7f1e2]'
+                : 'bg-white hover:bg-[#fdf9f0]'
+            "
           >
-            <td
-              class="px-3 py-1.5 flex items-center justify-center w-10 shrink-0 sticky left-0 bg-white/60 backdrop-blur-md group-hover:bg-dunhuang-yellow/10 transition-colors sticky-col-left"
-            >
+            <div class="px-3 flex items-center justify-center">
               <input
                 type="checkbox"
                 v-model="selectedIds"
                 :value="sp.id"
                 class="custom-checkbox text-dunhuang-red focus-visible:ring-2 focus-visible:ring-dunhuang-red/30 focus-visible:ring-offset-1 outline-none"
               />
-            </td>
-            <td
-              class="px-4 py-1.5 text-dunhuang-text/80 flex-1 hidden sm:flex items-center"
+            </div>
+            <div
+              class="px-3 flex items-center justify-center text-dunhuang-text/60 tabular-nums"
             >
               {{ (currentPage - 1) * pageSize + index + 1 }}
-            </td>
-            <td class="px-4 py-1.5 font-medium flex-1 flex items-center">
-              {{ sp.name_zh }}
-            </td>
-            <td
-              class="px-4 py-1.5 tabular-nums text-dunhuang-red flex-1 flex items-center"
+            </div>
+            <div
+              class="px-3 flex items-center justify-center font-medium text-dunhuang-text min-w-0"
+              :title="sp.name_zh"
             >
-              {{ formatMoney(sp.default_price) }}
-            </td>
-            <td class="px-4 py-1.5 flex-1 hidden sm:flex items-center text-sm">
-              {{ dateStr(sp.release_date || sp.created_at) || "-" }}
-            </td>
-            <td class="px-4 py-1.5 flex-1 hidden md:flex items-center">
+              <span class="truncate">{{ sp.name_zh }}</span>
+            </div>
+            <div
+              class="px-3 flex items-center justify-center text-dunhuang-text/70 whitespace-nowrap tabular-nums"
+            >
+              {{ dateStr(sp.last_release_date) || "—" }}
+            </div>
+            <div class="px-3 flex items-center justify-center">
+              <input
+                v-if="editingPriceId === sp.id"
+                v-model="editingPrice"
+                type="text"
+                inputmode="decimal"
+                class="price-edit-input w-24 h-8 px-2 rounded-lg border border-dunhuang-blue/40 bg-white text-center tabular-nums text-sm outline-none focus:ring-2 focus:ring-dunhuang-blue/20"
+                :disabled="savingPrice"
+                @click.stop
+                @keydown.enter.prevent="savePrice(sp)"
+                @keydown.esc.prevent="cancelEditPrice"
+                @blur="savePrice(sp)"
+              />
+              <button
+                v-else
+                type="button"
+                class="tabular-nums text-dunhuang-red rounded px-1.5 py-0.5 transition-colors"
+                :class="
+                  authStore.isAdmin
+                    ? 'hover:bg-dunhuang-red/10 cursor-pointer'
+                    : 'cursor-default'
+                "
+                :title="authStore.isAdmin ? '点击修改单价' : ''"
+                @click="startEditPrice(sp)"
+              >
+                {{ formatMoney(sp.default_price) }}
+              </button>
+            </div>
+            <div
+              class="px-3 flex items-center justify-center text-dunhuang-text/60"
+            >
               {{ sp.default_unit }}
-            </td>
-            <td class="px-4 py-1.5 flex-1 hidden md:flex items-center">
-              <div class="flex items-center">
+            </div>
+            <div class="px-3 flex items-center justify-center">
+              <button
+                type="button"
+                class="species-photo-btn relative h-8 w-8 rounded-md overflow-hidden transition-colors group"
+                :class="
+                  authStore.isAdmin
+                    ? 'cursor-pointer hover:ring-2 hover:ring-dunhuang-blue/30'
+                    : 'cursor-default'
+                "
+                :title="
+                  authStore.isAdmin
+                    ? sp.image_url
+                      ? '点击更换照片'
+                      : '点击上传照片'
+                    : sp.image_url
+                      ? sp.name_zh
+                      : '暂无照片'
+                "
+                :disabled="uploadingPhotoId === sp.id"
+                @click.stop="pickPhoto(sp)"
+              >
                 <img
                   v-if="sp.image_url"
                   :src="sp.image_url"
-                  :alt="sp.name_zh"
-                  class="w-10 h-8 rounded-lg object-cover border border-dunhuang-yellow/30 cursor-pointer hover:opacity-80 transition-opacity"
-                  @click.stop="openImagePreview(sp.image_url)"
+                  alt=""
+                  class="h-8 w-8 rounded-md object-cover border border-dunhuang-yellow/30"
                 />
-                <div
+                <span
                   v-else
-                  class="flex items-center justify-center w-10 h-8 rounded-lg bg-dunhuang-yellow/10 border border-dunhuang-yellow/30 text-dunhuang-blue"
-                  :title="sp.name_zh"
+                  class="h-8 w-8 rounded-md border border-dashed border-dunhuang-yellow/40 bg-[#faf6ec] flex items-center justify-center text-dunhuang-text/20"
                 >
-                  <span class="text-[10px] font-bold">{{
-                    sp.name_zh ? sp.name_zh.charAt(0) : "?"
-                  }}</span>
-                </div>
-              </div>
-            </td>
-            <td
-              class="px-3 py-1.5 flex items-center justify-center w-28 sm:w-44 shrink-0 sticky right-0 bg-white/60 backdrop-blur-md group-hover:bg-dunhuang-yellow/10 transition-colors sticky-col-right"
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    width="14"
+                    height="14"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  >
+                    <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
+                    <circle cx="8.5" cy="8.5" r="1.5" />
+                    <polyline points="21 15 16 10 5 21" />
+                  </svg>
+                </span>
+                <span
+                  v-if="uploadingPhotoId === sp.id"
+                  class="absolute inset-0 bg-white/70 flex items-center justify-center"
+                >
+                  <span
+                    class="h-3 w-3 rounded-full border-2 border-dunhuang-blue/70 border-t-transparent animate-spin"
+                  ></span>
+                </span>
+              </button>
+            </div>
+            <div
+              class="px-3 flex items-center justify-center text-dunhuang-text/60 min-w-0"
+              :title="sp.supplier_note || ''"
             >
-              <div class="flex items-center justify-center gap-1">
-                <button
-                  @click="openDetail(sp.id)"
-                  class="px-1 sm:px-2 py-1.5 rounded text-xs sm:text-sm whitespace-nowrap shrink-0 transition-colors text-dunhuang-blue hover:bg-dunhuang-blue/10 border border-transparent hover:border-dunhuang-blue/30"
-                >
-                  查看
-                </button>
-                <button
-                  v-if="authStore.isAdmin"
-                  @click="openDetail(sp.id, true)"
-                  class="px-1 sm:px-2 py-1.5 rounded text-xs sm:text-sm whitespace-nowrap shrink-0 transition-colors text-dunhuang-green hover:bg-dunhuang-green/10 border border-transparent hover:border-dunhuang-green/30"
-                >
-                  编辑
-                </button>
-                <button
-                  v-if="authStore.isAdmin"
-                  @click="confirmRemoveSpecies(sp.id)"
-                  class="px-1 sm:px-2 py-1.5 rounded text-xs sm:text-sm whitespace-nowrap shrink-0 transition-colors text-dunhuang-red hover:bg-dunhuang-red/10 border border-transparent hover:border-dunhuang-red/30"
-                >
-                  删除
-                </button>
-              </div>
-            </td>
-          </tr>
-          <tr
-            v-for="i in Math.max(0, 10 - paginatedSpecies.length)"
-            :key="'placeholder-' + i"
-            class="border-b border-dunhuang-yellow/10 text-sm flex w-full shrink-0 h-[45px]"
-          >
-            <td
-              class="px-3 py-1.5 w-10 shrink-0 sticky left-0 bg-white/60 sticky-col-left"
-            ></td>
-            <td class="px-4 py-1.5 flex-1 hidden sm:flex"></td>
-            <td class="px-4 py-1.5 flex-1"></td>
-            <td class="px-4 py-1.5 flex-1"></td>
-            <td class="px-4 py-1.5 flex-1 hidden sm:flex"></td>
-            <td class="px-4 py-1.5 flex-1 hidden md:flex"></td>
-            <td class="px-4 py-1.5 flex-1 hidden md:flex"></td>
-            <td
-              class="px-3 py-1.5 w-28 sm:w-44 shrink-0 sticky right-0 bg-white/60 sticky-col-right"
-            ></td>
-          </tr>
-          <tr
-            v-if="species.length === 0 && !errorMsg"
-            class="absolute inset-0 flex items-center justify-center pointer-events-none"
-          >
-            <td
-              class="w-auto text-center text-dunhuang-text/50 bg-white/50 px-6 py-2 rounded-full backdrop-blur-sm shadow-sm border border-dunhuang-yellow/30"
+              <span class="truncate">{{ sp.supplier_note || "—" }}</span>
+            </div>
+            <div
+              class="sticky right-0 bg-inherit px-3 flex items-center justify-center border-l border-dunhuang-yellow/20"
+              :class="
+                bodyScrollsX
+                  ? 'shadow-[-8px_0_8px_-8px_rgba(74,52,40,0.16)]'
+                  : ''
+              "
             >
-              暂未录入品种数据
-            </td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
+              <button
+                v-if="authStore.isAdmin"
+                @click="openEditModal(sp)"
+                class="px-2 py-1 rounded text-xs whitespace-nowrap transition-colors text-dunhuang-blue hover:bg-dunhuang-blue/10 border border-transparent hover:border-dunhuang-blue/30"
+              >
+                编辑
+              </button>
+              <button
+                v-if="authStore.isAdmin"
+                @click="confirmRemoveSpecies(sp.id)"
+                class="px-2 py-1 rounded text-xs whitespace-nowrap transition-colors text-dunhuang-red hover:bg-dunhuang-red/10 border border-transparent hover:border-dunhuang-red/30"
+              >
+                删除
+              </button>
+              <span v-else class="text-dunhuang-text/25">—</span>
+            </div>
+          </div>
 
-    <div class="flex justify-between items-center mt-4 shrink-0 relative z-50 flex-wrap gap-3">
-      <div class="text-sm text-dunhuang-text/70">
-        共
-        <span class="font-bold text-dunhuang-blue">{{ totalItems }}</span>
-        个品种
-        <span v-if="selectedIds.length > 0">
-          (已选择
-          <span class="font-bold text-dunhuang-red">{{
-            selectedIds.length
-          }}</span>
-          项)
-        </span>
+          <div
+            v-if="species.length === 0 && !errorMsg"
+            class="py-12 text-center text-sm text-dunhuang-text/40"
+          >
+            暂未录入品种数据
+          </div>
+
+          <!-- 表格剩余空间的装饰：点阵底纹 + 水波纹，避免大片留白 -->
+          <div
+            v-else
+            class="species-tail flex-1 min-h-0 flex flex-col items-center justify-center gap-2 select-none overflow-hidden bg-[radial-gradient(circle,rgba(191,160,95,0.13)_1px,transparent_1px)] [background-size:18px_18px]"
+          >
+            <svg
+              class="w-20 h-4 shrink-0 text-dunhuang-yellow/45"
+              viewBox="0 0 80 16"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.3"
+              stroke-linecap="round"
+            >
+              <path d="M2 8q9-8 18 0t18 0 18 0 18 0" />
+            </svg>
+            <p
+              class="text-[11px] tracking-[0.28em] text-dunhuang-text/30 shrink-0 whitespace-nowrap"
+            >
+              本页 {{ paginatedSpecies.length }} 个品种
+            </p>
+          </div>
+        </div>
       </div>
 
-      <Pagination
-        v-model:currentPage="currentPage"
-        v-model:pageSize="pageSize"
-        :totalPages="totalPages"
-        :showPageSizeSelect="true"
+      <!-- 分页 -->
+      <div
+        class="shrink-0 flex justify-between items-center flex-wrap gap-3 mt-3"
+      >
+        <div class="text-sm text-dunhuang-text/70">
+          共
+          <span class="font-bold text-dunhuang-blue">{{ totalItems }}</span>
+          个品种
+          <span v-if="selectedIds.length > 0">
+            (已选择
+            <span class="font-bold text-dunhuang-red">{{
+              selectedIds.length
+            }}</span>
+            项)
+          </span>
+        </div>
+
+        <Pagination
+          v-model:currentPage="currentPage"
+          v-model:pageSize="pageSize"
+          :totalPages="totalPages"
+          :showPageSizeSelect="true"
+        />
+      </div>
+
+      <!-- 列表内点击照片上传用的隐藏文件框 -->
+      <input
+        ref="photoInputRef"
+        type="file"
+        accept="image/*"
+        class="hidden"
+        @change="handlePhotoPicked"
       />
     </div>
 
+    <!-- 新增品种弹窗 -->
     <Transition name="modal-backdrop">
       <div
         v-if="showAddModal"
@@ -260,7 +340,7 @@
         <Transition name="modal" appear>
           <div
             v-if="showAddModal"
-            class="bg-white rounded-2xl shadow-2xl border border-dunhuang-yellow w-full max-w-lg p-4 sm:p-8"
+            class="bg-white rounded-2xl shadow-2xl border border-dunhuang-yellow w-full max-w-lg p-4 sm:p-8 max-h-[90vh] overflow-y-auto panel-scrollbar"
           >
             <div class="mb-6 border-b border-dunhuang-yellow/20 pb-4">
               <h4 class="text-xl font-serif text-dunhuang-blue font-bold">
@@ -330,9 +410,9 @@
                 <div>
                   <label
                     class="block text-sm font-medium text-dunhuang-text mb-2"
-                    >默认单位</label
+                    >单位</label
                   >
-                  <div class="grid grid-cols-2 gap-2">
+                  <div class="grid grid-cols-3 gap-2">
                     <button
                       v-for="unit in unitOptions"
                       :key="unit"
@@ -459,6 +539,202 @@
         </Transition>
       </div>
     </Transition>
+
+    <!-- 编辑品种弹窗 -->
+    <Transition name="modal-backdrop">
+      <div
+        v-if="showEditModal"
+        class="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 px-4"
+        @click.self="closeEditModal"
+      >
+        <Transition name="modal" appear>
+          <form
+            v-if="showEditModal"
+            @submit.prevent="saveEditSpecies"
+            class="bg-white rounded-2xl shadow-2xl border border-dunhuang-yellow w-full max-w-lg p-5 sm:p-6 max-h-[90vh] overflow-y-auto panel-scrollbar"
+          >
+            <div
+              class="flex items-center justify-between gap-3 mb-4 pb-3 border-b border-dunhuang-yellow/20"
+            >
+              <div class="min-w-0">
+                <h4 class="text-lg font-serif text-dunhuang-blue font-bold">
+                  编辑品种
+                </h4>
+                <p class="text-xs text-dunhuang-text/45 mt-0.5 truncate">
+                  {{ editTarget?.name_zh }}
+                </p>
+              </div>
+              <button
+                type="button"
+                @click="closeEditModal"
+                class="w-8 h-8 shrink-0 rounded-lg flex items-center justify-center text-dunhuang-text/35 hover:text-dunhuang-red hover:bg-dunhuang-red/10 transition-colors"
+                title="关闭"
+              >
+                <svg
+                  class="w-4 h-4"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                >
+                  <line x1="18" y1="6" x2="6" y2="18" />
+                  <line x1="6" y1="6" x2="18" y2="18" />
+                </svg>
+              </button>
+            </div>
+
+            <div class="flex items-start gap-5">
+              <!-- 照片 -->
+              <div class="shrink-0">
+                <div
+                  class="relative w-24 h-24 rounded-xl border-2 border-dashed cursor-pointer group overflow-hidden transition-colors"
+                  :class="
+                    editPreviewUrl || editTarget?.image_url
+                      ? 'border-dunhuang-blue/40'
+                      : 'border-dunhuang-yellow/40 hover:border-dunhuang-blue/50 bg-dunhuang-bg'
+                  "
+                  @click="triggerEditFileInput"
+                >
+                  <img
+                    v-if="editPreviewUrl || editTarget?.image_url"
+                    :src="editPreviewUrl || editTarget?.image_url || ''"
+                    alt=""
+                    class="w-full h-full object-cover"
+                  />
+                  <div
+                    v-else
+                    class="w-full h-full flex items-center justify-center text-2xl font-bold text-dunhuang-blue/40 font-serif"
+                  >
+                    {{ editForm.name_zh.charAt(0) || "?" }}
+                  </div>
+                  <div
+                    class="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                  >
+                    <span class="text-white text-xs font-medium">{{
+                      editPreviewUrl || editTarget?.image_url
+                        ? "更换照片"
+                        : "上传照片"
+                    }}</span>
+                  </div>
+                </div>
+                <input
+                  ref="editFileInputRef"
+                  type="file"
+                  accept="image/*"
+                  class="hidden"
+                  @change="handleEditImageSelect"
+                />
+              </div>
+
+              <!-- 名称 / 单价 / 单位 -->
+              <div class="flex-1 min-w-0 space-y-3">
+                <div>
+                  <label
+                    class="block text-xs font-medium text-dunhuang-text/60 mb-1.5"
+                    >品种名称</label
+                  >
+                  <input
+                    v-model="editForm.name_zh"
+                    type="text"
+                    placeholder="品种名称"
+                    class="w-full bg-dunhuang-bg border border-dunhuang-yellow/50 rounded-lg py-2 px-3 text-sm outline-none focus:ring-0 focus:border-dunhuang-blue/50"
+                  />
+                </div>
+                <div class="grid grid-cols-2 gap-3">
+                  <div>
+                    <label
+                      class="block text-xs font-medium text-dunhuang-text/60 mb-1.5"
+                      >单价（元）</label
+                    >
+                    <input
+                      v-model="editForm.default_price"
+                      type="text"
+                      inputmode="decimal"
+                      @blur="
+                        editForm.default_price = (
+                          Number(editForm.default_price) || 0
+                        ).toFixed(2)
+                      "
+                      class="w-full bg-dunhuang-bg border border-dunhuang-yellow/50 rounded-lg py-2 px-3 text-sm outline-none focus:ring-0 focus:border-dunhuang-blue/50 tabular-nums"
+                    />
+                  </div>
+                  <div>
+                    <label
+                      class="block text-xs font-medium text-dunhuang-text/60 mb-1.5"
+                      >单位</label
+                    >
+                    <input
+                      v-model="editForm.default_unit"
+                      type="text"
+                      placeholder="公斤 / 只"
+                      class="w-full bg-dunhuang-bg border border-dunhuang-yellow/50 rounded-lg py-2 px-3 text-sm outline-none focus:ring-0 focus:border-dunhuang-blue/50"
+                    />
+                  </div>
+                </div>
+                <div class="flex items-center gap-1.5">
+                  <button
+                    v-for="unit in unitOptions"
+                    :key="unit"
+                    type="button"
+                    @click="editForm.default_unit = unit"
+                    :class="[
+                      'px-2.5 py-1 rounded-md text-xs font-medium border transition-colors',
+                      editForm.default_unit === unit
+                        ? 'border-dunhuang-blue bg-dunhuang-blue/10 text-dunhuang-blue'
+                        : 'border-dunhuang-yellow/40 text-dunhuang-text/50 hover:border-dunhuang-blue/40 hover:text-dunhuang-blue',
+                    ]"
+                  >
+                    {{ unit }}
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <div class="mt-4">
+              <label class="block text-xs font-medium text-dunhuang-text/60 mb-1.5"
+                >备注</label
+              >
+              <textarea
+                v-model="editForm.supplier_note"
+                rows="2"
+                placeholder="例如：常驻供应商 / 暂不售卖 / 规格说明"
+                class="w-full resize-none bg-dunhuang-bg border border-dunhuang-yellow/50 rounded-lg py-2 px-3 text-sm outline-none focus:ring-0 focus:border-dunhuang-blue/50"
+              ></textarea>
+            </div>
+
+            <p class="text-[11px] text-dunhuang-text/40 mt-3">
+              最近放生
+              {{ dateStr(editTarget?.last_release_date) || "—" }}
+            </p>
+
+            <p v-if="editFormError" class="text-xs text-dunhuang-red mt-2">
+              {{ editFormError }}
+            </p>
+
+            <div
+              class="flex justify-end gap-3 mt-4 pt-4 border-t border-dunhuang-yellow/20"
+            >
+              <button
+                type="button"
+                @click="closeEditModal"
+                class="h-10 px-5 rounded-lg text-sm transition-colors text-dunhuang-text/70 hover:bg-dunhuang-yellow/20 border border-dunhuang-yellow/50"
+              >
+                取消
+              </button>
+              <button
+                type="submit"
+                :disabled="editSaving"
+                class="h-10 px-5 rounded-lg text-sm font-medium transition-colors bg-dunhuang-blue text-white hover:bg-dunhuang-blue/90 shadow-md disabled:opacity-50"
+              >
+                {{ editSaving ? "保存中..." : "保存" }}
+              </button>
+            </div>
+          </form>
+        </Transition>
+      </div>
+    </Transition>
+
     <ConfirmDialog
       :show="deleteConfirm.show"
       @cancel="deleteConfirm.show = false"
@@ -471,284 +747,14 @@
         确认要删除选中的 {{ selectedIds.length }} 个品种吗？此操作无法恢复！
       </template>
     </ConfirmDialog>
-
-    <!-- 图片放大预览弹窗 -->
-    <Transition name="modal-backdrop">
-      <div
-        v-if="previewImageModal.show"
-        class="fixed inset-0 bg-transparent flex items-center justify-center z-[80]"
-        @click="previewImageModal.show = false"
-      >
-        <Transition name="preview-image" appear>
-          <div
-            v-if="previewImageModal.show"
-            class="relative max-w-4xl max-h-[90vh] p-4 flex items-center justify-center"
-          >
-            <img
-              :src="previewImageModal.url"
-              class="max-w-full max-h-[85vh] rounded-lg shadow-2xl object-contain"
-              @click.stop
-            />
-          </div>
-        </Transition>
-      </div>
-    </Transition>
-
-    <!-- 导入品种弹窗 -->
-    <Transition name="modal-backdrop">
-      <div
-        v-if="showImportModal"
-        class="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50"
-      >
-        <Transition name="modal" appear>
-          <div
-            v-if="showImportModal"
-            class="bg-white rounded-2xl shadow-2xl border border-dunhuang-yellow w-full max-w-2xl p-4 sm:p-8 max-h-[90vh] flex flex-col"
-          >
-            <div
-              class="flex items-center gap-3 mb-6 border-b border-dunhuang-yellow/20 pb-4 shrink-0"
-            >
-              <button
-                @click="
-                  showImportModal = false;
-                  importPreview = [];
-                "
-                class="w-8 h-8 flex items-center justify-center rounded-full text-dunhuang-text/50 hover:text-dunhuang-blue hover:bg-dunhuang-yellow/20 transition-colors shrink-0"
-              >
-                <svg
-                  class="w-5 h-5"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    stroke-width="2"
-                    d="M10 19l-7-7m0 0l7-7m-7 7h18"
-                  />
-                </svg>
-              </button>
-              <div>
-                <h4 class="text-xl font-serif text-dunhuang-blue font-bold">
-                  批量导入品种
-                </h4>
-                <p class="text-xs text-dunhuang-text/50 mt-0.5">
-                  下载模板 → 填写数据 → 上传文件 → 一键导入
-                </p>
-              </div>
-            </div>
-
-            <!-- 未上传文件时显示指引 -->
-            <div
-              v-if="!importPreview.length"
-              class="flex-1 flex flex-col items-center justify-center space-y-6"
-            >
-              <div
-                class="w-full max-w-sm border-2 border-dashed border-dunhuang-yellow/40 rounded-2xl p-10 text-center hover:border-dunhuang-blue hover:bg-dunhuang-yellow/5 transition-all duration-200 cursor-pointer"
-                @click="triggerSpeciesFileInput"
-              >
-                <input
-                  type="file"
-                  ref="speciesFileInput"
-                  accept=".xlsx, .xls"
-                  class="hidden"
-                  @change="handleSpeciesFileUpload"
-                />
-                <div
-                  class="bg-dunhuang-yellow/10 rounded-full w-14 h-14 mx-auto mb-4 flex items-center justify-center"
-                >
-                  <svg
-                    class="w-7 h-7 text-dunhuang-yellow/70"
-                    fill="none"
-                    stroke="currentColor"
-                    stroke-width="1.5"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      stroke-linecap="round"
-                      stroke-linejoin="round"
-                      d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"
-                    />
-                  </svg>
-                </div>
-                <p class="text-base font-serif text-dunhuang-text/70 mb-1">
-                  点击上传 Excel 文件
-                </p>
-                <p class="text-sm text-dunhuang-text/40">支持 .xlsx、.xls 格式</p>
-              </div>
-              <div class="flex gap-3">
-                <button
-                  @click="downloadSpeciesTemplate"
-                  class="h-10 px-5 rounded-lg text-sm font-medium transition-colors bg-dunhuang-yellow/20 text-dunhuang-blue hover:bg-dunhuang-yellow/30 border border-dunhuang-yellow/40"
-                >
-                  下载导入模板
-                </button>
-                <button
-                  @click="triggerSpeciesFileInput"
-                  class="h-10 px-5 rounded-lg text-sm font-medium transition-colors bg-dunhuang-blue text-white hover:bg-dunhuang-green"
-                >
-                  选择 Excel 文件
-                </button>
-              </div>
-              <div class="text-center text-dunhuang-text/50 text-sm">
-                模板包含字段：品种、单价（元）、放生日期
-              </div>
-            </div>
-
-            <!-- 已解析文件时显示预览 -->
-            <div v-else class="flex-1 flex flex-col min-h-0">
-              <div class="mb-3 flex justify-between items-center shrink-0">
-                <span class="text-sm text-dunhuang-text/70">
-                  解析到
-                  <span class="font-bold text-dunhuang-blue">{{
-                    importPreview.length
-                  }}</span>
-                  个品种
-                  <span v-if="overwriteCount > 0" class="ml-1">
-                    (覆盖
-                    <span class="font-bold text-dunhuang-red">{{
-                      overwriteCount
-                    }}</span>
-                    项)
-                  </span>
-                  <span v-if="importSkipCount > 0" class="ml-1">
-                    (跳过
-                    <span class="font-bold text-dunhuang-yellow">{{
-                      importSkipCount
-                    }}</span>
-                    项)
-                  </span>
-                </span>
-                <div class="flex items-center gap-3">
-                  <label
-                    class="flex items-center gap-1.5 text-xs text-dunhuang-text/60 cursor-pointer select-none"
-                    title="勾选后，已存在的品种全部按本次导入的价格/日期覆盖更新"
-                  >
-                    <input
-                      type="checkbox"
-                      :checked="isAllOverwrite"
-                      @change="toggleAllOverwrite"
-                      class="custom-checkbox text-dunhuang-red outline-none"
-                    />
-                    全部覆盖
-                  </label>
-                  <button
-                    @click="clearImportPreview"
-                    class="text-xs text-dunhuang-text/50 hover:text-dunhuang-red transition-colors"
-                  >
-                    重新选择
-                  </button>
-                </div>
-              </div>
-
-              <div
-                class="flex-1 overflow-auto custom-scrollbar border border-dunhuang-yellow/30 rounded-lg mb-4 min-h-0"
-              >
-                <table
-                  class="w-full text-left border-collapse whitespace-nowrap text-sm"
-                >
-                  <thead class="sticky top-0 z-10">
-                    <tr>
-                      <th
-                        class="px-4 py-2.5 border-b border-dunhuang-yellow/30 bg-dunhuang-bg/95 text-xs font-medium text-dunhuang-text/60"
-                      >
-                        品种
-                      </th>
-                      <th
-                        class="px-4 py-2.5 border-b border-dunhuang-yellow/30 bg-dunhuang-bg/95 text-right text-xs font-medium text-dunhuang-text/60"
-                      >
-                        单价（元）
-                      </th>
-                      <th
-                        class="px-4 py-2.5 border-b border-dunhuang-yellow/30 bg-dunhuang-bg/95 text-xs font-medium text-dunhuang-text/60"
-                      >
-                        放生日期
-                      </th>
-                      <th
-                        class="px-4 py-2.5 border-b border-dunhuang-yellow/30 bg-dunhuang-bg/95 text-center text-xs font-medium text-dunhuang-text/60"
-                      >
-                        状态
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <tr
-                      v-for="(row, idx) in importPreview"
-                      :key="idx"
-                      class="border-b border-dunhuang-yellow/20 hover:bg-dunhuang-yellow/5"
-                    >
-                      <td class="px-4 py-2.5 text-sm text-dunhuang-text font-medium">
-                        {{ row.name_zh }}
-                      </td>
-                      <td class="px-4 py-2.5 text-right text-sm tabular-nums text-dunhuang-text/80">
-                        {{ formatMoney(row.default_price) }}
-                      </td>
-                      <td class="px-4 py-2.5 text-sm text-dunhuang-text/60">
-                        {{ dateStr(row.release_date) || "-" }}
-                      </td>
-                      <td class="px-4 py-2.5 text-center">
-                        <button
-                          v-if="row.exists"
-                          @click="row.overwrite = !row.overwrite"
-                          :class="[
-                            'text-xs px-2 py-0.5 rounded cursor-pointer transition-colors',
-                            row.overwrite
-                              ? 'bg-dunhuang-red/10 text-dunhuang-red hover:bg-dunhuang-red/20'
-                              : 'bg-dunhuang-yellow/20 text-dunhuang-blue hover:bg-dunhuang-yellow/30',
-                          ]"
-                        >
-                          {{ row.overwrite ? "覆盖" : "跳过" }}
-                        </button>
-                        <span
-                          v-else
-                          class="text-xs bg-dunhuang-green/10 text-dunhuang-green px-2 py-0.5 rounded"
-                          >待新建</span
-                        >
-                      </td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
-
-              <div class="flex justify-end gap-3 shrink-0">
-                <button
-                  @click="clearImportPreview"
-                  class="h-10 px-5 rounded-lg text-sm transition-colors text-dunhuang-text/70 hover:bg-dunhuang-yellow/20 border border-dunhuang-yellow/50"
-                >
-                  取消
-                </button>
-                <button
-                  @click="confirmImportSpecies"
-                  :disabled="importing"
-                  class="h-10 px-5 rounded-lg text-sm font-medium transition-colors bg-dunhuang-red text-white hover:bg-dunhuang-red/90 disabled:opacity-50"
-                >
-                  {{
-                    importing
-                      ? "导入中..."
-                      : `确认导入 ${importPreview.length} 项`
-                  }}
-                </button>
-              </div>
-            </div>
-          </div>
-        </Transition>
-      </div>
-    </Transition>
   </div>
 </template>
 
 <script setup lang="ts">
-import { onMounted, ref, shallowRef, computed, watch } from "vue";
-import { useRouter } from "vue-router";
-import * as XLSX from "xlsx";
+import { onMounted, onBeforeUnmount, ref, shallowRef, computed, watch, nextTick } from "vue";
 import api from "../api";
 import { apiErrorMessage, isAuthError } from "../lib/error";
-import {
-  formatMoney,
-  dateStr,
-  compressImage,
-} from "../lib/utils";
+import { formatMoney, compressImage, dateStr } from "../lib/utils";
 import { useToast } from "../composables/useToast";
 import { useSpecies } from "../composables/useSpecies";
 import ConfirmDialog from "../components/ConfirmDialog.vue";
@@ -758,7 +764,7 @@ import SearchInput from "../components/SearchInput.vue";
 import { useAuthStore } from "../stores/auth";
 
 // ============================================================
-//  品种管理：列表 + 新增 + 批量删除 + 分页
+//  品种库：列表 + 新增 + 批量删除 + 分页（品种由开单/导入自动入库，这里只做维护）
 // ============================================================
 
 interface SpeciesItem {
@@ -767,11 +773,14 @@ interface SpeciesItem {
   default_unit: string;
   default_price: number;
   image_url?: string | null;
+  supplier_name?: string | null;
+  supplier_note?: string | null;
   release_date?: string | null;
   created_at?: string | null;
+  /** 列表接口附带：最近一次有单据的放生日期（没有单据时回退品种自身放生日期） */
+  last_release_date?: string | null;
 }
 
-const router = useRouter();
 const authStore = useAuthStore();
 const toast = useToast();
 const { invalidateCache } = useSpecies();
@@ -785,9 +794,6 @@ const speciesSearchText = ref("");
 
 const currentPage = ref(1);
 const pageSize = ref(10);
-
-// 品种库列表显示全部品种（含冰块、打包袋等耗材，不再隐藏）
-const displaySpecies = computed(() => species.value);
 
 // 服务端分页：总数以后端 X-Total-Count 为准，翻页/改条数触发重新拉取
 const totalItems = ref(0);
@@ -812,25 +818,237 @@ watch(totalPages, (t) => {
   }
 });
 
-const paginatedSpecies = computed(() => displaySpecies.value);
+const paginatedSpecies = computed(() => species.value);
+
+// 表格是否横向溢出：只有真溢出时才给固定列加阴影，否则那道阴影会变成一条多余的竖线
+const rowsBodyRef = ref<HTMLElement | null>(null);
+const bodyScrollsX = ref(false);
+// 表体预留的滚动条宽度：表头要补同样的右侧留白，列才能和数据行对齐
+const bodyGutter = ref(0);
+let rowsObserver: ResizeObserver | null = null;
+
+// ===== 行内改单价：点价格进入编辑，回车/失焦保存，Esc 取消 =====
+const editingPriceId = ref<number | null>(null);
+const editingPrice = ref("");
+const savingPrice = ref(false);
+
+const startEditPrice = (sp: SpeciesItem) => {
+  if (!authStore.isAdmin) return;
+  editingPriceId.value = sp.id;
+  editingPrice.value = Number(sp.default_price ?? 0).toFixed(2);
+  nextTick(() => {
+    const el = document.querySelector<HTMLInputElement>(".price-edit-input");
+    el?.focus();
+    el?.select();
+  });
+};
+
+const cancelEditPrice = () => {
+  editingPriceId.value = null;
+  editingPrice.value = "";
+};
+
+// ===== 编辑弹窗：名称 / 单价 / 单位 / 备注 / 照片 =====
+const showEditModal = ref(false);
+const editSaving = ref(false);
+const editFormError = ref("");
+const editTarget = ref<SpeciesItem | null>(null);
+const editForm = ref({
+  name_zh: "",
+  default_unit: "公斤",
+  default_price: "0.00",
+  supplier_note: "",
+});
+const editPhotoFile = ref<Blob | null>(null);
+const editPreviewUrl = ref<string | null>(null);
+const editFileInputRef = ref<HTMLInputElement | null>(null);
+
+const todayIso = () => {
+  const t = new Date();
+  return `${t.getFullYear()}-${String(t.getMonth() + 1).padStart(2, "0")}-${String(t.getDate()).padStart(2, "0")}`;
+};
+
+const openEditModal = (sp: SpeciesItem) => {
+  if (!authStore.isAdmin) return;
+  editTarget.value = sp;
+  editForm.value = {
+    name_zh: sp.name_zh,
+    default_unit: sp.default_unit || "公斤",
+    default_price: Number(sp.default_price ?? 0).toFixed(2),
+    supplier_note: sp.supplier_note || "",
+  };
+  editPhotoFile.value = null;
+  if (editPreviewUrl.value) URL.revokeObjectURL(editPreviewUrl.value);
+  editPreviewUrl.value = null;
+  editFormError.value = "";
+  showEditModal.value = true;
+};
+
+const closeEditModal = () => {
+  showEditModal.value = false;
+  editTarget.value = null;
+  if (editPreviewUrl.value) {
+    URL.revokeObjectURL(editPreviewUrl.value);
+    editPreviewUrl.value = null;
+  }
+  editPhotoFile.value = null;
+};
+
+const triggerEditFileInput = () => editFileInputRef.value?.click();
+
+const handleEditImageSelect = async (event: Event) => {
+  const input = event.target as HTMLInputElement;
+  const file = input.files?.[0];
+  if (!file) return;
+  let picked: Blob = file;
+  if (file.size > 1024 * 1024) {
+    try {
+      picked = await compressImage(file, 1024, 1024, 0.7);
+    } catch (compressError) {
+      console.error("Image compression failed", compressError);
+    }
+  }
+  editPhotoFile.value = picked;
+  if (editPreviewUrl.value) URL.revokeObjectURL(editPreviewUrl.value);
+  editPreviewUrl.value = URL.createObjectURL(picked);
+};
+
+const saveEditSpecies = async () => {
+  const sp = editTarget.value;
+  if (!sp || editSaving.value) return;
+  const name = editForm.value.name_zh.trim();
+  const unit = editForm.value.default_unit.trim();
+  const price = Number(editForm.value.default_price);
+  if (!name) {
+    editFormError.value = "请填写品种名称";
+    return;
+  }
+  if (!Number.isFinite(price) || price <= 0) {
+    editFormError.value = "单价必须大于0";
+    return;
+  }
+  if (!unit) {
+    editFormError.value = "请填写单位";
+    return;
+  }
+
+  editSaving.value = true;
+  editFormError.value = "";
+  try {
+    // 后端 PUT 是整行覆盖：未在弹窗里出现的字段原样带回，避免被清空
+    await api.put(`/species/${sp.id}`, {
+      name_zh: name,
+      default_unit: unit,
+      default_price: price,
+      release_date: sp.release_date || sp.last_release_date || todayIso(),
+      supplier_name: sp.supplier_name ?? null,
+      supplier_note: editForm.value.supplier_note.trim() || null,
+    });
+
+    if (editPhotoFile.value) {
+      const formData = new FormData();
+      formData.append("image", editPhotoFile.value, "species.jpg");
+      await api.post(`/species/${sp.id}/image`, formData, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
+    }
+
+    closeEditModal();
+    await fetchSpecies();
+    toast.success("品种已更新");
+  } catch (error: any) {
+    if (isAuthError(error)) return;
+    console.error("Failed to update species", error);
+    editFormError.value = apiErrorMessage(error, "保存品种");
+  } finally {
+    editSaving.value = false;
+  }
+};
+
+// ===== 列表内点击照片上传：点缩略图/占位框选图，压缩后走 /species/{id}/image =====
+const photoInputRef = ref<HTMLInputElement | null>(null);
+const photoTargetId = ref<number | null>(null);
+const uploadingPhotoId = ref<number | null>(null);
+
+const pickPhoto = (sp: SpeciesItem) => {
+  if (!authStore.isAdmin || uploadingPhotoId.value === sp.id) return;
+  photoTargetId.value = sp.id;
+  photoInputRef.value?.click();
+};
+
+const handlePhotoPicked = async (event: Event) => {
+  const input = event.target as HTMLInputElement;
+  const file = input.files?.[0];
+  input.value = "";
+  const targetId = photoTargetId.value;
+  if (!file || !targetId) return;
+
+  uploadingPhotoId.value = targetId;
+  try {
+    let payload: Blob = file;
+    if (file.size > 1024 * 1024) {
+      try {
+        payload = await compressImage(file, 1024, 1024, 0.7);
+      } catch (compressError) {
+        console.error("Image compression failed", compressError);
+      }
+    }
+    const formData = new FormData();
+    formData.append("image", payload, file.name || "species.jpg");
+    await api.post(`/species/${targetId}/image`, formData, {
+      headers: { "Content-Type": "multipart/form-data" },
+    });
+    await fetchSpecies();
+    toast.success("照片已更新");
+  } catch (error: any) {
+    if (isAuthError(error)) return;
+    console.error("Failed to upload species image", error);
+    errorMsg.value = apiErrorMessage(error, "上传照片");
+  } finally {
+    uploadingPhotoId.value = null;
+    photoTargetId.value = null;
+  }
+};
+
+const savePrice = async (sp: SpeciesItem) => {
+  if (editingPriceId.value !== sp.id || savingPrice.value) return;
+  const value = Number(editingPrice.value);
+  if (!Number.isFinite(value) || value <= 0) {
+    errorMsg.value = "单价必须大于0";
+    return;
+  }
+  if (Math.abs(value - Number(sp.default_price ?? 0)) < 0.005) {
+    cancelEditPrice();
+    return;
+  }
+  savingPrice.value = true;
+  try {
+    // 后端 PUT 是整行覆盖：其它字段原样带回，避免把供应商/日期清空
+    await api.put(`/species/${sp.id}`, {
+      name_zh: sp.name_zh,
+      default_unit: sp.default_unit,
+      default_price: value,
+      release_date: sp.release_date ?? null,
+      supplier_name: sp.supplier_name ?? null,
+      supplier_note: sp.supplier_note ?? null,
+    });
+    cancelEditPrice();
+    toast.success(`「${sp.name_zh}」单价已更新`);
+    await invalidateCache();
+    await fetchSpecies();
+  } catch (error: any) {
+    if (isAuthError(error)) return;
+    errorMsg.value = apiErrorMessage(error, "保存单价");
+  } finally {
+    savingPrice.value = false;
+  }
+};
 
 const deleteConfirm = ref({
   show: false,
   id: null as number | null,
   isBatch: false,
 });
-
-const previewImageModal = ref({
-  show: false,
-  url: "",
-});
-
-const openImagePreview = (url: string) => {
-  previewImageModal.value = {
-    show: true,
-    url,
-  };
-};
 
 const isAllSelected = computed(() => {
   // 只对当前页的判断负责，避免勾一页变成全选所有页
@@ -893,6 +1111,7 @@ const exportSpecies = async () => {
     exportingSpecies.value = false;
   }
 };
+
 const saving = ref(false);
 
 const newSp = ref({
@@ -907,7 +1126,7 @@ const selectedFile = ref<File | null>(null);
 const previewUrl = ref<string | null>(null);
 const fileInputRef = ref<HTMLInputElement | null>(null);
 
-const unitOptions = ["公斤", "只"];
+const unitOptions = ["公斤", "只", "个"];
 
 const triggerFileInput = () => {
   fileInputRef.value?.click();
@@ -980,6 +1199,8 @@ const fetchSpecies = async () => {
     if (q) params.set("q", q);
     params.set("page", String(currentPage.value));
     params.set("page_size", String(pageSize.value));
+    // 列表要显示照片缩略图，让接口带上 image_url（base64 图片仍不会进列表，只在文件存储模式下有值）
+    params.set("include_images", "true");
     const url = params.toString()
       ? `/species?${params.toString()}`
       : "/species";
@@ -1063,14 +1284,6 @@ const addSpecies = async () => {
   }
 };
 
-const openDetail = (id: number, edit = false) => {
-  router.push({
-    name: "SpeciesDetail",
-    params: { id },
-    query: edit ? { mode: "edit" } : undefined,
-  });
-};
-
 const confirmRemoveSpecies = (id: number) => {
   deleteConfirm.value = { show: true, id, isBatch: false };
 };
@@ -1116,185 +1329,31 @@ const executeDeleteSpecies = async () => {
   }
 };
 
-// ============================================================
-//  批量导入品种
-// ============================================================
-
-interface ImportRow {
-  name_zh: string;
-  default_price: number;
-  default_unit: string;
-  exists: boolean;
-  species_id: number | null;
-  overwrite: boolean;
-  release_date?: string | null;
-}
-
-const showImportModal = ref(false);
-const speciesFileInput = ref<HTMLInputElement | null>(null);
-const importPreview = ref<ImportRow[]>([]);
-const importing = ref(false);
-
-const overwriteCount = computed(
-  () => importPreview.value.filter((r) => r.exists && r.overwrite).length,
-);
-
-const existingCount = computed(
-  () => importPreview.value.filter((r) => r.exists).length,
-);
-
-const isAllOverwrite = computed(
-  () =>
-    existingCount.value > 0 &&
-    importPreview.value.filter((r) => r.exists).every((r) => r.overwrite),
-);
-
-const toggleAllOverwrite = (e: Event) => {
-  const checked = (e.target as HTMLInputElement).checked;
-  for (const row of importPreview.value) {
-    if (row.exists) row.overwrite = checked;
+onMounted(() => {
+  fetchSpecies();
+  const el = rowsBodyRef.value;
+  if (el) {
+    const syncScrollState = () => {
+      bodyScrollsX.value = el.scrollWidth > el.clientWidth + 1;
+      bodyGutter.value = Math.max(0, el.offsetWidth - el.clientWidth);
+    };
+    rowsObserver = new ResizeObserver(syncScrollState);
+    rowsObserver.observe(el);
+    syncScrollState();
   }
-};
+});
 
-// 解析时被丢弃的行数（名称为空/单价无效/重复），供预览区徽标展示
-const importSkipCount = ref(0);
-
-const triggerSpeciesFileInput = () => {
-  if (speciesFileInput.value) {
-    speciesFileInput.value.value = "";
-    speciesFileInput.value.click();
-  }
-};
-
-const downloadSpeciesTemplate = () => {
-  const templateData = [
-    { 品种: "草鱼", "单价（元）": 12.5, 放生日期: "2025-01-15" },
-    { 品种: "鲈鱼", "单价（元）": 25.0, 放生日期: "2025-01-15" },
-  ];
-  const worksheet = XLSX.utils.json_to_sheet(templateData);
-  worksheet["!cols"] = [{ wch: 15 }, { wch: 12 }, { wch: 14 }];
-  const workbook = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(workbook, worksheet, "品种导入模板");
-  XLSX.writeFile(workbook, "品种导入模板.xlsx");
-};
-
-const handleSpeciesFileUpload = (event: Event) => {
-  const input = event.target as HTMLInputElement;
-  const file = input.files?.[0];
-  if (!file) return;
-
-  const reader = new FileReader();
-  reader.onload = (e) => {
-    try {
-      const data = new Uint8Array(e.target?.result as ArrayBuffer);
-      const workbook = XLSX.read(data, { type: "array" });
-      const firstSheetName = workbook.SheetNames[0];
-      const worksheet = workbook.Sheets[firstSheetName];
-      const jsonData = XLSX.utils.sheet_to_json(worksheet) as any[];
-      const parsedTotal = jsonData.length;
-
-      const seen = new Set<string>();
-
-      importPreview.value = jsonData
-        .map((row: any) => {
-          const nameZh = String(row["品种"] || row["名称"] || "").trim();
-          const rawPrice =
-            row["单价（元）"] ??
-            row["单价"] ??
-            row["单价 (¥)"] ??
-            row["单价(¥)"] ??
-            row["默认单价"] ??
-            0;
-          const price =
-            parseFloat(String(rawPrice).replace(/[^\d.]/g, "")) || 0;
-
-          const release_date = row["放生日期"] || row["日期"] || "";
-
-          if (seen.has(nameZh)) return null;
-          seen.add(nameZh);
-
-          const existsInDb = species.value.some((s) => s.name_zh === nameZh);
-          const existing = existsInDb
-            ? (species.value.find((s) => s.name_zh === nameZh) ?? null)
-            : null;
-
-          return {
-            name_zh: nameZh,
-            default_price: Number(price.toFixed(2)),
-            default_unit: "公斤",
-            exists: existsInDb,
-            species_id: existing ? existing.id : null,
-            overwrite: false,
-            release_date: release_date ? String(release_date).trim() : "",
-          };
-        })
-        .filter((r) => r && r.name_zh && r.default_price > 0);
-
-      importSkipCount.value = parsedTotal - importPreview.value.length;
-
-      if (importPreview.value.length === 0) {
-        toast.warning("未能解析到有效数据，请确认文件格式与模板一致。");
-      }
-    } catch (err) {
-      console.error("Parse species Excel failed", err);
-      toast.error("解析 Excel 失败，请检查文件格式是否正确。");
-    }
-  };
-  reader.readAsArrayBuffer(file);
-};
-
-const clearImportPreview = () => {
-  importPreview.value = [];
-  importSkipCount.value = 0;
-};
-
-const confirmImportSpecies = async () => {
-  if (importPreview.value.length === 0) return;
-  importing.value = true;
-  try {
-    let created = 0;
-    let updated = 0;
-    let skipped = 0;
-
-    for (const row of importPreview.value) {
-      if (row.exists && row.overwrite && row.species_id) {
-        await api.put(`/species/${row.species_id}`, {
-          name_zh: row.name_zh,
-          default_price: row.default_price,
-          default_unit: row.default_unit,
-          release_date: row.release_date || null,
-        });
-        updated++;
-      } else if (row.exists) {
-        skipped++;
-      } else {
-        await api.post("/species", {
-          name_zh: row.name_zh,
-          default_price: row.default_price,
-          default_unit: row.default_unit,
-          release_date: row.release_date || null,
-        });
-        created++;
-      }
-    }
-
-    const parts = [`成功导入 ${created + updated} 个品种`];
-    if (created > 0) parts.push(`新建 ${created} 个`);
-    if (updated > 0) parts.push(`覆盖 ${updated} 个`);
-    if (skipped > 0) parts.push(`跳过 ${skipped} 个`);
-    toast.success(parts.join("，"));
-
-    importPreview.value = [];
-    showImportModal.value = false;
-    await invalidateCache();
-    await fetchSpecies();
-  } catch (error: any) {
-    if (isAuthError(error)) return;
-    errorMsg.value = apiErrorMessage(error, "导入品种");
-  } finally {
-    importing.value = false;
-  }
-};
-
-onMounted(fetchSpecies);
+onBeforeUnmount(() => {
+  rowsObserver?.disconnect();
+  rowsObserver = null;
+});
 </script>
+
+<style scoped>
+/* 表头 / 数据行共用同一套列宽：品种 + 放生日期 + 单价 + 单位 + 照片 + 备注 + 操作 */
+.species-grid {
+  grid-template-columns:
+    44px 56px minmax(100px, 1.6fr) minmax(88px, 0.9fr) minmax(84px, 0.9fr)
+    minmax(70px, 0.7fr) 64px minmax(90px, 1.2fr) minmax(96px, 0.7fr);
+}
+</style>

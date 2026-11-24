@@ -4,6 +4,7 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
+    "predev": "node scripts/check-node.cjs",
     "dev": "node scripts/dev.js",
     "dev:frontend": "vite",
     "dev:backend": "cd backend && uvicorn app:app --port 8000 --reload",
@@ -12,7 +13,9 @@
     "check": "vue-tsc -b",
     "lint": "eslint . --ext .ts,.vue",
     "lint:fix": "eslint . --ext .ts,.vue --fix",
+    "pretest": "node scripts/check-node.cjs",
     "test": "vitest run",
+    "pretest:watch": "node scripts/check-node.cjs",
     "test:watch": "vitest"
   },
   "dependencies": {

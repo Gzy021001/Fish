@@ -16,8 +16,9 @@ export function useBillAudit(speciesList: Ref<Species[]>) {
     return map
   })
 
+  // 审计日志里记的是 species_id，品种已被删/列表未加载时只显示占位符，不显示「未知品种」
   const getSpeciesName = (id: number) =>
-    speciesMap.value.get(id)?.name_zh ?? `未知品种(${id})`
+    speciesMap.value.get(id)?.name_zh ?? "—"
 
   const formatAction = (action: string) => {
     const map: Record<string, string> = {

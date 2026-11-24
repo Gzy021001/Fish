@@ -24,8 +24,8 @@ const router = createRouter({
         { path: '', redirect: '/dashboard' },
         { path: 'dashboard', name: 'Dashboard', component: () => import('../pages/Dashboard.vue') },
         { path: 'species', name: 'Species', component: () => import('../pages/Species.vue') },
-        { path: 'species/:id', name: 'SpeciesDetail', component: () => import('../pages/SpeciesDetail.vue') },
         { path: 'billing', name: 'Billing', component: () => import('../pages/Billing.vue') },
+        { path: 'suixi', name: 'Suixi', component: () => import('../pages/Suixi.vue') },
         { path: 'import', name: 'Import', component: () => import('../pages/Import.vue') },
       ]
     },

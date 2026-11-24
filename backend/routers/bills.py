@@ -64,10 +64,12 @@ def list_bills_route(
     date_to: str = None,
     q: str = None,
     exclude_packaging: bool = False,
+    has_suixi: bool = False,
+    group_by_date: bool = False,
     db: Session = Depends(get_db),
     current_user: models.User = Depends(auth.get_current_user),
 ):
-    return list_bills(db, page=page, page_size=page_size, limit=limit, status=status, date=date, date_from=date_from, date_to=date_to, q=q, exclude_packaging=exclude_packaging)
+    return list_bills(db, page=page, page_size=page_size, limit=limit, status=status, date=date, date_from=date_from, date_to=date_to, q=q, exclude_packaging=exclude_packaging, has_suixi=has_suixi, group_by_date=group_by_date)
 
 
 @router.post("/bills/batch", response_model=schemas.BatchImportResult)

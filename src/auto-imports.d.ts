@@ -85,6 +85,7 @@ declare global {
   const useRouter: typeof import('vue-router').useRouter
   const useSlots: typeof import('vue').useSlots
   const useSpecies: typeof import('./composables/useSpecies').useSpecies
+  const useSuixiSummary: typeof import('./composables/useSuixiSummary').useSuixiSummary
   const useTemplateRef: typeof import('vue').useTemplateRef
   const useToast: typeof import('./composables/useToast').useToast
   const watch: typeof import('vue').watch
@@ -100,6 +101,9 @@ declare global {
   // @ts-ignore
   export type { BillEntry, BillFormState } from './composables/useBillForm'
   import('./composables/useBillForm')
+  // @ts-ignore
+  export type { SuixiDailyRow } from './composables/useSuixiSummary'
+  import('./composables/useSuixiSummary')
   // @ts-ignore
   export type { Toast } from './composables/useToast'
   import('./composables/useToast')

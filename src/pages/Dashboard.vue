@@ -297,7 +297,7 @@
       <div
         class="flex flex-col md:flex-row gap-3 md:gap-5 mb-5 md:h-[340px]"
       >
-        <div class="relative w-full md:w-[58%] h-[240px] md:h-full">
+        <div class="relative w-full md:w-[58%] h-[280px] md:h-full">
           <Transition name="fade">
             <div
               v-if="billsLoading"
@@ -343,7 +343,7 @@
         注：分类统计（饼图 / 分类走势）不含冰、打包、袋等耗材
       </div>
 
-      <div class="relative h-[300px] md:h-[480px]">
+      <div class="relative h-[320px] md:h-[480px]">
         <Transition name="fade">
           <div
             v-if="speciesWeightLoading"
@@ -693,6 +693,9 @@ let speciesWeightChartInstance: echarts.ECharts | null = null;
 let pieChartInstance: echarts.ECharts | null = null;
 /** 饼图当前是否处于窄屏布局（用于跨断点时重算图例位置） */
 let pieCompact = false;
+/** 柱状图 / 分类走势图的窄屏布局标记：resize 只缩放尺寸、不会重算标签密度与图例折行，跨断点时需重建 */
+let billsCompact = false;
+let speciesCompact = false;
 let fluctuationChartInstance: echarts.ECharts | null = null;
 const trendChartRefs = new Map<number, HTMLElement>();
 const trendChartInstances = new Map<number, echarts.ECharts>();
@@ -1202,9 +1205,15 @@ const renderBillsChart = async () => {
     return b ? Number(b.total_amount.toFixed(2)) : 0;
   });
 
-  // 小屏不再硬挤 24 个日期标签：按容器宽度算最多能放几个（每个标签约 44px）
+  // 容器尺寸决定紧凑布局：手机/平板这类窄容器里，坐标轴名称、图例和柱子数值都要给绘图区让位
   const chartW = billsChartRef.value.clientWidth || 600;
-  const maxLabels = Math.max(3, Math.floor(chartW / 44));
+  const chartH = billsChartRef.value.clientHeight || 240;
+  const compact = chartW < 560 || chartH < 260;
+  billsCompact = compact;
+
+  // 小屏不再硬挤 24 个日期标签：按容器宽度算最多能放几个（紧凑布局不旋转，每个约 32px）
+  const labelUnit = compact ? 32 : 44;
+  const maxLabels = Math.max(3, Math.floor(chartW / labelUnit));
   const labelOverflow2 = dayLabels.length > maxLabels;
   const labelInterval2 = Math.max(
     0,
@@ -1212,7 +1221,7 @@ const renderBillsChart = async () => {
   );
   const xDataCount = dayLabels.length;
   const showDataZoom = xDataCount > 25;
-  // 自适应柱宽：数据越少柱子越宽
+  // 自适应柱宽：数据越少柱子越宽；窄屏再兜一个最小柱宽，避免 40+ 根柱子细成发丝线
   const barWidth =
     xDataCount <= 7
       ? "30%"
@@ -1221,18 +1230,41 @@ const renderBillsChart = async () => {
         : xDataCount <= 30
           ? "10%"
           : "6%";
-  // dataZoom slider 出现时 legend 上移避免重叠，grid bottom 预留空间
+  // 每根柱子分不到 30px 时不再画柱顶数值：几十个价格标签会叠成一团字，数值交给 tooltip
+  const perBarW = (chartW * 0.84) / Math.max(1, xDataCount);
+  const showBarLabels = perBarW >= 30;
+  // 紧凑布局把图例挪到顶部，底部只留 X 轴日期 + 缩放滑杆
+  const sliderH = compact ? 20 : 24;
   const legendBottom = showDataZoom ? 24 : 0;
-  const gridBottom = showDataZoom ? "24%" : labelOverflow2 ? "22%" : "15%";
+  const gridBottom = compact
+    ? 16 + (showDataZoom ? sliderH + 10 : 0)
+    : showDataZoom
+      ? "24%"
+      : labelOverflow2
+        ? "22%"
+        : "15%";
+  // 窄屏右轴用「万」压缩金额刻度：¥100,000.00 会占掉近 1/5 屏宽
+  const compactYuan = (v: number) => {
+    if (Math.abs(v) < 10000) return `¥${Math.round(v)}`;
+    const wan = v / 10000;
+    // 10 万以内保留 1 位小数，再大直接取整，避免「12.5 万」被显示成「13 万」
+    return `¥${wan >= 100 ? wan.toFixed(0) : String(Math.round(wan * 10) / 10)}万`;
+  };
   const option: any = {
     labelLayout: { hideOverlap: true },
     legend: {
       data: ["总重量", "总金额"],
-      bottom: legendBottom,
-      textStyle: { color: "#6b7280", fontSize: 11 },
+      ...(compact
+        ? { top: 0, left: "center", itemGap: 10 }
+        : { bottom: legendBottom }),
+      textStyle: { color: "#6b7280", fontSize: compact ? 10 : 11 },
       icon: "roundRect",
-      itemWidth: 12,
+      itemWidth: compact ? 10 : 12,
       itemHeight: 4,
+      // 紧凑布局去掉坐标轴名称，单位改由图例表达，省下两行纵向空间
+      formatter: compact
+        ? (name: string) => (name === "总重量" ? "重量(公斤)" : "金额(元)")
+        : undefined,
     },
     tooltip: {
       trigger: "axis",
@@ -1264,10 +1296,10 @@ const renderBillsChart = async () => {
       },
     },
     grid: {
-      left: "4%",
-      right: "6%",
+      left: compact ? 2 : "4%",
+      right: compact ? 2 : "6%",
       bottom: gridBottom,
-      top: "14%",
+      top: compact ? 26 : "14%",
       containLabel: true,
     },
     xAxis: {
@@ -1277,8 +1309,8 @@ const renderBillsChart = async () => {
       axisLine: { lineStyle: { color: "#d1d5db" } },
       axisLabel: {
         color: "#9ca3af",
-        fontSize: 10,
-        rotate: labelOverflow2 ? 35 : 0,
+        fontSize: compact ? 9 : 10,
+        rotate: compact ? 0 : labelOverflow2 ? 35 : 0,
         interval: labelOverflow2 ? labelInterval2 : "auto",
       },
       axisTick: { show: false },
@@ -1286,14 +1318,14 @@ const renderBillsChart = async () => {
     yAxis: [
       {
         type: "value",
-        name: "总重量 (公斤)",
+        name: compact ? "" : "总重量 (公斤)",
         boundaryGap: [0, 0.08],
         nameTextStyle: { color: "#9ca3af", fontSize: 10 },
         axisLine: { show: true, lineStyle: { color: "#d1d5db" } },
         axisLabel: {
           color: "#9ca3af",
           formatter: (v: number) => v.toFixed(1),
-          fontSize: 10,
+          fontSize: compact ? 9 : 10,
         },
         splitLine: {
           lineStyle: { color: "#e5e7eb", type: "solid" },
@@ -1301,15 +1333,17 @@ const renderBillsChart = async () => {
       },
       {
         type: "value",
-        name: "总金额 (元)",
+        name: compact ? "" : "总金额 (元)",
         scale: true,
         boundaryGap: [0, 0.08],
         nameTextStyle: { color: "#9ca3af", fontSize: 10 },
         axisLine: { show: true, lineStyle: { color: "#d1d5db" } },
         axisLabel: {
           color: "#9ca3af",
-          formatter: (v: number) => fmtYuan(v),
-          fontSize: 10,
+          formatter: compact
+            ? (v: number) => compactYuan(v)
+            : (v: number) => fmtYuan(v),
+          fontSize: compact ? 9 : 10,
         },
         splitLine: { show: false },
       },
@@ -1320,6 +1354,7 @@ const renderBillsChart = async () => {
         type: "bar",
         yAxisIndex: 0,
         barWidth,
+        barMinWidth: compact ? 3 : undefined,
         z: 2,
         itemStyle: {
           color: {
@@ -1351,11 +1386,11 @@ const renderBillsChart = async () => {
           },
         },
         label: {
-          show: true,
+          show: showBarLabels,
           position: "top",
           distance: 4,
           color: "#4a2c1e",
-          fontSize: 10,
+          fontSize: compact ? 9 : 10,
           fontWeight: "bold",
           formatter: (p: any) => (p.value > 0 ? formatPrice(p.value) : ""),
         },
@@ -1418,12 +1453,13 @@ const renderBillsChart = async () => {
       ? [
           {
             type: "slider",
-            bottom: 0,
-            height: 24,
+            bottom: compact ? 4 : 0,
+            height: sliderH,
             borderColor: "#d1d5db40",
             fillerColor: "#d1d5db20",
             handleStyle: { color: "#d1d5db" },
-            textStyle: { color: "#9ca3af", fontSize: 10 },
+            textStyle: { color: "#9ca3af", fontSize: compact ? 9 : 10 },
+            showDetail: !compact,
           },
         ]
       : [],
@@ -1499,24 +1535,43 @@ const renderSpeciesWeightChart = async () => {
 
   // 同样按容器宽度算标签密度，避免手机上一排日期挤成一团
   const speciesChartW = speciesWeightChartRef.value.clientWidth || 600;
-  const maxLabels3 = Math.max(3, Math.floor(speciesChartW / 44));
+  const compact = speciesChartW < 560;
+  speciesCompact = compact;
+  const labelUnit3 = compact ? 32 : 44;
+  const maxLabels3 = Math.max(3, Math.floor(speciesChartW / labelUnit3));
   const labelOverflow3 = dayLabels.length > maxLabels3;
   const labelInterval3 = Math.max(
     0,
     Math.ceil(dayLabels.length / maxLabels3) - 1,
   );
   const legendNames = activeCats.map((c) => c.label);
+  const legendFont = compact ? 10 : 11;
+  const legendIconW = compact ? 14 : 20;
+  const legendGap = compact ? 10 : 14;
+  // 图例在窄屏会折行，按估算行数为它预留高度，否则第二行会压住 X 轴日期
+  const legendTextW = legendNames.reduce(
+    (sum, name) => sum + name.length * legendFont + legendIconW + legendGap,
+    0,
+  );
+  const legendRows = Math.max(
+    1,
+    Math.ceil(legendTextW / Math.max(120, speciesChartW - 16)),
+  );
+  const legendH = legendRows * (legendFont + 6);
+  const rotateX = compact ? 0 : labelOverflow3 ? 35 : 0;
+  const gridBottom3 = legendH + (rotateX ? 32 : 16) + 4;
 
   const option: any = {
     legend: {
       orient: "horizontal",
       bottom: 0,
       left: "center",
-      itemGap: 14,
-      itemWidth: 20,
+      width: "96%",
+      itemGap: legendGap,
+      itemWidth: legendIconW,
       itemHeight: 3,
       icon: "roundRect",
-      textStyle: { color: "#6b7280", fontSize: 11 },
+      textStyle: { color: "#6b7280", fontSize: legendFont },
       data: legendNames,
     },
     tooltip: {
@@ -1525,7 +1580,7 @@ const renderSpeciesWeightChart = async () => {
       borderColor: "#e5e7eb",
       borderWidth: 1,
       padding: [10, 14],
-      textStyle: { color: "#374151", fontSize: 12 },
+      textStyle: { color: "#374151", fontSize: compact ? 11 : 12 },
       formatter: (params: any) => {
         if (!Array.isArray(params) || params.length === 0) return "";
         const items = params
@@ -1536,18 +1591,18 @@ const renderSpeciesWeightChart = async () => {
         let total = 0;
         for (const p of items) {
           total += Number(p.value);
-          html += `<div style="display:flex;justify-content:space-between;gap:24px;"><span>${p.marker} ${p.seriesName}</span><b style="color:#374151;">${formatPrice(p.value)} 公斤</b></div>`;
+          html += `<div style="display:flex;justify-content:space-between;gap:${compact ? 12 : 24}px;"><span>${p.marker} ${p.seriesName}</span><b style="color:#374151;">${formatPrice(p.value)} 公斤</b></div>`;
         }
         html += `<div style="margin-top:4px;padding-top:4px;border-top:1px solid #e5e7eb;display:flex;justify-content:space-between;"><span style="color:#9ca3af;">合计</span><b style="color:#374151;">${formatPrice(Number(total.toFixed(2)))} 公斤</b></div>`;
         return html;
       },
     },
     grid: {
-      left: 45,
-      right: 10,
-      bottom: labelOverflow3 ? 44 : 28,
-      top: 10,
-      containLabel: false,
+      left: compact ? 4 : 45,
+      right: compact ? 6 : 10,
+      bottom: gridBottom3,
+      top: compact ? 18 : 10,
+      containLabel: compact,
     },
     xAxis: {
       type: "category",
@@ -1556,8 +1611,8 @@ const renderSpeciesWeightChart = async () => {
       axisLine: { lineStyle: { color: "#d1d5db" } },
       axisLabel: {
         color: "#9ca3af",
-        fontSize: 10,
-        rotate: labelOverflow3 ? 35 : 0,
+        fontSize: compact ? 9 : 10,
+        rotate: rotateX,
         interval: labelOverflow3 ? labelInterval3 : "auto",
       },
       axisTick: { show: false },
@@ -1566,12 +1621,13 @@ const renderSpeciesWeightChart = async () => {
       type: "value",
       scale: true,
       name: "重量 (公斤)",
-      nameTextStyle: { color: "#9ca3af", fontSize: 10 },
+      nameGap: compact ? 6 : 15,
+      nameTextStyle: { color: "#9ca3af", fontSize: compact ? 9 : 10 },
       axisLine: { show: true, lineStyle: { color: "#d1d5db" } },
       axisLabel: {
         color: "#9ca3af",
         formatter: (v: number) => v.toFixed(1),
-        fontSize: 10,
+        fontSize: compact ? 9 : 10,
       },
       splitLine: {
         lineStyle: { color: "#e5e7eb", type: "solid" },
@@ -1808,6 +1864,16 @@ const handleResize = () => {
     const compactNow =
       pieChart.value.clientWidth < 560 || pieChart.value.clientHeight < 240;
     if (compactNow !== pieCompact) renderPieChart();
+  }
+  if (hasBillData.value && billsChartRef.value) {
+    const compactNow =
+      billsChartRef.value.clientWidth < 560 ||
+      billsChartRef.value.clientHeight < 260;
+    if (compactNow !== billsCompact) renderBillsChart();
+  }
+  if (hasSpeciesWeightData.value && speciesWeightChartRef.value) {
+    const compactNow = speciesWeightChartRef.value.clientWidth < 560;
+    if (compactNow !== speciesCompact) renderSpeciesWeightChart();
   }
 };
 

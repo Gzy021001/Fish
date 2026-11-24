@@ -29,21 +29,78 @@ def list_species(db: Session, q: Optional[str] = None):
 
 
 def list_species_paginated(db: Session, q: Optional[str], page: int, page_size: int):
-    """服务端分页版品种列表（page/page_size 均 > 0 时使用），返回 (items, total)。"""
-    query = db.query(models.Species).filter(models.Species.is_deleted.is_(False))
+    """服务端分页版品种列表（page/page_size 均 > 0 时使用），返回 (items, total)。
+
+    排序按「放生日期」：该品种最近一次有单据的放生日期（没有单据时回退品种自身日期）倒序，
+    这样同一周放生的品种会排在一起，和列表里显示的日期一致。
+    """
+    from sqlalchemy import func
+
+    base = db.query(models.Species).filter(models.Species.is_deleted.is_(False))
     if q:
-        query = query.filter(models.Species.name_zh.ilike(f"%{q}%"))
-    total = query.count()
-    items = (
-        query.order_by(
-            models.Species.release_date.desc().nullslast(),
-            models.Species.id.desc(),
+        base = base.filter(models.Species.name_zh.ilike(f"%{q}%"))
+    total = base.count()
+
+    # 放生日期口径与单据列表/看板一致：单据日期缺失时回退品种日期
+    bill_day = func.coalesce(models.Bill.release_date, models.Species.release_date)
+    last_day_sq = (
+        db.query(
+            models.Bill.species_id.label("species_id"),
+            func.max(bill_day).label("last_day"),
         )
+        .join(models.Species, models.Bill.species_id == models.Species.id)
+        .filter(models.Bill.is_deleted.is_(False))
+        .group_by(models.Bill.species_id)
+        .subquery()
+    )
+    sort_day = func.coalesce(last_day_sq.c.last_day, models.Species.release_date)
+
+    items = (
+        base.outerjoin(last_day_sq, last_day_sq.c.species_id == models.Species.id)
+        # 同一天放生的品种再按名称排一次，顺序稳定、便于找
+        .order_by(sort_day.desc().nullslast(), models.Species.name_zh.asc())
         .offset((page - 1) * page_size)
         .limit(page_size)
         .all()
     )
     return items, total
+
+
+def attach_species_last_release(db: Session, rows: list):
+    """给品种库列表补「放生日期」：取该品种最近一次有单据的放生日期（即最近一周的放生日）。
+
+    只查当前页的品种，一次 GROUP BY；放生日期口径与单据列表/看板一致
+    （单据日期缺失时回退品种日期）。没有任何单据的品种保留品种自身的放生日期。
+    """
+    ids = [row.get("id") for row in rows if row.get("id") is not None]
+    if not ids:
+        return rows
+
+    from sqlalchemy import func
+
+    bill_day = func.coalesce(models.Bill.release_date, models.Species.release_date)
+    stats = (
+        db.query(models.Bill.species_id, func.max(bill_day))
+        .join(models.Species, models.Bill.species_id == models.Species.id)
+        .filter(
+            models.Bill.species_id.in_(ids),
+            models.Bill.is_deleted.is_(False),
+        )
+        .group_by(models.Bill.species_id)
+        .all()
+    )
+    last_by_id = {species_id: _iso_day(last_day) for species_id, last_day in stats}
+    for row in rows:
+        # 没有单据时回退到品种自身的放生日期（可能是空）
+        row["last_release_date"] = last_by_id.get(row.get("id")) or _iso_day(
+            row.get("release_date")
+        )
+    return rows
+
+
+def _iso_day(value):
+    """date -> 'YYYY-MM-DD'；字符串/None 原样返回。"""
+    return value.isoformat() if hasattr(value, "isoformat") else value
 
 
 def serialize_species_list(items, include_images: bool = True):

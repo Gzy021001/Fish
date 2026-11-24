@@ -42,6 +42,8 @@ class SpeciesUpdate(SpeciesBase):
 
 class Species(SpeciesBase):
     id: int
+    # 列表页附带：最近一次有单据的放生日期（只有分页列表接口会填，其它接口为 None）
+    last_release_date: Optional[str] = None
 
     class Config:
         from_attributes = True

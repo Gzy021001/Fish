@@ -686,7 +686,7 @@
       </div>
     </Transition>
 
-    <!-- 历史单据列表 -->
+    <!-- 单据列表 -->
     <Transition name="switch-fade" mode="out-in">
       <div
         v-if="!showForm"
@@ -694,206 +694,36 @@
       >
         <div class="flex flex-wrap items-center justify-between gap-3 mb-6">
           <div class="flex flex-wrap items-center gap-2 sm:gap-4">
-            <div
-              class="flex items-center gap-6 border-b border-dunhuang-yellow/30 pb-2"
-            >
-              <button
-                v-for="tab in tabs"
-                :key="tab.key"
-                @click="switchTab(tab.key)"
-                :class="[
-                  'text-lg font-serif font-bold transition-colors pb-1 -mb-[5px] border-b-2',
-                  activeTab === tab.key
-                    ? 'text-dunhuang-blue border-dunhuang-blue'
-                    : 'text-dunhuang-text/50 border-transparent hover:text-dunhuang-blue/70',
-                ]"
-              >
-                {{ tab.label }}
-              </button>
-            </div>
-
             <!-- 品种搜索（常驻工具栏，不藏在筛选面板里） -->
             <SearchInput
               v-model="billingSearch"
               placeholder="搜索品种..."
-              class="self-center mb-2"
+              class="self-center"
               @search="refetchFromFirstPage"
               @clear="clearBillingSearch"
             />
 
-            <!-- 筛选面板 -->
-            <div class="relative self-center mb-2 z-[60]" ref="filterWrapperRef">
-              <button
-                @click="
-                  showFilterDropdown
-                    ? (showFilterDropdown = false)
-                    : openFilterDropdown()
-                "
-                :class="[
-                  'flex items-center justify-center gap-2 rounded-lg px-4 h-9 text-sm font-semibold transition-all duration-200',
-                  activeFilterCount > 0
-                    ? 'bg-dunhuang-yellow/15 text-dunhuang-blue border border-dunhuang-yellow/40 shadow-sm'
-                    : 'bg-dunhuang-bg/50 text-dunhuang-text/40 border border-dunhuang-blue/15 hover:text-dunhuang-text/60 hover:border-dunhuang-blue/35 hover:bg-white',
-                ]"
-              >
-                <svg
-                  class="w-4 h-4"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    stroke-width="2"
-                    d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"
-                  />
-                </svg>
-                <span>筛选</span>
-                <span
-                  v-if="activeFilterCount > 0"
-                  class="ml-1 flex items-center justify-center w-4 h-4 text-[10px] font-bold text-white bg-dunhuang-red rounded-full leading-none pt-[1px]"
-                >
-                  {{ activeFilterCount }}
-                </span>
-              </button>
-
-              <Transition name="dropdown">
-                <div
-                  v-if="showFilterDropdown"
-                  class="absolute top-full mt-2 left-0 z-50"
-                >
-                  <div
-                    class="bg-white rounded-2xl shadow-xl border border-dunhuang-yellow/20 w-[min(320px,calc(100vw-2rem))]"
-                    style="
-                      box-shadow:
-                        0 12px 36px rgba(92, 64, 51, 0.12),
-                        0 4px 12px rgba(92, 64, 51, 0.06);
-                    "
-                  >
-                    <div
-                      class="flex items-center gap-2.5 px-5 pt-4 pb-3 border-b border-dunhuang-yellow/10"
-                    >
-                      <div
-                        class="w-1 h-5 rounded-full bg-dunhuang-yellow shrink-0"
-                      ></div>
-                      <h4
-                        class="text-sm font-serif font-bold text-dunhuang-blue"
-                      >
-                        筛选
-                      </h4>
-                    </div>
-
-                    <div class="px-5 py-4 space-y-4">
-                      <!-- 日期范围 -->
-                      <div>
-                        <label
-                          class="block text-[11px] text-dunhuang-text/40 mb-1.5 tracking-wider font-medium"
-                          >放生日期范围</label
-                        >
-                        <div
-                          class="flex items-center gap-1.5 border border-dunhuang-yellow/30 rounded-lg bg-dunhuang-bg/30 px-2 h-9 w-full hover:border-dunhuang-yellow/50 focus-within:border-dunhuang-blue focus-within:bg-white transition-all duration-200"
-                        >
-                          <DateInput
-                            v-model="pickerFromDate"
-                            placeholder="开始日期"
-                            size="sm"
-                            variant="ghost"
-                            class="flex-1 min-w-0"
-                          />
-                          <span
-                            class="text-dunhuang-text/30 text-xs font-medium shrink-0 px-0.5"
-                            >至</span
-                          >
-                          <DateInput
-                            v-model="pickerToDate"
-                            placeholder="结束日期"
-                            size="sm"
-                            variant="ghost"
-                            class="flex-1 min-w-0"
-                          />
-                        </div>
-                      </div>
-                      <!-- 归档状态 (仅在最新单据下显示) -->
-                      <div v-if="activeTab === 'current'">
-                        <label
-                          class="block text-[11px] text-dunhuang-text/40 mb-1.5 tracking-wider font-medium"
-                          >单据状态</label
-                        >
-                        <div class="flex gap-2">
-                          <button
-                            @click="pickerStatus = ''"
-                            :class="[
-                              'flex-1 h-8 rounded-lg text-xs font-medium transition-all duration-200 border',
-                              pickerStatus === ''
-                                ? 'bg-dunhuang-blue text-white border-dunhuang-blue'
-                                : 'bg-dunhuang-bg/30 text-dunhuang-text/60 border-dunhuang-yellow/30 hover:border-dunhuang-blue/50',
-                            ]"
-                          >
-                            全部
-                          </button>
-                          <button
-                            @click="pickerStatus = 'DRAFT'"
-                            :class="[
-                              'flex-1 h-8 rounded-lg text-xs font-medium transition-all duration-200 border',
-                              pickerStatus === 'DRAFT'
-                                ? 'bg-dunhuang-blue text-white border-dunhuang-blue'
-                                : 'bg-dunhuang-bg/30 text-dunhuang-text/60 border-dunhuang-yellow/30 hover:border-dunhuang-blue/50',
-                            ]"
-                          >
-                            草稿
-                          </button>
-                          <button
-                            @click="pickerStatus = 'COMPLETED'"
-                            :class="[
-                              'flex-1 h-8 rounded-lg text-xs font-medium transition-all duration-200 border',
-                              pickerStatus === 'COMPLETED'
-                                ? 'bg-dunhuang-blue text-white border-dunhuang-blue'
-                                : 'bg-dunhuang-bg/30 text-dunhuang-text/60 border-dunhuang-yellow/30 hover:border-dunhuang-blue/50',
-                            ]"
-                          >
-                            已归档
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-
-                    <!-- 操作按钮 -->
-                    <div
-                      class="flex justify-end items-center px-5 py-3 bg-dunhuang-bg/40 border-t border-dunhuang-yellow/10 rounded-b-2xl"
-                    >
-                      <div class="flex gap-2">
-                        <button
-                          @click="applyFilters"
-                          class="h-9 px-5 rounded-lg text-sm font-medium transition-all duration-200 bg-dunhuang-blue text-white hover:bg-dunhuang-blue/90 shadow-sm hover:shadow-md"
-                        >
-                          搜索
-                        </button>
-                        <button
-                          @click="resetFilters"
-                          class="h-9 px-4 rounded-lg text-sm text-dunhuang-text/50 hover:text-dunhuang-text/70 hover:bg-dunhuang-yellow/20 transition-colors font-medium"
-                        >
-                          重置
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </Transition>
-            </div>
+            <!-- 放生日期筛选（直接放工具栏，选完立即生效） -->
+            <DateRangeInput
+              v-model:from="filterDateFrom"
+              v-model:to="filterDateTo"
+              align="left"
+              class="w-[264px] self-center"
+              @change="onDateRangeChange"
+            />
           </div>
 
           <div class="flex gap-2 items-center">
             <!-- 批量删除 -->
             <button
-              v-if="activeTab === 'current' && selectedBillIds.length > 0 && authStore.isAdmin"
+              v-if="selectedBillIds.length > 0 && authStore.isAdmin"
               @click="confirmBatchDeleteBills"
               class="h-10 px-5 rounded-lg text-sm font-medium transition-all duration-200 text-dunhuang-red hover:bg-dunhuang-red/8 border border-dunhuang-red/25 hover:border-dunhuang-red/40"
             >
               批量删除 ({{ selectedBillIds.length }})
             </button>
 
-            <!-- 批量导出（选中单据；最新/历史 tab 均可用） -->
+            <!-- 批量导出（只导勾选的单据） -->
             <button
               v-if="selectedBillIds.length > 0"
               @click="exportBills"
@@ -903,9 +733,9 @@
               批量导出 ({{ selectedBillIds.length }})
             </button>
 
-            <!-- current tab 专有按钮：导入 -->
+            <!-- 导入 -->
             <button
-              v-if="activeTab === 'current' && authStore.isAdmin"
+              v-if="authStore.isAdmin"
               @click="goToImport"
               type="button"
               class="h-10 px-5 rounded-lg text-sm font-medium transition-all duration-200 text-dunhuang-blue/80 hover:text-dunhuang-blue hover:bg-dunhuang-blue/6 border border-dunhuang-blue/15 hover:border-dunhuang-blue/35"
@@ -922,8 +752,8 @@
               导出
             </button>
 
-            <!-- current tab 专有按钮：新增（仅管理员可写，其他账号只读） -->
-            <template v-if="activeTab === 'current' && authStore.isAdmin">
+            <!-- 新增（仅管理员可写，其他账号只读） -->
+            <template v-if="authStore.isAdmin">
               <button
                 @click="
                   initNewBill();
@@ -945,7 +775,10 @@
             ref="tableHeaderRef"
             class="overflow-hidden shrink-0 bg-[#f9f3e7] z-40 transform-gpu shadow-sm"
           >
-            <div class="flex min-w-[1558px] h-[42px] pr-[12px]">
+            <div
+              class="flex h-[42px] pr-[12px]"
+              :style="{ minWidth: tableHeaderMinWidth + 'px' }"
+            >
               <div
                 class="bg-dunhuang-yellow/10 text-dunhuang-blue font-sans font-bold text-sm flex w-full h-full"
               >
@@ -970,45 +803,41 @@
                   品种
                 </div>
                 <div
-                  class="col-th flex-1 min-w-[72px] hidden sm:flex items-center justify-center"
+                  class="col-th flex-1 min-w-[104px] flex items-center"
                 >
-                  归档状态
-                </div>
-                <div class="col-th flex-1 min-w-[104px] flex items-center">
                   重量（公斤）
                 </div>
-                <div class="col-th flex-1 min-w-[88px] flex items-center">
+                <div
+                  class="col-th flex-1 min-w-[88px] flex items-center"
+                >
                   单价（元）
                 </div>
-                <div class="col-th flex-1 min-w-[96px] flex items-center">
+                <div
+                  class="col-th flex-1 min-w-[96px] flex items-center"
+                >
                   小计（元）
                 </div>
-                <div class="col-th flex-1 min-w-[104px] flex items-center">
+                <div
+                  class="col-th flex-1 min-w-[104px] flex items-center"
+                >
                   服务费（元）
                 </div>
-                <div class="col-th flex-1 min-w-[88px] flex items-center justify-center">
-                  随喜类型
-                </div>
-                <div class="col-th flex-1 min-w-[88px] flex items-center justify-center">
-                  支付宝（元）
-                </div>
-                <div class="col-th flex-1 min-w-[88px] flex items-center justify-center">
-                  微信（元）
-                </div>
-                <div class="col-th flex-1 min-w-[104px] flex items-center justify-center">
-                  随喜放生（元）
-                </div>
-                <div class="col-th flex-1 min-w-[104px] flex items-center">
+                <div
+                  class="col-th flex-1 min-w-[104px] flex items-center"
+                >
                   总金额（元）
                 </div>
-                <div class="col-th flex-1 min-w-[96px] flex items-center">
+                <div
+                  class="col-th flex-1 min-w-[96px] flex items-center"
+                >
                   放生日期
                 </div>
-                <div class="col-th flex-1 min-w-[140px] hidden lg:flex items-center">
+                <div
+                  class="col-th flex-1 min-w-[140px] hidden lg:flex items-center"
+                >
                   添加时间
                 </div>
                 <div
-                  v-if="activeTab === 'current'"
                   class="col-th flex items-center justify-center w-[112px] sm:w-[168px] shrink-0 sticky right-0 bg-[#f9f3e7] z-50 shadow-[-2px_0_5px_-2px_rgba(0,0,0,0.05)]"
                 >
                   操作
@@ -1023,10 +852,13 @@
             @scroll="handleTableScroll"
             class="overflow-y-auto overflow-x-auto panel-scrollbar [scrollbar-gutter:stable] flex-1 w-full"
           >
-            <div class="flex flex-col min-w-[1552px] pr-[6px] relative min-h-[450px]">
+            <div
+              class="flex flex-col pr-[6px] relative min-h-[450px]"
+              :style="{ minWidth: tableMinWidth + 'px' }"
+            >
               <div
                 v-for="(b, index) in paginatedBills"
-                :key="b.id"
+                :key="b.id ?? b.release_date ?? index"
                 class="border-b border-dunhuang-yellow/20 hover:bg-[#fbf6ec] transition-colors text-sm group flex w-full shrink-0 h-[45px]"
               >
                 <div
@@ -1047,57 +879,44 @@
                 <div
                   class="col-td font-medium flex-1 min-w-[100px] flex items-center truncate pr-2 bg-white group-hover:bg-[#fbf6ec] transition-colors z-30 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.05)] sticky left-[112px]"
                 >
-                  {{ getSpeciesName(b.species_id) }}
+                  {{ getSpeciesName(b.species_id, b.species?.name_zh) }}
                 </div>
                 <div
-                  class="col-td flex-1 min-w-[72px] hidden sm:flex items-center justify-center"
+                  class="col-td tabular-nums flex-1 min-w-[104px] flex items-center"
                 >
-                  <span
-                    v-if="b.status === 'COMPLETED'"
-                    class="text-[10px] px-1.5 py-0.5 rounded bg-dunhuang-blue/10 text-dunhuang-blue border border-dunhuang-blue/20 shrink-0"
-                    >已归档</span
-                  >
-                  <span
-                    v-else-if="b.status === 'DRAFT'"
-                    class="text-[10px] px-1.5 py-0.5 rounded bg-dunhuang-yellow/20 text-dunhuang-orange border border-dunhuang-yellow/40 shrink-0"
-                    >草稿</span
-                  >
-                </div>
-                <div class="col-td tabular-nums flex-1 min-w-[104px] flex items-center">
                   {{ formatMoney(b.weight) }}
                 </div>
-                <div class="col-td-mono-red flex-1 min-w-[88px] flex items-center">
+                <div
+                  class="col-td-mono-red flex-1 min-w-[88px] flex items-center"
+                >
                   {{ formatMoney(b.unit_price) }}
                 </div>
-                <div class="col-td-green flex-1 min-w-[96px] flex items-center">
+                <div
+                  class="col-td-green flex-1 min-w-[96px] flex items-center"
+                >
                   {{ formatMoney(b.subtotal) }}
                 </div>
-                <div class="col-td tabular-nums flex-1 min-w-[104px] flex items-center">
+                <div
+                  class="col-td tabular-nums flex-1 min-w-[104px] flex items-center"
+                >
                   {{ formatFee(b) }}
                 </div>
-                <div class="col-td flex-1 min-w-[88px] flex items-center justify-center">
-                  {{ b.payment_method || "—" }}
-                </div>
-                <div class="col-td tabular-nums flex-1 min-w-[88px] flex items-center justify-center">
-                  {{ b.alipay_amount != null ? formatMoney(b.alipay_amount) : "—" }}
-                </div>
-                <div class="col-td tabular-nums flex-1 min-w-[88px] flex items-center justify-center">
-                  {{ b.wechat_amount != null ? formatMoney(b.wechat_amount) : "—" }}
-                </div>
-                <div class="col-td tabular-nums flex-1 min-w-[104px] flex items-center justify-center">
-                  {{ b.suixi_amount != null ? formatMoney(b.suixi_amount) : "—" }}
-                </div>
-                <div class="col-td-mono-red flex-1 min-w-[104px] flex items-center">
+                <div
+                  class="col-td-mono-red flex-1 min-w-[104px] flex items-center"
+                >
                   {{ formatMoney(b.total_amount) }}
                 </div>
-                <div class="col-td flex-1 min-w-[96px] flex items-center">
+                <div
+                  class="col-td flex-1 min-w-[96px] flex items-center"
+                >
                   {{ dateStr(b.release_date || b.species?.release_date) }}
                 </div>
-                <div class="col-td-time flex-1 min-w-[140px] hidden lg:flex items-center">
+                <div
+                  class="col-td-time flex-1 min-w-[140px] hidden lg:flex items-center"
+                >
                   {{ dateTimeStr(b.created_at) }}
                 </div>
                 <div
-                  v-if="activeTab === 'current'"
                   class="px-3 py-2 flex items-center justify-center w-[112px] sm:w-[168px] shrink-0 sticky right-0 bg-white group-hover:bg-[#fbf6ec] transition-colors z-30 shadow-[-2px_0_5px_-2px_rgba(0,0,0,0.05)]"
                 >
                   <div class="flex items-center justify-center gap-1">
@@ -1141,29 +960,27 @@
                     class="col-td font-medium flex-1 min-w-[100px] flex items-center bg-white z-30 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.05)] sticky left-[112px]"
                   ></div>
                   <div
-                    class="col-td flex-1 min-w-[72px] hidden sm:flex items-center justify-center"
-                  ></div>
-                  <div
                     class="col-td tabular-nums flex-1 min-w-[104px] flex items-center"
                   ></div>
                   <div
                     class="col-td-mono-red flex-1 min-w-[88px] flex items-center"
                   ></div>
-                  <div class="col-td-green flex-1 min-w-[96px] flex items-center"></div>
+                  <div
+                    class="col-td-green flex-1 min-w-[96px] flex items-center"
+                  ></div>
                   <div
                     class="col-td tabular-nums flex-1 min-w-[104px] flex items-center"
                   ></div>
-                  <div class="col-td flex-1 min-w-[88px] flex items-center justify-center"></div>
-                  <div class="col-td tabular-nums flex-1 min-w-[88px] flex items-center justify-center"></div>
-                  <div class="col-td tabular-nums flex-1 min-w-[88px] flex items-center justify-center"></div>
-                  <div class="col-td tabular-nums flex-1 min-w-[104px] flex items-center justify-center"></div>
                   <div
                     class="col-td-mono-red flex-1 min-w-[104px] flex items-center"
                   ></div>
-                  <div class="col-td flex-1 min-w-[96px] flex items-center"></div>
-                  <div class="col-td-time flex-1 min-w-[140px] hidden lg:flex items-center"></div>
                   <div
-                    v-if="activeTab === 'current'"
+                    class="col-td flex-1 min-w-[96px] flex items-center"
+                  ></div>
+                  <div
+                    class="col-td-time flex-1 min-w-[140px] hidden lg:flex items-center"
+                  ></div>
+                  <div
                     class="px-3 py-2 flex items-center justify-center w-[168px] shrink-0 sticky right-0 bg-white z-30 shadow-[-2px_0_5px_-2px_rgba(0,0,0,0.05)]"
                   ></div>
                 </div>
@@ -1186,7 +1003,10 @@
             ref="tableFooterRef"
             class="overflow-hidden shrink-0 bg-white border-t-2 border-dunhuang-yellow/30 shadow-[0_-2px_5px_-2px_rgba(0,0,0,0.05)]"
           >
-            <div class="flex min-w-[1558px] h-[42px] pr-[12px]">
+            <div
+              class="flex h-[42px] pr-[12px]"
+              :style="{ minWidth: tableHeaderMinWidth + 'px' }"
+            >
               <div
                 class="w-12 shrink-0 sticky left-0 bg-white z-50"
               ></div>
@@ -1198,36 +1018,44 @@
               >
                 总计
               </div>
-              <div class="px-4 py-2 flex-1 min-w-[72px]"></div>
-              <div class="px-4 py-2 flex-1 min-w-[104px] flex items-center">
+              <div
+                class="px-4 py-2 flex-1 min-w-[104px] flex items-center"
+              >
                 <span class="tabular-nums text-xs text-dunhuang-text/60">{{
                   formatMoney(tableSumWeight)
                 }}</span>
               </div>
-              <div class="px-4 py-2 flex-1 min-w-[88px] flex items-center"></div>
-              <div class="px-4 py-2 flex-1 min-w-[96px] flex items-center">
+              <div
+                class="px-4 py-2 flex-1 min-w-[88px] flex items-center"
+              ></div>
+              <div
+                class="px-4 py-2 flex-1 min-w-[96px] flex items-center"
+              >
                 <span class="tabular-nums text-xs text-dunhuang-green">{{
                   formatMoney(tableSumSubtotal)
                 }}</span>
               </div>
-              <div class="px-4 py-2 flex-1 min-w-[104px] flex items-center">
+              <div
+                class="px-4 py-2 flex-1 min-w-[104px] flex items-center"
+              >
                 <span class="tabular-nums text-xs text-dunhuang-text/60">{{
                   formatMoney(tableSumFee)
                 }}</span>
               </div>
-              <div class="px-4 py-2 flex-1 min-w-[88px] flex items-center justify-center"></div>
-              <div class="px-4 py-2 flex-1 min-w-[88px] flex items-center justify-center"></div>
-              <div class="px-4 py-2 flex-1 min-w-[88px] flex items-center justify-center"></div>
-              <div class="px-4 py-2 flex-1 min-w-[104px] flex items-center justify-center"></div>
-              <div class="px-4 py-2 flex-1 min-w-[104px] flex items-center">
+              <div
+                class="px-4 py-2 flex-1 min-w-[104px] flex items-center"
+              >
                 <span class="tabular-nums text-xs text-dunhuang-red">{{
                   formatMoney(tableSumTotal)
                 }}</span>
               </div>
-              <div class="px-4 py-2 flex-1 min-w-[96px] flex items-center"></div>
-              <div class="px-4 py-2 flex-1 min-w-[140px] flex items-center"></div>
               <div
-                v-if="activeTab === 'current'"
+                class="px-4 py-2 flex-1 min-w-[96px] flex items-center"
+              ></div>
+              <div
+                class="px-4 py-2 flex-1 min-w-[140px] flex items-center"
+              ></div>
+              <div
                 class="px-3 py-2 w-[168px] shrink-0 sticky right-0 bg-white z-50 shadow-[-2px_0_5px_-2px_rgba(0,0,0,0.05)]"
               ></div>
             </div>
@@ -1320,7 +1148,10 @@
               >
                 <span class="text-dunhuang-text/50 text-sm">品种</span>
                 <span class="font-medium text-dunhuang-blue text-sm">{{
-                  getSpeciesName(viewingBill?.species_id)
+                  getSpeciesName(
+                    viewingBill?.species_id,
+                    viewingBill?.species?.name_zh,
+                  )
                 }}</span>
               </div>
               <div
@@ -1513,7 +1344,7 @@
                     v-else-if="log.action === 'COMPLETED'"
                     class="text-dunhuang-text/50 text-xs"
                   >
-                    单据已从最新单据归档至历史单据
+                    单据已归档
                   </div>
                 </div>
               </div>
@@ -1558,13 +1389,14 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, onBeforeUnmount, ref, computed } from "vue";
+import { onMounted, ref, computed } from "vue";
 import { useI18n } from "vue-i18n";
 import { useRouter } from "vue-router";
 import { useAuthStore } from "../stores/auth";
 import { dateStr, dateTimeStr, formatMoney } from "../lib/utils";
 import ConfirmDialog from "../components/ConfirmDialog.vue";
 import DateInput from "../components/DateInput.vue";
+import DateRangeInput from "../components/DateRangeInput.vue";
 import Pagination from "../components/Pagination.vue";
 import PaymentPicker from "../components/PaymentPicker.vue";
 import SearchInput from "../components/SearchInput.vue";
@@ -1576,10 +1408,6 @@ import { useBillAudit } from "../composables/useBillAudit";
 const { t } = useI18n();
 const router = useRouter();
 const authStore = useAuthStore();
-
-const showFilterDropdown = ref(false);
-const filterWrapperRef = ref<HTMLElement | null>(null);
-const pickerStatus = ref("");
 
 const tableHeaderRef = ref<HTMLElement | null>(null);
 const tableBodyRef = ref<HTMLElement | null>(null);
@@ -1595,71 +1423,16 @@ const handleTableScroll = (e: Event) => {
   }
 };
 
-const handleFilterClickOutside = (e: MouseEvent) => {
-  if (
-    showFilterDropdown.value &&
-    filterWrapperRef.value &&
-    !filterWrapperRef.value.contains(e.target as Node)
-  ) {
-    showFilterDropdown.value = false;
-  }
-};
-
-const pickerFromDate = ref("");
-const pickerToDate = ref("");
-
-const openFilterDropdown = () => {
-  pickerFromDate.value = filterDateFrom.value;
-  pickerToDate.value = filterDateTo.value;
-  pickerStatus.value = filterStatus.value;
-  showFilterDropdown.value = true;
-};
-
 // 搜索框 ✕ 清空：SearchInput 只发 clear 事件，需要手动清词后再拉取
 const clearBillingSearch = async () => {
   billingSearch.value = "";
   await refetchFromFirstPage();
 };
 
-const applyFilters = async () => {
-  let from = pickerFromDate.value || "";
-  let to = pickerToDate.value || "";
-  if (from && to && from > to) {
-    [from, to] = [to, from];
-  }
-  filterDateFrom.value = from;
-  filterDateTo.value = to;
-
-  filterStatus.value = pickerStatus.value;
-
-  showFilterDropdown.value = false;
+// 工具栏上的日期范围：选完/清空立即按新范围重新查询
+const onDateRangeChange = async () => {
   await refetchFromFirstPage();
 };
-
-const resetFilters = () => {
-  pickerFromDate.value = "";
-  pickerToDate.value = "";
-  pickerStatus.value = "";
-  filterDateFrom.value = "";
-  filterDateTo.value = "";
-  billingSearch.value = "";
-  filterStatus.value = "";
-  showFilterDropdown.value = false;
-  refetchFromFirstPage();
-};
-
-const activeFilterCount = computed(() => {
-  let count = 0;
-  if (filterDateFrom.value || filterDateTo.value) count++;
-  if (billingSearch.value) count++;
-  if (filterStatus.value) count++;
-  return count;
-});
-
-const tabs = [
-  { key: "current", label: "最新单据" },
-  { key: "history", label: "历史单据" },
-];
 
 const { speciesList, fetchSpecies } = useSpecies();
 
@@ -1697,10 +1470,8 @@ const {
 } = useBillForm(speciesList);
 
 const {
-  activeTab,
   filterDateFrom,
   filterDateTo,
-  filterStatus,
   dateRangeLabel,
   billingSearch,
   bills,
@@ -1720,7 +1491,6 @@ const {
   getSpeciesName,
   formatFee,
   fetchBills,
-  switchTab,
   refetchFromFirstPage,
   clearDateFilter,
   exportBills,
@@ -1729,6 +1499,13 @@ const {
   executeDeleteBill,
   upsertBill,
 } = useBillTable(speciesList);
+
+/**
+ * 表格最小宽度：序号/品种/重量/单价/小计/服务费/总金额/放生日期/添加时间/操作。
+ * 表头/表脚比表体多 6px，补偿竖向滚动条占位。
+ */
+const tableMinWidth = 1112;
+const tableHeaderMinWidth = tableMinWidth + 6;
 
 const {
   showViewModal,
@@ -1744,26 +1521,16 @@ const goToImport = () => {
 };
 
 const handleSaveBill = async () => {
-  const prevTab = activeTab.value;
   if (bill.value.id) {
     await saveSingleBill(upsertBill);
   } else {
     await saveBatchBills(upsertBill);
   }
-  if (prevTab !== "current") {
-    activeTab.value = "current";
-    fetchBills();
-  }
 };
 
 onMounted(() => {
-  document.addEventListener("mousedown", handleFilterClickOutside);
   fetchSpecies();
   fetchBills();
-});
-
-onBeforeUnmount(() => {
-  document.removeEventListener("mousedown", handleFilterClickOutside);
 });
 </script>
 

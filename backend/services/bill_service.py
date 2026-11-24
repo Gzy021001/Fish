@@ -79,7 +79,7 @@ def create_bill(data: schemas.BillCreate, user: models.User, db: Session, commit
     return bill
 
 
-def _apply_bill_filters(query, status=None, date_from=None, date_to=None, date_str=None, q=None, exclude_packaging=False):
+def _apply_bill_filters(query, status=None, date_from=None, date_to=None, date_str=None, q=None, exclude_packaging=False, has_suixi=False):
     try:
         if status:
             query = query.filter(models.Bill.status == status)
@@ -117,9 +117,131 @@ def _apply_bill_filters(query, status=None, date_from=None, date_to=None, date_s
                 models.Species.name_zh.like("%袋%"),
             )
         )
+    # 随喜汇总视图：只留真正带随喜记录的单据（有随喜类型，或三类金额至少一项大于 0），
+    # 避免历史导入的 700+ 条空记录把明细淹掉
+    if has_suixi:
+        query = query.filter(
+            or_(
+                models.Bill.payment_method.isnot(None) & (models.Bill.payment_method != ""),
+                models.Bill.alipay_amount > 0,
+                models.Bill.wechat_amount > 0,
+                models.Bill.suixi_amount > 0,
+            )
+        )
     return query
 
-def list_bills(db: Session, page: int = 1, page_size: int = 10, limit: int = 100, status: str = None, date: str = None, date_from: str = None, date_to: str = None, q: str = None, exclude_packaging: bool = False):
+def _bill_day():
+    """放生日期口径：单据日期缺失时回退品种日期（与列表/看板一致）。"""
+    return func.coalesce(models.Bill.release_date, models.Species.release_date)
+
+
+def _bill_totals(db: Session, status: str = None, date_str: str = None, date_from: str = None, date_to: str = None, q: str = None, exclude_packaging: bool = False, has_suixi: bool = False):
+    """全量口径合计（与分页无关）：重量/小计/总金额 + 随喜三分类，供列表表尾直接展示。"""
+    sum_query = db.query(
+        func.sum(models.Bill.weight),
+        func.sum(models.Bill.subtotal),
+        func.sum(models.Bill.total_amount),
+        func.sum(models.Bill.alipay_amount),
+        func.sum(models.Bill.wechat_amount),
+        func.sum(models.Bill.suixi_amount)
+    ).join(models.Species).filter(models.Bill.is_deleted.is_(False))
+    sum_query = _apply_bill_filters(sum_query, status, date_from, date_to, date_str, q, exclude_packaging, has_suixi)
+
+    sum_result = sum_query.first()
+    if not sum_result:
+        return (0, 0, 0, 0, 0, 0)
+    return tuple((value or 0) for value in sum_result)
+
+
+def _day_key(value):
+    """按天聚合的键：date -> ISO 字符串，字符串原样返回（SQLite/PG 结果类型统一）。"""
+    return value.isoformat() if hasattr(value, "isoformat") else value
+
+
+def _split_wechat_by_day(db: Session, status: str = None, date_str: str = None, date_from: str = None, date_to: str = None, q: str = None, exclude_packaging: bool = False, has_suixi: bool = False):
+    """微信两列口径（与导出模板的「微信 / 微信」两行一致）：
+    当天第一笔微信 -> 微信1，当天其余微信合计 -> 微信2；按单据创建顺序取「第一笔」。"""
+    day = _bill_day()
+    query = (
+        db.query(day.label("day"), models.Bill.wechat_amount)
+        .join(models.Species)
+        .filter(models.Bill.is_deleted.is_(False), models.Bill.wechat_amount > 0)
+    )
+    query = _apply_bill_filters(query, status, date_from, date_to, date_str, q, exclude_packaging, has_suixi)
+    query = query.order_by(day.asc(), models.Bill.created_at.asc(), models.Bill.id.asc())
+
+    first: dict = {}
+    rest: dict = {}
+    for day_value, amount in query.all():
+        key = _day_key(day_value)
+        if key in first:
+            rest[key] = rest.get(key, 0) + amount
+        else:
+            first[key] = amount
+    return first, rest
+
+
+def _list_bills_by_day(db: Session, page: int = 1, page_size: int = 10, status: str = None, date_str: str = None, date_from: str = None, date_to: str = None, q: str = None, exclude_packaging: bool = False, has_suixi: bool = False):
+    """随喜汇总：按放生日期聚合，一行一天（分页按天）。
+    微信拆两列（微信1 = 当天第一笔，微信2 = 当天其余合计），三分类合计供表尾使用。"""
+    day = _bill_day()
+    grouped = (
+        db.query(
+            day.label("release_date"),
+            func.sum(models.Bill.alipay_amount).label("alipay_amount"),
+            func.sum(models.Bill.suixi_amount).label("suixi_amount"),
+        )
+        .join(models.Species)
+        .filter(models.Bill.is_deleted.is_(False))
+    )
+    grouped = _apply_bill_filters(grouped, status, date_from, date_to, date_str, q, exclude_packaging, has_suixi)
+    grouped_sub = grouped.group_by(day).subquery()
+
+    total = db.query(func.count()).select_from(grouped_sub).scalar() or 0
+
+    rows_query = db.query(grouped_sub).order_by(grouped_sub.c.release_date.desc().nullslast())
+    if page_size > 0:
+        rows_query = rows_query.offset(max(0, page - 1) * page_size).limit(page_size)
+    rows = rows_query.all()
+
+    sum_weight, sum_subtotal, sum_total_amount, sum_alipay, sum_wechat, sum_suixi = _bill_totals(
+        db, status=status, date_str=date_str, date_from=date_from, date_to=date_to,
+        q=q, exclude_packaging=exclude_packaging, has_suixi=has_suixi,
+    )
+    wechat_first, wechat_rest = _split_wechat_by_day(
+        db, status=status, date_str=date_str, date_from=date_from, date_to=date_to,
+        q=q, exclude_packaging=exclude_packaging, has_suixi=has_suixi,
+    )
+    sum_wechat1 = sum(wechat_first.values(), 0)
+    sum_wechat2 = sum(wechat_rest.values(), 0)
+
+    items = []
+    for row in rows:
+        release = row.release_date
+        key = _day_key(release)
+        items.append({
+            "release_date": key,
+            "alipay_amount": row.alipay_amount or 0,
+            "wechat1_amount": wechat_first.get(key, 0),
+            "wechat2_amount": wechat_rest.get(key, 0),
+            "suixi_amount": row.suixi_amount or 0,
+        })
+
+    return {
+        "total": total,
+        "items": items,
+        "sum_weight": sum_weight,
+        "sum_subtotal": sum_subtotal,
+        "sum_total_amount": sum_total_amount,
+        "sum_alipay": sum_alipay,
+        "sum_wechat": sum_wechat,
+        "sum_wechat1": sum_wechat1,
+        "sum_wechat2": sum_wechat2,
+        "sum_suixi": sum_suixi,
+    }
+
+
+def list_bills(db: Session, page: int = 1, page_size: int = 10, limit: int = 100, status: str = None, date: str = None, date_from: str = None, date_to: str = None, q: str = None, exclude_packaging: bool = False, has_suixi: bool = False, group_by_date: bool = False):
     from sqlalchemy.orm import joinedload
 
     # 单页硬上限 200 条；page_size=-1（全量）语义保留，供导出/历史页使用
@@ -128,8 +250,16 @@ def list_bills(db: Session, page: int = 1, page_size: int = 10, limit: int = 100
     if limit > 200:
         limit = 200
 
+    # 随喜汇总按放生日期聚合（一行一天），走独立的分组查询
+    if group_by_date:
+        return _list_bills_by_day(
+            db, page=page, page_size=page_size, status=status, date_str=date,
+            date_from=date_from, date_to=date_to, q=q,
+            exclude_packaging=exclude_packaging, has_suixi=has_suixi,
+        )
+
     query = db.query(models.Bill).join(models.Species).options(joinedload(models.Bill.species)).filter(models.Bill.is_deleted.is_(False)).order_by(func.coalesce(models.Bill.release_date, models.Species.release_date).desc().nullslast(), models.Bill.created_at.desc(), models.Bill.id.desc())
-    query = _apply_bill_filters(query, status, date_from, date_to, date, q, exclude_packaging)
+    query = _apply_bill_filters(query, status, date_from, date_to, date, q, exclude_packaging, has_suixi)
 
     if limit > 0:
         query = query.limit(limit)
@@ -138,28 +268,29 @@ def list_bills(db: Session, page: int = 1, page_size: int = 10, limit: int = 100
         sum_weight = sum((item.weight or 0) for item in items)
         sum_subtotal = sum((item.subtotal or 0) for item in items)
         sum_total_amount = sum((item.total_amount or 0) for item in items)
+        # 随喜三分类合计（支付宝 / 微信 / 随喜放生）：供「随喜汇总」页签直接展示，
+        # 金额一律按 Decimal 相加，不引入 float 误差
+        sum_alipay = sum((item.alipay_amount or 0) for item in items)
+        sum_wechat = sum((item.wechat_amount or 0) for item in items)
+        sum_suixi = sum((item.suixi_amount or 0) for item in items)
 
         return {
             "total": len(items),
             "items": items,
             "sum_weight": sum_weight,
             "sum_subtotal": sum_subtotal,
-            "sum_total_amount": sum_total_amount
+            "sum_total_amount": sum_total_amount,
+            "sum_alipay": sum_alipay,
+            "sum_wechat": sum_wechat,
+            "sum_suixi": sum_suixi
         }
 
     total = query.count()
 
-    sum_query = db.query(
-        func.sum(models.Bill.weight),
-        func.sum(models.Bill.subtotal),
-        func.sum(models.Bill.total_amount)
-    ).join(models.Species).filter(models.Bill.is_deleted.is_(False))
-    sum_query = _apply_bill_filters(sum_query, status, date_from, date_to, date, q, exclude_packaging)
-
-    sum_result = sum_query.first()
-    sum_weight = (sum_result[0] or 0.0) if sum_result else 0.0
-    sum_subtotal = (sum_result[1] or 0.0) if sum_result else 0.0
-    sum_total_amount = (sum_result[2] or 0.0) if sum_result else 0.0
+    sum_weight, sum_subtotal, sum_total_amount, sum_alipay, sum_wechat, sum_suixi = _bill_totals(
+        db, status=status, date_str=date, date_from=date_from, date_to=date_to,
+        q=q, exclude_packaging=exclude_packaging, has_suixi=has_suixi,
+    )
 
     if page_size == -1:
         items = query.all()
@@ -168,7 +299,10 @@ def list_bills(db: Session, page: int = 1, page_size: int = 10, limit: int = 100
             "items": items,
             "sum_weight": sum_weight,
             "sum_subtotal": sum_subtotal,
-            "sum_total_amount": sum_total_amount
+            "sum_total_amount": sum_total_amount,
+            "sum_alipay": sum_alipay,
+            "sum_wechat": sum_wechat,
+            "sum_suixi": sum_suixi
         }
 
     if page_size > 0:
@@ -180,7 +314,10 @@ def list_bills(db: Session, page: int = 1, page_size: int = 10, limit: int = 100
         "items": items,
         "sum_weight": sum_weight,
         "sum_subtotal": sum_subtotal,
-        "sum_total_amount": sum_total_amount
+        "sum_total_amount": sum_total_amount,
+        "sum_alipay": sum_alipay,
+        "sum_wechat": sum_wechat,
+        "sum_suixi": sum_suixi
     }
 
 
