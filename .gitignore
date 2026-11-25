@@ -46,3 +46,10 @@ _tmp_backend.err.log
 
 # vercel env pull 临时文件（含密钥），不入库.env.*.tmp
 
+
+# 临时调试脚本/日志
+_tmp_*.py
+_tmp_*.log
+_dev_*.log
+_dev_*.err.log
+
