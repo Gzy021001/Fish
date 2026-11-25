@@ -1027,49 +1027,49 @@
           <!-- Footer (Synced Scroll) -->
           <div
             ref="tableFooterRef"
-            class="overflow-hidden shrink-0 bg-white border-t-2 border-dunhuang-yellow/30 shadow-[0_-2px_5px_-2px_rgba(0,0,0,0.05)]"
+            class="overflow-hidden shrink-0 bg-[#fbf7ee] border-t border-dunhuang-yellow/40"
           >
             <div
               class="flex h-[42px] pr-[12px]"
               :style="{ minWidth: tableHeaderMinWidth + 'px' }"
             >
               <div
-                class="w-12 shrink-0 sticky left-0 bg-white z-50"
+                class="w-12 shrink-0 sticky left-0 bg-[#fbf7ee] z-30"
               ></div>
               <div
-                class="w-16 shrink-0 bg-white z-50 sticky left-12"
+                class="w-16 shrink-0 bg-[#fbf7ee] z-30 sticky left-12"
               ></div>
               <div
-                class="flex-1 min-w-[100px] flex items-center justify-end pr-4 text-xs text-dunhuang-text/60 bg-white z-50 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.05)] sticky left-[112px]"
+                class="col-td text-xs font-semibold text-dunhuang-blue flex-1 min-w-[100px] flex items-center bg-[#fbf7ee] z-30 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.05)] sticky left-[112px]"
               >
                 总计
               </div>
               <div
-                class="px-4 py-2 flex-1 min-w-[104px] flex items-center"
+                class="col-td flex-1 min-w-[104px] flex items-center"
               >
                 <span class="tabular-nums text-xs text-dunhuang-text/60">{{
                   formatMoney(inJin(tableSumWeight))
                 }}</span>
               </div>
               <div
-                class="px-4 py-2 flex-1 min-w-[88px] flex items-center"
+                class="col-td flex-1 min-w-[88px] flex items-center"
               ></div>
               <div
-                class="px-4 py-2 flex-1 min-w-[96px] flex items-center"
+                class="col-td flex-1 min-w-[96px] flex items-center"
               >
                 <span class="tabular-nums text-xs text-dunhuang-green">{{
                   formatMoney(tableSumSubtotal)
                 }}</span>
               </div>
               <div
-                class="px-4 py-2 flex-1 min-w-[104px] flex items-center"
+                class="col-td flex-1 min-w-[104px] flex items-center"
               >
                 <span class="tabular-nums text-xs text-dunhuang-text/60">{{
                   formatMoney(tableSumFee)
                 }}</span>
               </div>
               <div
-                class="px-4 py-2 flex-1 min-w-[104px] flex items-center"
+                class="col-td flex-1 min-w-[104px] flex items-center"
                 :title="`实付合计 = 单据实付 ${formatMoney(tableSumPaid)} + 车费/船费 ${formatMoney(tableSumExpense)}`"
               >
                 <span class="tabular-nums text-xs text-dunhuang-red">{{
@@ -1077,13 +1077,13 @@
                 }}</span>
               </div>
               <div
-                class="px-4 py-2 flex-1 min-w-[96px] flex items-center"
+                class="col-td flex-1 min-w-[96px] flex items-center"
               ></div>
               <div
-                class="px-4 py-2 flex-1 min-w-[140px] flex items-center"
+                class="col-td-time flex-1 min-w-[140px] hidden lg:flex items-center"
               ></div>
               <div
-                class="px-3 py-2 w-[168px] shrink-0 sticky right-0 bg-white z-50 shadow-[-2px_0_5px_-2px_rgba(0,0,0,0.05)]"
+                class="w-[112px] sm:w-[168px] shrink-0 sticky right-0 bg-[#fbf7ee] z-30 shadow-[-2px_0_5px_-2px_rgba(0,0,0,0.05)]"
               ></div>
             </div>
           </div>
