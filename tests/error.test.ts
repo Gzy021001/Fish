@@ -33,7 +33,7 @@ describe('apiErrorMessage', () => {
 
   it('returns connection error message when no response', () => {
     const error: ApiError = { code: 'ERR_NETWORK' }
-    expect(apiErrorMessage(error, '查询')).toContain('无法连接')
+    expect(apiErrorMessage(error, '查询')).toContain('连接异常')
   })
 })
 
