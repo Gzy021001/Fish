@@ -283,20 +283,12 @@ def _build_sheet(wb: openpyxl.Workbook, d: date, bills: list, carry_in, multi_ye
         _write(ws, boat_row, end_col, _q(ship_amount), align=CENTER_WRAP, number_format=MONEY_FMT_SUM)
     fill_row(boat_row, YELLOW_FILL)
 
-    # 耗材（冰块/打包袋等，灰底）：只补「没有被任何批次实付覆盖」的那部分，
-    # 否则会和批次实付行重复计数（批次已含耗材份额时不再单列）
-    paid_sum = sum((_dec(b.paid_amount) for b in bills if b.paid_amount is not None), Decimal("0.00"))
-    # 与写入列一致：同一批只在「批次值变化」处计一次（相邻同额的不同批次会被合并，两边同口径）
-    batch_sum = Decimal("0.00")
-    prev_val = None
-    for b in bills:
-        if b.batch_paid is None:
-            continue
-        val = _dec(b.batch_paid)
-        if val != prev_val:
-            batch_sum += val
-        prev_val = val
-    other_row_amount = (other_amount or Decimal("0.00")) - (batch_sum - paid_sum)
+    # 耗材（冰块/打包袋等，灰底）：只输出数据库里真实记录的其它支出（WeekExpense 里除车费/船费）。
+    # 旧逻辑用「批次实付合计 - 已摊到单据的实付」反推「批次里含的耗材份额」，但这个差值
+    # 只在数据不一致时为正：某天同一批实付被重复摊到单据（分片导入把一批切成两片，每片各摊一遍），
+    # 差值变负 → 反而凭空生成一条金额为正的「耗材」行（例：2026-03-01 多出 5056），
+    # 把「慈悲护生购生实付金额」和本周余款一起抬高了。批次实付本身已含耗材份额，不能再补。
+    other_row_amount = (other_amount or Decimal("0.00")).quantize(CENT, rounding=ROUND_HALF_UP)
     if other_row_amount < 0:
         other_row_amount = Decimal("0.00")
 
