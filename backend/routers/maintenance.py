@@ -3,8 +3,11 @@
 用途：线上 Vercel 环境把迁移做进冷启动后仍报 ProgrammingError，需要逐条看 DDL 的真实报错。
 """
 import logging
+from datetime import date
+from typing import Optional
 
 from fastapi import APIRouter, Depends
+from pydantic import BaseModel, Field
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 
@@ -15,6 +18,24 @@ from database import get_db
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/maintenance", tags=["maintenance"])
+
+
+class PaidRow(BaseModel):
+    date: str
+    weight: float
+    unit_price: float
+    paid: float
+
+
+class ExpenseRow(BaseModel):
+    date: str
+    name: str = Field(..., max_length=20)
+    amount: float
+
+
+class PaidBackfillRequest(BaseModel):
+    rows: list[PaidRow] = Field(default_factory=list, max_length=5000)
+    expenses: list[ExpenseRow] = Field(default_factory=list, max_length=1000)
 
 _STATEMENTS = [
     (
@@ -83,3 +104,48 @@ def schema_fix(
         "has_week_expenses": has_table,
         "db_user": current_user_name,
     }
+
+
+@router.post("/backfill-paid")
+def backfill_paid(
+    payload: PaidBackfillRequest,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(auth.require_admin),
+):
+    """按（放生日期 + 重量 + 单价）把模板「实付」写进对应单据，并重建这些日期的车费/船费。"""
+    updated = 0
+    missing = 0
+    used_ids: set[int] = set()
+    for row in payload.rows:
+        candidates = db.execute(
+            text(
+                "SELECT id FROM bills WHERE release_date = :d AND is_deleted = false "
+                "AND abs(weight - :w) < 0.02 AND abs(unit_price - :p) < 0.02 ORDER BY id"
+            ),
+            {"d": row.date, "w": row.weight, "p": row.unit_price},
+        ).scalars().all()
+        target = next((cid for cid in candidates if cid not in used_ids), None)
+        if target is None:
+            missing += 1
+            continue
+        used_ids.add(target)
+        db.execute(
+            text("UPDATE bills SET paid_amount = :paid WHERE id = :id"),
+            {"paid": row.paid, "id": target},
+        )
+        updated += 1
+
+    dates = sorted({e.date for e in payload.expenses})
+    for d in dates:
+        db.execute(text("DELETE FROM week_expenses WHERE release_date = :d"), {"d": d})
+    for exp in payload.expenses:
+        db.execute(
+            text(
+                "INSERT INTO week_expenses (release_date, name, amount, created_at, is_deleted) "
+                "VALUES (:d, :n, :a, now(), false)"
+            ),
+            {"d": exp.date, "n": exp.name, "a": exp.amount},
+        )
+
+    db.commit()
+    return {"updated": updated, "missing": missing, "expenses": len(payload.expenses)}
