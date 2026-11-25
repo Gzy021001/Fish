@@ -105,8 +105,15 @@ def apply_paid_rows(db: Session, rows: list[dict]) -> dict:
     expense_added = 0
     used: set[int] = set()
     dates = sorted({row["date"] for row in rows})
-    # 先把上一次回填生成的杂项支出清掉（保留车费/船费），保证可重复执行
+    # 先把这些日期的实付与本批实付清空（重跑幂等），顺带清掉上一次回填生成的杂项支出
     for day in dates:
+        db.execute(
+            text(
+                "UPDATE bills SET paid_amount = NULL, batch_paid = NULL "
+                "WHERE release_date = :d AND is_deleted = false"
+            ),
+            {"d": day},
+        )
         db.execute(
             text("DELETE FROM week_expenses WHERE release_date = :d AND name NOT IN ('车费', '船费')"),
             {"d": day},
