@@ -1066,10 +1066,28 @@
         <div
           class="flex justify-between items-center mt-4 shrink-0 relative z-50 flex-wrap gap-3"
         >
-          <div class="text-sm text-dunhuang-text/70">
-            共
-            <span class="font-bold text-dunhuang-blue">{{ totalItems }}</span>
-            条
+          <div class="flex items-center gap-3 flex-wrap text-sm text-dunhuang-text/70">
+            <span>
+              共
+              <span class="font-bold text-dunhuang-blue">{{ totalItems }}</span>
+              条
+            </span>
+            <!-- 车费/船费：模板表尾的支出，已并入上方「实付」合计 -->
+            <template v-if="tableSumExpense > 0">
+              <span class="text-dunhuang-text/30">·</span>
+              <span class="text-xs text-dunhuang-text/55">
+                车费
+                <span class="tabular-nums text-dunhuang-text/75">{{
+                  formatMoney(tableSumExpenseCar)
+                }}</span>
+                <span class="text-dunhuang-text/30 mx-1">/</span>
+                船费
+                <span class="tabular-nums text-dunhuang-text/75">{{
+                  formatMoney(tableSumExpenseShip)
+                }}</span>
+                元（已含在实付合计）
+              </span>
+            </template>
           </div>
 
           <Pagination
@@ -1479,6 +1497,8 @@ const {
   tableSumTotal,
   tableSumPaid,
   tableSumExpense,
+  tableSumExpenseCar,
+  tableSumExpenseShip,
   isAllSelected,
   toggleSelectAll,
   getSpeciesName,

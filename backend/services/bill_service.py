@@ -136,11 +136,11 @@ def _bill_day():
     return func.coalesce(models.Bill.release_date, models.Species.release_date)
 
 
-def _week_expense_sum(db: Session, date_str: str = None, date_from: str = None, date_to: str = None):
-    """车费/船费合计（按放生日期范围过滤，与单据口径一致）。"""
-    query = db.query(func.sum(models.WeekExpense.amount)).filter(
-        models.WeekExpense.is_deleted.is_(False)
-    )
+def _week_expense_totals(db: Session, date_str: str = None, date_from: str = None, date_to: str = None):
+    """车费/船费合计（按放生日期范围过滤）；返回 (合计, 车费, 船费)。"""
+    query = db.query(
+        models.WeekExpense.name, func.sum(models.WeekExpense.amount)
+    ).filter(models.WeekExpense.is_deleted.is_(False))
     if date_str:
         try:
             d = datetime.strptime(date_str, "%Y-%m-%d").date()
@@ -152,7 +152,8 @@ def _week_expense_sum(db: Session, date_str: str = None, date_from: str = None, 
         query = query.filter(models.WeekExpense.release_date >= date_from)
     if date_to:
         query = query.filter(models.WeekExpense.release_date <= date_to)
-    return query.scalar() or 0
+    by_name = {name: float(amount or 0) for name, amount in query.group_by(models.WeekExpense.name).all()}
+    return sum(by_name.values()), by_name.get("车费", 0.0), by_name.get("船费", 0.0)
 
 
 def _bill_totals(db: Session, status: str = None, date_str: str = None, date_from: str = None, date_to: str = None, q: str = None, exclude_packaging: bool = False, has_suixi: bool = False):
@@ -304,7 +305,7 @@ def list_bills(db: Session, page: int = 1, page_size: int = 10, limit: int = 100
         sum_wechat = sum((item.wechat_amount or 0) for item in items)
         sum_suixi = sum((item.suixi_amount or 0) for item in items)
         sum_paid_amount = sum((item.paid_amount or 0) for item in items)
-        sum_expense = _week_expense_sum(db, date, date_from, date_to)
+        sum_expense, sum_expense_car, sum_expense_ship = _week_expense_totals(db, date, date_from, date_to)
 
         return {
             "total": len(items),
@@ -317,6 +318,8 @@ def list_bills(db: Session, page: int = 1, page_size: int = 10, limit: int = 100
             "sum_suixi": sum_suixi,
             "sum_paid_amount": sum_paid_amount,
             "sum_expense": sum_expense,
+            "sum_expense_car": sum_expense_car,
+            "sum_expense_ship": sum_expense_ship,
         }
 
     total = query.count()
@@ -333,7 +336,7 @@ def list_bills(db: Session, page: int = 1, page_size: int = 10, limit: int = 100
         db, status=status, date_str=date, date_from=date_from, date_to=date_to,
         q=q, exclude_packaging=exclude_packaging, has_suixi=has_suixi,
     )
-    sum_expense = _week_expense_sum(db, date, date_from, date_to)
+    sum_expense, sum_expense_car, sum_expense_ship = _week_expense_totals(db, date, date_from, date_to)
 
     if page_size == -1:
         items = query.all()
@@ -348,6 +351,8 @@ def list_bills(db: Session, page: int = 1, page_size: int = 10, limit: int = 100
             "sum_suixi": sum_suixi,
             "sum_paid_amount": sum_paid_amount,
             "sum_expense": sum_expense,
+            "sum_expense_car": sum_expense_car,
+            "sum_expense_ship": sum_expense_ship,
         }
 
     if page_size > 0:
@@ -365,6 +370,8 @@ def list_bills(db: Session, page: int = 1, page_size: int = 10, limit: int = 100
         "sum_suixi": sum_suixi,
         "sum_paid_amount": sum_paid_amount,
         "sum_expense": sum_expense,
+        "sum_expense_car": sum_expense_car,
+        "sum_expense_ship": sum_expense_ship,
     }
 
 
