@@ -14,6 +14,8 @@ export interface SuixiDailyRow {
   expense_car?: number
   expense_ship?: number
   expense_other?: number
+  /** 其它支出明细（冰块/打包袋等），列表里用小字标注 */
+  expense_other_items?: { name: string; amount: number }[]
   expense_total?: number
 }
 

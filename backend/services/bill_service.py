@@ -196,14 +196,18 @@ def _expenses_by_day(db: Session, date_from: str = None, date_to: str = None):
 
     result: dict = {}
     for day, name, amount in query.group_by(models.WeekExpense.release_date, models.WeekExpense.name).all():
-        bucket = result.setdefault(_day_key(day), {"car": 0.0, "ship": 0.0, "other": 0.0})
+        bucket = result.setdefault(
+            _day_key(day), {"car": 0.0, "ship": 0.0, "other": 0.0, "other_items": []}
+        )
         value = float(amount or 0)
         if name == "车费":
             bucket["car"] += value
         elif name == "船费":
             bucket["ship"] += value
         else:
+            # 其它支出（冰块/打包袋等耗材，或没有对应单据的行）：带上明细，前端小字标注
             bucket["other"] += value
+            bucket["other_items"].append({"name": name or "其他", "amount": value})
     return result
 
 
@@ -277,7 +281,7 @@ def _list_bills_by_day(db: Session, page: int = 1, page_size: int = 10, status: 
     for row in rows:
         release = row.release_date
         key = _day_key(release)
-        expense = expenses_by_day.get(key) or {"car": 0.0, "ship": 0.0, "other": 0.0}
+        expense = expenses_by_day.get(key) or {"car": 0.0, "ship": 0.0, "other": 0.0, "other_items": []}
         items.append({
             "release_date": key,
             "alipay_amount": row.alipay_amount or 0,
@@ -288,6 +292,7 @@ def _list_bills_by_day(db: Session, page: int = 1, page_size: int = 10, status: 
             "expense_car": expense["car"],
             "expense_ship": expense["ship"],
             "expense_other": expense["other"],
+            "expense_other_items": expense.get("other_items", []),
             "expense_total": expense["car"] + expense["ship"] + expense["other"],
         })
 

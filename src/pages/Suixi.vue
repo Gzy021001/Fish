@@ -87,12 +87,15 @@
             :key="row.release_date ?? `row-${index}`"
           >
             <div
-              class="grid suixi-grid text-sm border-b border-dunhuang-yellow/15 transition-colors"
+              class="grid suixi-grid text-sm transition-all duration-200 border-b border-dunhuang-yellow/15"
               :class="
-                row.expense_total
-                  ? 'cursor-pointer hover:bg-[#fbf6ec]'
-                  : 'hover:bg-[#fbf6ec]'
+                expandedKeys.has(rowKey(row, index))
+                  ? 'bg-[#fdf7ea] shadow-[inset_3px_0_0_rgba(191,160,95,0.75)]'
+                  : row.expense_total
+                    ? 'cursor-pointer hover:bg-[#fbf6ec]'
+                    : 'hover:bg-[#fbf6ec]'
               "
+              :title="row.expense_total ? '点击展开/收起当天费用明细' : ''"
               @click="row.expense_total && toggleExpanded(rowKey(row, index))"
             >
               <div
@@ -120,44 +123,72 @@
               <div
                 class="px-4 py-2 flex items-center justify-center gap-1.5 tabular-nums"
                 :class="
-                  row.expense_total ? 'text-dunhuang-text/70' : 'text-dunhuang-text/35'
+                  row.expense_total ? 'text-dunhuang-text/80' : 'text-dunhuang-text/30'
                 "
               >
                 <span>{{
                   row.expense_total ? formatMoney(row.expense_total) : "—"
                 }}</span>
-                <svg
+                <span
                   v-if="row.expense_total"
-                  class="w-3.5 h-3.5 text-dunhuang-text/35 transition-transform duration-200"
+                  class="w-[18px] h-[18px] shrink-0 rounded-full flex items-center justify-center transition-colors duration-200"
                   :class="
-                    expandedKeys.has(rowKey(row, index)) ? 'rotate-90' : ''
+                    expandedKeys.has(rowKey(row, index))
+                      ? 'bg-dunhuang-yellow/30 text-dunhuang-blue'
+                      : 'bg-dunhuang-yellow/12 text-dunhuang-text/45'
                   "
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
                 >
-                  <path
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    stroke-width="2"
-                    d="M9 5l7 7-7 7"
-                  />
-                </svg>
+                  <svg
+                    class="w-3 h-3 transition-transform duration-200"
+                    :class="
+                      expandedKeys.has(rowKey(row, index)) ? 'rotate-90' : ''
+                    "
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2.5"
+                      d="M9 5l7 7-7 7"
+                    />
+                  </svg>
+                </span>
               </div>
             </div>
 
-            <!-- 车费/船费：模板表尾的费用行，点日期行展开 -->
+            <!-- 车费/船费/耗材：点日期行展开，缩进 + 色点标识 -->
             <template v-if="expandedKeys.has(rowKey(row, index))">
               <div
-                v-for="item in dayExpenses(row)"
+                v-for="(item, subIndex) in dayExpenses(row)"
                 :key="`${rowKey(row, index)}-${item.label}`"
-                class="grid suixi-grid text-xs border-b border-dashed border-dunhuang-yellow/20 bg-[#fdf9f1]"
+                class="grid suixi-grid text-xs bg-[#fdfaf2] border-b border-dunhuang-yellow/10 last-of-type:border-dunhuang-yellow/25"
               >
-                <div></div>
-                <div class="px-4 py-1.5 pl-6 text-dunhuang-text/55">
-                  <span :title="item.tip">└ {{ item.label }}</span>
+                <div
+                  class="flex items-center justify-center"
+                  :class="subIndex === 0 ? 'border-l-[3px]' : 'border-l-[3px]'"
+                  :style="{ borderLeftColor: 'rgba(191,160,95,0.35)' }"
+                >
+                  <span class="w-1 h-1 rounded-full bg-dunhuang-yellow/50"></span>
                 </div>
-                <div class="col-span-4"></div>
+                <div class="px-4 py-1.5 pl-5 flex items-center gap-1.5">
+                  <span
+                    class="w-1.5 h-1.5 rounded-full shrink-0"
+                    :class="item.dot"
+                  ></span>
+                  <span class="text-dunhuang-text/60" :title="item.tip">{{
+                    item.label
+                  }}</span>
+                </div>
+                <div
+                  v-if="item.detail"
+                  class="col-span-4 px-3 py-1.5 text-[11px] text-dunhuang-text/40 truncate"
+                  :title="item.detail"
+                >
+                  {{ item.detail }}
+                </div>
+                <div v-else class="col-span-4"></div>
                 <div
                   class="px-4 py-1.5 text-center tabular-nums"
                   :class="item.cls"
@@ -248,20 +279,43 @@ const {
   resetFilters,
 } = useSuixiSummary();
 
-/** 当天要单独列出的费用行（车费/船费/其它耗材），没有就不渲染 */
+/** 当天要单独列出的费用行（车费/船费/耗材），没有就不渲染 */
 const dayExpenses = (row: {
   expense_car?: number;
   expense_ship?: number;
   expense_other?: number;
+  expense_other_items?: { name: string; amount: number }[];
 }) => {
-  const items: { label: string; value: number; cls: string; tip?: string }[] = [
-    { label: "车费", value: row.expense_car || 0, cls: "text-dunhuang-orange/85" },
-    { label: "船费", value: row.expense_ship || 0, cls: "text-dunhuang-orange/85" },
+  const items: {
+    label: string;
+    value: number;
+    cls: string;
+    dot: string;
+    detail?: string;
+    tip?: string;
+  }[] = [
+    {
+      label: "车费",
+      value: row.expense_car || 0,
+      cls: "text-dunhuang-orange/85",
+      dot: "bg-dunhuang-orange/70",
+    },
+    {
+      label: "船费",
+      value: row.expense_ship || 0,
+      cls: "text-dunhuang-green/80",
+      dot: "bg-dunhuang-green/60",
+    },
     {
       label: "耗材",
       value: row.expense_other || 0,
-      cls: "text-dunhuang-text/50",
-      tip: "打包耗材：冰块/打包袋等（模板里没有对应物命单据的支出）",
+      cls: "text-dunhuang-text/60",
+      dot: "bg-dunhuang-yellow/70",
+      // 具体是哪些：冰块/大冰块/空运袋…… 名称+金额，小字展示
+      detail: (row.expense_other_items || [])
+        .map((item) => `${item.name} ${formatMoney(item.amount)}`)
+        .join(" · "),
+      tip: "模板里没有对应物命单据的支出（冰块/打包袋等耗材）",
     },
   ];
   return items.filter((item) => item.value);
