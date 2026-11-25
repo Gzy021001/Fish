@@ -194,9 +194,6 @@
           放生统计
         </h3>
         <div class="flex items-center gap-3">
-          <span class="text-[11px] text-dunhuang-text/50"
-            >统计口径：已归档单据（不含草稿）</span
-          >
           <button
             class="flex items-center gap-2 bg-dunhuang-bg/50 rounded-lg border border-dunhuang-yellow/20 h-9 px-4 text-sm font-bold text-dunhuang-blue hover:border-dunhuang-yellow/40 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             :disabled="trendsLoading || billsLoading"
