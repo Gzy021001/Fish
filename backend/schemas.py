@@ -90,6 +90,8 @@ class BillBase(BaseModel):
     paid_amount: Optional[float] = None
     # 本批实付：模板该批的原始实付总额（同批每行相同），paid_amount 是摊到本行的份额
     batch_paid: Optional[float] = None
+    # 上周余款：模板里这一周的结转余额（记在当天第一张单据上）
+    week_carry_in: Optional[float] = None
 
     @field_validator('currency')
     @classmethod
@@ -197,6 +199,8 @@ class BatchImportRow(BaseModel):
     batch_paid: Optional[float] = None
     # 本周现场随喜：模板表尾一行的值，导入时挂到当天第一张单据上
     weekly_donation: Optional[float] = None
+    # 上周余款：模板表尾一行的值，导入时挂到当天第一张单据上
+    week_carry_in: Optional[float] = None
     payment_method: Optional[str] = Field(None, max_length=20)
 
     @field_validator('payment_method', mode='before')

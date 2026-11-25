@@ -64,6 +64,7 @@ def create_bill(data: schemas.BillCreate, user: models.User, db: Session, commit
         suixi_amount=data.suixi_amount,
         paid_amount=data.paid_amount,
         batch_paid=data.batch_paid,
+        week_carry_in=data.week_carry_in,
     )
     db.add(bill)
     db.flush()
@@ -493,6 +494,8 @@ def update_bill(bill_id: int, data: schemas.BillCreate, user: models.User, db: S
     # 编辑表单不带本批实付：为空时保留原值，避免手工改单价把「本批实付」清掉
     if data.batch_paid is not None:
         bill.batch_paid = data.batch_paid
+    if data.week_carry_in is not None:
+        bill.week_carry_in = data.week_carry_in
 
     db.flush()
 
@@ -660,6 +663,7 @@ def batch_create_bills(data: schemas.BatchImportRequest, user: models.User, db: 
             paid_amount=row.paid_amount,
             batch_paid=row.batch_paid,
             weekly_donation=row.weekly_donation,
+            week_carry_in=row.week_carry_in,
         )
         create_bill(bill_create, user, db, commit=False, allow_zero_weight=True)
         affected_species_ids.add(species.id)

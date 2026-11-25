@@ -402,8 +402,15 @@ def _expenses_by_date(db: Session, d_from: date, d_to: date) -> dict:
     return result
 
 
-def _carry_before(db: Session, day: date) -> Decimal:
-    """该日期之前所有周的余款累计 =（随喜 + 现场随喜）-（单据实付 + 车船费）。"""
+def _carry_before(db: Session, day: date, bills: list | None = None) -> Decimal:
+    """该周的「上周余款」：优先取模板里记录的原值，没有才按（随喜 + 现场随喜）-（实付 + 车船费）累计推算。"""
+    stored = next(
+        (_dec(b.week_carry_in) for b in (bills or []) if b.week_carry_in is not None),
+        None,
+    )
+    if stored is not None:
+        return stored.quantize(CENT, rounding=ROUND_HALF_UP)
+
     from sqlalchemy import func
 
     suixi, wechat, suixi_donation, weekly, paid = (
@@ -447,7 +454,7 @@ def _build_workbook(db: Session, bills: list):
     for d in dates:
         day_expense = expenses.get(d) or {}
         _build_sheet(
-            wb, d, groups[d], _carry_before(db, d), multi_year=multi_year,
+            wb, d, groups[d], _carry_before(db, d, groups[d]), multi_year=multi_year,
             car_amount=day_expense.get("car"), ship_amount=day_expense.get("ship"),
             other_amount=day_expense.get("other"),
         )

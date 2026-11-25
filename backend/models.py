@@ -55,6 +55,8 @@ class Bill(Base):
     paid_amount = Column(Numeric(12, 2), nullable=True)
     # 本批实付：该批在模板里的原始实付总额（同批每一行都相同；paid_amount 是按比例摊到本行的份额）
     batch_paid = Column(Numeric(12, 2), nullable=True)
+    # 上周余款：模板里这一周开头的结转余额（记在当天第一张单据上；为空时按流水链推算）
+    week_carry_in = Column(Numeric(12, 2), nullable=True)
     created_at = Column(DateTime, default=datetime.now, index=True)
     is_deleted = Column(Boolean, default=False, index=True)
 
