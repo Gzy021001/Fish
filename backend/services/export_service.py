@@ -135,8 +135,10 @@ def _build_sheet(wb: openpyxl.Workbook, d: date, bills: list, carry_in, multi_ye
         if i >= 2:  # 重量及之后的数值列表头
             cell.number_format = MONEY_FMT_HEADER
 
-    # 数据行（第 4 行起）：总计用公式；实付列按「该批实付」写在该批首行（与模板一致）
+    # 数据行（第 4 行起）：总计用公式；实付列按「该批实付」写在该批首行，并把整批纵向合并
     prev_batch = None
+    batch_groups: list[list[int]] = []
+    current_group: list[int] = []
     for idx, b in enumerate(bills, start=1):
         row = 3 + idx
         _write(ws, row, 2, idx, align=CENTER_WRAP)
@@ -163,17 +165,41 @@ def _build_sheet(wb: openpyxl.Workbook, d: date, bills: list, carry_in, multi_ye
             fee = b.fee_value if b.fee_value is not None else 0
             _write(ws, row, 7, _q(_dec(fee)), align=CENTER, number_format=MONEY_FMT)
 
-        # 实付列：同一批只在首行写「该批实付」，其余行留空（与模板的合并观感一致）
+        # 实付列：同一批只在首行写「该批实付」，其余行留空后纵向合并（与模板观感一致）
         batch_val = _dec(b.batch_paid) if b.batch_paid is not None else None
         if batch_val is not None:
             if batch_val != prev_batch:
                 _write(ws, row, end_col, _q(batch_val), align=CENTER, number_format=MONEY_FMT)
+                if current_group:
+                    batch_groups.append(current_group)
+                current_group = [row]
+            else:
+                current_group.append(row)
             prev_batch = batch_val
-        elif b.paid_amount is not None:
-            _write(ws, row, end_col, _q(_dec(b.paid_amount)), align=CENTER, number_format=MONEY_FMT)
         else:
-            formula = f"=F{row}+G{row}" if has_fee else f"=F{row}"
-            _write(ws, row, end_col, formula, align=CENTER, number_format=MONEY_FMT)
+            if current_group:
+                batch_groups.append(current_group)
+            current_group = []
+            prev_batch = None
+            if b.paid_amount is not None:
+                _write(ws, row, end_col, _q(_dec(b.paid_amount)), align=CENTER, number_format=MONEY_FMT)
+            else:
+                formula = f"=F{row}+G{row}" if has_fee else f"=F{row}"
+                _write(ws, row, end_col, formula, align=CENTER, number_format=MONEY_FMT)
+    if current_group:
+        batch_groups.append(current_group)
+
+    # 整批合并实付列：数字显示在合并区中央，边框补齐四条边
+    for group in batch_groups:
+        if len(group) < 2:
+            continue
+        top, bottom = group[0], group[-1]
+        ws.merge_cells(start_row=top, start_column=end_col, end_row=bottom, end_column=end_col)
+        top_cell = ws.cell(row=top, column=end_col)
+        top_cell.alignment = Alignment(horizontal="center", vertical="center")
+        top_cell.number_format = MONEY_FMT
+        for r in range(top, bottom + 1):
+            ws.cell(row=r, column=end_col).border = BORDER
 
     last_data_row = 3 + len(bills)
 

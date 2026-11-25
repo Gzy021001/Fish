@@ -45,15 +45,19 @@ def apportion_rows(rows: Iterable) -> None:
 
     for group in by_date.values():
         i = 0
-        while i < len(group):
+        n = len(group)
+        while i < n:
             if group[i].paid_amount is None:
                 i += 1
                 continue
+            # 一批 = 该行 + 后面没写实付的行；中间重复写了同一批次金额（例如导出合并单元格
+            # 再导入时被广播到每行）也算同一批，避免整批金额被当成多笔钱重复计。
+            value = group[i].paid_amount
             j = i + 1
-            while j < len(group) and group[j].paid_amount is None:
+            while j < n and (group[j].paid_amount is None or group[j].paid_amount == value):
                 j += 1
             batch = group[i:j]
-            total_paid = Decimal(str(group[i].paid_amount or 0))
+            total_paid = Decimal(str(value or 0))
             for row, share in zip(batch, _split_batch(batch, total_paid)):
                 row.paid_amount = float(share)
                 row.batch_paid = float(total_paid)
