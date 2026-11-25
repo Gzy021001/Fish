@@ -272,26 +272,66 @@
             暂未录入品种数据
           </div>
 
-          <!-- 表格剩余空间的装饰：点阵底纹 + 水波纹，避免大片留白 -->
+          <!-- 表格剩余空间：本页概览（空间不够时自动退化成一行摘要，避免被裁切） -->
           <div
             v-else
-            class="species-tail flex-1 min-h-0 flex flex-col items-center justify-center gap-2 select-none overflow-hidden bg-[radial-gradient(circle,rgba(191,160,95,0.13)_1px,transparent_1px)] [background-size:18px_18px]"
+            ref="tailRef"
+            class="species-tail flex-1 min-h-0 flex flex-col justify-center px-5 sm:px-6 py-3 select-none overflow-hidden bg-[radial-gradient(circle,rgba(191,160,95,0.13)_1px,transparent_1px)] [background-size:18px_18px]"
           >
-            <svg
-              class="w-20 h-4 shrink-0 text-dunhuang-yellow/45"
-              viewBox="0 0 80 16"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="1.3"
-              stroke-linecap="round"
+            <!-- 空间充足：标题 + 四块指标 + 脚注 -->
+            <template v-if="!tailCompact">
+              <div class="flex items-center gap-2 mb-2">
+                <span class="w-1 h-3.5 rounded-full bg-dunhuang-yellow"></span>
+                <span class="text-xs font-serif font-bold text-dunhuang-blue">
+                  本页概览
+                </span>
+                <span class="text-[11px] text-dunhuang-text/35">
+                  · 全部 {{ totalItems }} 个品种
+                </span>
+              </div>
+
+              <div class="grid grid-cols-2 xl:grid-cols-4 gap-2.5">
+                <div
+                  v-for="stat in pageStats"
+                  :key="stat.label"
+                  class="rounded-xl bg-white/70 border border-dunhuang-yellow/25 px-3.5 py-2 backdrop-blur-[1px]"
+                >
+                  <div class="text-[11px] text-dunhuang-text/45 mb-0.5">
+                    {{ stat.label }}
+                  </div>
+                  <div
+                    class="tabular-nums text-dunhuang-blue font-semibold leading-none text-[15px]"
+                    :class="stat.mono ? 'font-mono' : ''"
+                  >
+                    {{ stat.value }}
+                  </div>
+                </div>
+              </div>
+
+              <p class="mt-2 text-[11px] text-dunhuang-text/35">
+                最近放生 {{ latestRelease || "—" }} · 有照片 {{ photoCount }} ·
+                有备注 {{ noteCount }}
+              </p>
+            </template>
+
+            <!-- 空间不足：一行摘要 -->
+            <div
+              v-else
+              class="flex items-center justify-center gap-2 text-[11px] text-dunhuang-text/45 whitespace-nowrap overflow-hidden"
             >
-              <path d="M2 8q9-8 18 0t18 0 18 0 18 0" />
-            </svg>
-            <p
-              class="text-[11px] tracking-[0.28em] text-dunhuang-text/30 shrink-0 whitespace-nowrap"
-            >
-              本页 {{ paginatedSpecies.length }} 个品种
-            </p>
+              <span class="text-dunhuang-text/35">本页概览</span>
+              <span
+                v-for="(stat, i) in pageStats"
+                :key="stat.label"
+                class="flex items-center gap-2"
+              >
+                <span v-if="i > 0" class="text-dunhuang-yellow/50">·</span>
+                <span class="text-dunhuang-text/35">{{ stat.label }}</span>
+                <span class="tabular-nums font-medium text-dunhuang-blue">{{
+                  stat.value
+                }}</span>
+              </span>
+            </div>
           </div>
         </div>
       </div>
@@ -826,6 +866,73 @@ watch(totalPages, (t) => {
 
 const paginatedSpecies = computed(() => species.value);
 
+/* ---------- 本页概览（填充表格下方空白，展示这一页的统计） ---------- */
+const pageStats = computed(() => {
+  const rows = paginatedSpecies.value;
+  const prices = rows
+    .map((s) => toJinPrice(s.default_price))
+    .filter((v) => Number.isFinite(v) && v > 0);
+  const avg = prices.length
+    ? prices.reduce((a, b) => a + b, 0) / prices.length
+    : 0;
+
+  const units = new Map<string, number>();
+  for (const s of rows) {
+    const u = (s.default_unit || "斤").trim() || "斤";
+    units.set(u, (units.get(u) || 0) + 1);
+  }
+  const unitText =
+    [...units.entries()]
+      .map(([u, n]) => `${u} ${n}`)
+      .join(" · ") || "—";
+
+  return [
+    { label: "本页品种", value: `${rows.length} 个`, mono: false },
+    { label: "平均单价（元/斤）", value: formatMoney(avg), mono: true },
+    { label: "单位分布", value: unitText, mono: false },
+    {
+      label: "最高单价（元/斤）",
+      value: formatMoney(prices.length ? Math.max(...prices) : 0),
+      mono: true,
+    },
+  ];
+});
+
+const photoCount = computed(
+  () => paginatedSpecies.value.filter((s) => !!s.image_url).length,
+);
+const noteCount = computed(
+  () => paginatedSpecies.value.filter((s) => !!s.supplier_note).length,
+);
+const latestRelease = computed(() => {
+  const dates = paginatedSpecies.value
+    .map((s) => s.last_release_date || "")
+    .filter((d) => !!d)
+    .sort();
+  return dates.length ? dates[dates.length - 1] : "";
+});
+
+// 空白区域高度不够时退化成一行摘要（阈值按两块指标+标题+脚注的最小高度算）
+const tailRef = ref<HTMLElement | null>(null);
+const tailCompact = ref(false);
+let tailObserver: ResizeObserver | null = null;
+
+watch(
+  tailRef,
+  (el) => {
+    tailObserver?.disconnect();
+    if (!el) return;
+    tailCompact.value = el.clientHeight < 116;
+    if (typeof ResizeObserver === "undefined") return;
+    tailObserver = new ResizeObserver((entries) => {
+      const h = entries[0]?.contentRect.height ?? 0;
+      tailCompact.value = h < 116;
+    });
+    tailObserver.observe(el);
+  },
+  { immediate: true, flush: "post" },
+);
+
 // 表格是否横向溢出：只有真溢出时才给固定列加阴影，否则那道阴影会变成一条多余的竖线
 const rowsBodyRef = ref<HTMLElement | null>(null);
 const bodyScrollsX = ref(false);
@@ -1352,6 +1459,8 @@ onMounted(() => {
 onBeforeUnmount(() => {
   rowsObserver?.disconnect();
   rowsObserver = null;
+  tailObserver?.disconnect();
+  tailObserver = null;
 });
 </script>
 
