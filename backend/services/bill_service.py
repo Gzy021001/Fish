@@ -1,5 +1,5 @@
 import json
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta
 
 from fastapi import HTTPException
 from sqlalchemy import func, or_
@@ -61,6 +61,7 @@ def create_bill(data: schemas.BillCreate, user: models.User, db: Session, commit
         alipay_amount=data.alipay_amount,
         wechat_amount=data.wechat_amount,
         suixi_amount=data.suixi_amount,
+        paid_amount=data.paid_amount,
     )
     db.add(bill)
     db.flush()
@@ -135,21 +136,41 @@ def _bill_day():
     return func.coalesce(models.Bill.release_date, models.Species.release_date)
 
 
+def _week_expense_sum(db: Session, date_str: str = None, date_from: str = None, date_to: str = None):
+    """车费/船费合计（按放生日期范围过滤，与单据口径一致）。"""
+    query = db.query(func.sum(models.WeekExpense.amount)).filter(
+        models.WeekExpense.is_deleted.is_(False)
+    )
+    if date_str:
+        try:
+            d = datetime.strptime(date_str, "%Y-%m-%d").date()
+        except ValueError:
+            d = None
+        if d:
+            query = query.filter(models.WeekExpense.release_date == d)
+    if date_from:
+        query = query.filter(models.WeekExpense.release_date >= date_from)
+    if date_to:
+        query = query.filter(models.WeekExpense.release_date <= date_to)
+    return query.scalar() or 0
+
+
 def _bill_totals(db: Session, status: str = None, date_str: str = None, date_from: str = None, date_to: str = None, q: str = None, exclude_packaging: bool = False, has_suixi: bool = False):
-    """全量口径合计（与分页无关）：重量/小计/总金额 + 随喜三分类，供列表表尾直接展示。"""
+    """全量口径合计（与分页无关）：重量/小计/总金额/实付 + 随喜三分类，供列表表尾直接展示。"""
     sum_query = db.query(
         func.sum(models.Bill.weight),
         func.sum(models.Bill.subtotal),
         func.sum(models.Bill.total_amount),
         func.sum(models.Bill.alipay_amount),
         func.sum(models.Bill.wechat_amount),
-        func.sum(models.Bill.suixi_amount)
+        func.sum(models.Bill.suixi_amount),
+        func.sum(models.Bill.paid_amount)
     ).join(models.Species).filter(models.Bill.is_deleted.is_(False))
     sum_query = _apply_bill_filters(sum_query, status, date_from, date_to, date_str, q, exclude_packaging, has_suixi)
 
     sum_result = sum_query.first()
     if not sum_result:
-        return (0, 0, 0, 0, 0, 0)
+        return (0, 0, 0, 0, 0, 0, 0)
     return tuple((value or 0) for value in sum_result)
 
 
@@ -204,7 +225,15 @@ def _list_bills_by_day(db: Session, page: int = 1, page_size: int = 10, status: 
         rows_query = rows_query.offset(max(0, page - 1) * page_size).limit(page_size)
     rows = rows_query.all()
 
-    sum_weight, sum_subtotal, sum_total_amount, sum_alipay, sum_wechat, sum_suixi = _bill_totals(
+    (
+        sum_weight,
+        sum_subtotal,
+        sum_total_amount,
+        sum_alipay,
+        sum_wechat,
+        sum_suixi,
+        sum_paid_amount,
+    ) = _bill_totals(
         db, status=status, date_str=date_str, date_from=date_from, date_to=date_to,
         q=q, exclude_packaging=exclude_packaging, has_suixi=has_suixi,
     )
@@ -238,6 +267,7 @@ def _list_bills_by_day(db: Session, page: int = 1, page_size: int = 10, status: 
         "sum_wechat1": sum_wechat1,
         "sum_wechat2": sum_wechat2,
         "sum_suixi": sum_suixi,
+        "sum_paid_amount": sum_paid_amount,
     }
 
 
@@ -273,6 +303,8 @@ def list_bills(db: Session, page: int = 1, page_size: int = 10, limit: int = 100
         sum_alipay = sum((item.alipay_amount or 0) for item in items)
         sum_wechat = sum((item.wechat_amount or 0) for item in items)
         sum_suixi = sum((item.suixi_amount or 0) for item in items)
+        sum_paid_amount = sum((item.paid_amount or 0) for item in items)
+        sum_expense = _week_expense_sum(db, date, date_from, date_to)
 
         return {
             "total": len(items),
@@ -282,15 +314,26 @@ def list_bills(db: Session, page: int = 1, page_size: int = 10, limit: int = 100
             "sum_total_amount": sum_total_amount,
             "sum_alipay": sum_alipay,
             "sum_wechat": sum_wechat,
-            "sum_suixi": sum_suixi
+            "sum_suixi": sum_suixi,
+            "sum_paid_amount": sum_paid_amount,
+            "sum_expense": sum_expense,
         }
 
     total = query.count()
 
-    sum_weight, sum_subtotal, sum_total_amount, sum_alipay, sum_wechat, sum_suixi = _bill_totals(
+    (
+        sum_weight,
+        sum_subtotal,
+        sum_total_amount,
+        sum_alipay,
+        sum_wechat,
+        sum_suixi,
+        sum_paid_amount,
+    ) = _bill_totals(
         db, status=status, date_str=date, date_from=date_from, date_to=date_to,
         q=q, exclude_packaging=exclude_packaging, has_suixi=has_suixi,
     )
+    sum_expense = _week_expense_sum(db, date, date_from, date_to)
 
     if page_size == -1:
         items = query.all()
@@ -302,7 +345,9 @@ def list_bills(db: Session, page: int = 1, page_size: int = 10, limit: int = 100
             "sum_total_amount": sum_total_amount,
             "sum_alipay": sum_alipay,
             "sum_wechat": sum_wechat,
-            "sum_suixi": sum_suixi
+            "sum_suixi": sum_suixi,
+            "sum_paid_amount": sum_paid_amount,
+            "sum_expense": sum_expense,
         }
 
     if page_size > 0:
@@ -317,7 +362,9 @@ def list_bills(db: Session, page: int = 1, page_size: int = 10, limit: int = 100
         "sum_total_amount": sum_total_amount,
         "sum_alipay": sum_alipay,
         "sum_wechat": sum_wechat,
-        "sum_suixi": sum_suixi
+        "sum_suixi": sum_suixi,
+        "sum_paid_amount": sum_paid_amount,
+        "sum_expense": sum_expense,
     }
 
 
@@ -363,6 +410,7 @@ def update_bill(bill_id: int, data: schemas.BillCreate, user: models.User, db: S
         "alipay_amount": bill.alipay_amount,
         "wechat_amount": bill.wechat_amount,
         "suixi_amount": bill.suixi_amount,
+        "paid_amount": bill.paid_amount,
     }
 
     subtotal, fee, total_amount = calculate_bill_amounts(
@@ -390,6 +438,7 @@ def update_bill(bill_id: int, data: schemas.BillCreate, user: models.User, db: S
     bill.alipay_amount = data.alipay_amount
     bill.wechat_amount = data.wechat_amount
     bill.suixi_amount = data.suixi_amount
+    bill.paid_amount = data.paid_amount
 
     db.flush()
 
@@ -410,6 +459,7 @@ def update_bill(bill_id: int, data: schemas.BillCreate, user: models.User, db: S
         "alipay_amount": _money_or_none(data.alipay_amount),
         "wechat_amount": _money_or_none(data.wechat_amount),
         "suixi_amount": _money_or_none(data.suixi_amount),
+        "paid_amount": _money_or_none(data.paid_amount),
     }
     record_update(
         db,
@@ -475,6 +525,9 @@ def batch_create_bills(data: schemas.BatchImportRequest, user: models.User, db: 
         for row in data.rows:
             if row.release_date:
                 dates_to_replace.add(row.release_date)
+        for expense in data.expenses:
+            if expense.release_date:
+                dates_to_replace.add(expense.release_date)
         deleted_count = 0
         for d in dates_to_replace:
             # 软删除当天已有单据（保留审计引用），再插入新单据
@@ -484,6 +537,13 @@ def batch_create_bills(data: schemas.BatchImportRequest, user: models.User, db: 
                 models.Bill.is_deleted.is_(False),
             ).update({"is_deleted": True}, synchronize_session=False)
             deleted_count += result or 0
+        # 车费/船费同样按日期覆盖
+        for d in dates_to_replace:
+            db.query(models.WeekExpense).filter(
+                models.WeekExpense.release_date >= d,
+                models.WeekExpense.release_date < (d + timedelta(days=1)),
+                models.WeekExpense.is_deleted.is_(False),
+            ).update({"is_deleted": True}, synchronize_session=False)
         db.flush()
         if dates_to_replace:
             # 覆盖软删不走逐条 DELETE 审计，写一条汇总 REPLACE 审计保留追溯链
@@ -540,16 +600,33 @@ def batch_create_bills(data: schemas.BatchImportRequest, user: models.User, db: 
             alipay_amount=row.alipay_amount,
             wechat_amount=row.wechat_amount,
             suixi_amount=row.suixi_amount,
+            paid_amount=row.paid_amount,
         )
         create_bill(bill_create, user, db, commit=False, allow_zero_weight=True)
         affected_species_ids.add(species.id)
         success_count += 1
+
+    # 车费/船费等表尾支出（模板里不打进物命单据，单独落库，实付合计时才计入）
+    expense_count = 0
+    for expense in data.expenses:
+        name = (expense.name or "").strip()
+        if not name or expense.amount is None:
+            continue
+        db.add(
+            models.WeekExpense(
+                release_date=expense.release_date,
+                name=name[:20],
+                amount=money(expense.amount),
+            )
+        )
+        expense_count += 1
 
     db.commit()
 
     return schemas.BatchImportResult(
         success_count=success_count,
         skip_count=skip_count,
+        expense_count=expense_count,
         affected_species_ids=sorted(affected_species_ids),
         errors=errors,
     )

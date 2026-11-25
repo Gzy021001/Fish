@@ -6,6 +6,7 @@ const COLUMN_MAPS: Record<string, string[]> = {
   weight: ["重量", "公斤", "斤", "净重", "毛重", "总重", "重量(斤)", "重量（斤）", "重量(公斤)", "重量（公斤）", "数量", "weight", "kg"],
   unit_price: ["单价", "价格", "售价", "定价", "单价(元)", "单价（元）", "元/公斤", "元/斤", "price", "unit_price"],
   fee_value: ["服务费", "手续费", "附加费", "费用", "其他费用", "服务费(元)", "服务费（元）", "fee"],
+  paid_amount: ["实付", "实付金额", "实际付款", "付款金额", "paid", "paid_amount"],
   release_date: ["放生日期", "日期", "时间", "出货日期", "交易日期", "发货日期", "date", "time", "release"],
 };
 function normalizeHeader(h: string): string {
@@ -14,7 +15,7 @@ function normalizeHeader(h: string): string {
 
 export function detectColumns(headers: string[]): Record<string, string | null> {
   const nh = headers.map(normalizeHeader)
-  const r: Record<string, string | null> = { species: null, weight: null, unit_price: null, fee_value: null, release_date: null }
+  const r: Record<string, string | null> = { species: null, weight: null, unit_price: null, fee_value: null, paid_amount: null, release_date: null }
   for (const [k, cand] of Object.entries(COLUMN_MAPS)) {
     const nc = cand.map(normalizeHeader)
     for (const [i, h] of nh.entries()) {
@@ -207,6 +208,8 @@ export interface ParsedRow {
   unit?: string | null
   /** 1 件/个 合多少斤（与 unit 配套，导出还原数量/单价用） */
   unit_jin?: number | null
+  /** 模板「实付」列的值（一般只写在该批首行） */
+  paid_amount?: number | null
   alipay_amount?: number | null
   wechat_amount?: number | null
   suixi_amount?: number | null
@@ -214,6 +217,13 @@ export interface ParsedRow {
   payment_method?: string | null
   /** jsonData 内的行号（0 起），用于把收款区的逐笔行挂到同一行的单据上 */
   matrixRow?: number
+}
+
+/** 车费/船费等表尾支出（不打进物命单据，单独落库） */
+export interface ParsedExpense {
+  name: string
+  amount: number
+  release_date: string | null
 }
 
 export type PaymentKind = "alipay" | "wechat" | "suixi"
@@ -258,11 +268,15 @@ export function extractRowPayments(matrix: any[][]): RowPayment[] {
   return result
 }
 export interface SkippedRow { rowIndex: number; reason: string; rawData: Record<string, unknown> }
-export interface ParseResult { validRows: ParsedRow[]; skippedRows: SkippedRow[] }
+export interface ParseResult { validRows: ParsedRow[]; skippedRows: SkippedRow[]; expenseRows: ParsedExpense[] }
+
+/** 表尾费用行：金额写在「实付」列 */
+const EXPENSE_KW = ["车费", "船费"]
 
 export function parseImportRows(jsonData: Record<string, unknown>[], columns: Record<string, string | null>, fallbackReleaseDate?: string | null): ParseResult {
   const validRows: ParsedRow[] = []
   const skippedRows: SkippedRow[] = []
+  const expenseRows: ParsedExpense[] = []
   const fallbackYear = fallbackReleaseDate ? parseInt(fallbackReleaseDate.substring(0, 4)) : undefined
 
   for (const [idx, raw] of jsonData.entries()) {
@@ -282,6 +296,16 @@ export function parseImportRows(jsonData: Record<string, unknown>[], columns: Re
     const rawName = String(rs ?? "")
     const nm = normalizeSpeciesName(rawName)
     if (!nm) { skippedRows.push({ rowIndex: idx + 2, reason: "\u54c1\u79cd\u540d\u79f0\u4e3a\u7a7a\u6216\u65e0\u6cd5\u8bc6\u522b", rawData: raw }); continue }
+    // 车费/船费：模板表尾的费用行，金额写在「实付」列，单独落库（不算物命单据）
+    const expenseKw = EXPENSE_KW.find((k) => rawName.includes(k) || nm.includes(k))
+    if (expenseKw) {
+      const paidCell = columns.paid_amount ? raw[columns.paid_amount] : null
+      const amt = parseFloat(String(paidCell ?? ""))
+      if (!isNaN(amt) && amt > 0) {
+        expenseRows.push({ name: expenseKw, amount: amt, release_date: parseExcelDate(rd, fallbackYear) })
+      }
+      continue
+    }
     // 汇总行（本周现场随喜/累计等）不是错误，直接忽略，不进入"查看原因"列表
     if (isNonBillRow(nm) || isNonBillRow(String(rs ?? ""))) { continue }
     // 打包耗材（冰块/打包袋等）不是物命品种，直接忽略（与物命列表/导出的过滤规则一致）
@@ -302,12 +326,16 @@ export function parseImportRows(jsonData: Record<string, unknown>[], columns: Re
     if (isJinUnit) up = up * 2
     const fv = isNaN(parseFloat(String(rf ?? ""))) ? 0 : parseFloat(String(rf ?? ""))
     const rd2 = parseExcelDate(rd, fallbackYear)
+    // 模板「实付」列：有值就原样带上（一般只在该批首行），空则不计
+    const paidCell = columns.paid_amount ? raw[columns.paid_amount] : null
+    const paidNum = parseFloat(String(paidCell ?? ""))
     validRows.push({
       name_zh: nm, weight: wt, unit_price: up, fee_value: fv, release_date: rd2,
       matrixRow: idx,
       unit: pieceUnit ? pieceUnit.unit : null,
       unit_jin: pieceUnit ? pieceUnit.jin : null,
+      paid_amount: !isNaN(paidNum) && paidNum > 0 ? paidNum : null,
     })
   }
-  return { validRows, skippedRows }
+  return { validRows, skippedRows, expenseRows }
 }

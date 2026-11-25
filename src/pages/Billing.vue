@@ -904,7 +904,7 @@
                 <div
                   class="col-td-mono-red flex-1 min-w-[104px] flex items-center"
                 >
-                  {{ formatMoney(b.total_amount) }}
+                  {{ b.paid_amount != null ? formatMoney(b.paid_amount) : "—" }}
                 </div>
                 <div
                   class="col-td flex-1 min-w-[96px] flex items-center"
@@ -1044,9 +1044,10 @@
               </div>
               <div
                 class="px-4 py-2 flex-1 min-w-[104px] flex items-center"
+                :title="`实付合计 = 单据实付 ${formatMoney(tableSumPaid)} + 车费/船费 ${formatMoney(tableSumExpense)}`"
               >
                 <span class="tabular-nums text-xs text-dunhuang-red">{{
-                  formatMoney(tableSumTotal)
+                  formatMoney(tableSumPaid + tableSumExpense)
                 }}</span>
               </div>
               <div
@@ -1220,11 +1221,15 @@
                 class="flex justify-between items-center py-3 bg-dunhuang-red/5 -mx-2 px-2 rounded-lg border border-dunhuang-red/10"
               >
                 <span class="text-dunhuang-text/70 text-sm font-medium"
-                  >实付金额（元）</span
+                  >实付（元）</span
                 >
                 <span
                   class="tabular-nums font-bold text-dunhuang-red text-base"
-                  >{{ formatMoney(viewingBill?.total_amount) }}</span
+                  >{{
+                    viewingBill?.paid_amount != null
+                      ? formatMoney(viewingBill.paid_amount)
+                      : "—"
+                  }}</span
                 >
               </div>
 
@@ -1472,6 +1477,8 @@ const {
   tableSumSubtotal,
   tableSumFee,
   tableSumTotal,
+  tableSumPaid,
+  tableSumExpense,
   isAllSelected,
   toggleSelectAll,
   getSpeciesName,

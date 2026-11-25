@@ -56,6 +56,9 @@ export function useBillTable(speciesList: Ref<Species[]>) {
   const tableSumSubtotal = ref(0)
   const tableSumFee = ref(0)
   const tableSumTotal = ref(0)
+  // 实付口径：单据 paid_amount 合计 + 车费/船费合计（对齐模板「慈悲护生购生实付金额」）
+  const tableSumPaid = ref(0)
+  const tableSumExpense = ref(0)
 
   const isAllSelected = computed({
     get: () => {
@@ -140,12 +143,16 @@ export function useBillTable(speciesList: Ref<Species[]>) {
         tableSumSubtotal.value = res.data.sum_subtotal || 0
         tableSumTotal.value = res.data.sum_total_amount || 0
         tableSumFee.value = tableSumTotal.value - tableSumSubtotal.value
+        tableSumPaid.value = res.data.sum_paid_amount || 0
+        tableSumExpense.value = res.data.sum_expense || 0
       } else {
         const rawBills: Bill[] = Array.isArray(res.data) ? res.data : []
         tableSumWeight.value = Number(rawBills.reduce((s, b) => s + (b.weight || 0), 0).toFixed(2))
         tableSumSubtotal.value = Number(rawBills.reduce((s, b) => s + (b.subtotal || 0), 0).toFixed(2))
         tableSumTotal.value = Number(rawBills.reduce((s, b) => s + (b.total_amount || 0), 0).toFixed(2))
         tableSumFee.value = tableSumTotal.value - tableSumSubtotal.value
+        tableSumPaid.value = Number(rawBills.reduce((s, b) => s + (b.paid_amount || 0), 0).toFixed(2))
+        tableSumExpense.value = 0
         bills.value = rawBills
         totalItems.value = bills.value.length
       }
@@ -283,6 +290,8 @@ export function useBillTable(speciesList: Ref<Species[]>) {
     tableSumSubtotal,
     tableSumFee,
     tableSumTotal,
+    tableSumPaid,
+    tableSumExpense,
     isAllSelected,
     toggleSelectAll,
     getSpeciesName,

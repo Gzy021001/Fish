@@ -530,6 +530,7 @@ import {
   extractRowPayments,
   evalSimpleFormula,
   type ParsedRow,
+  type ParsedExpense,
   type SkippedRow,
 } from "../lib/importUtils";
 
@@ -629,6 +630,8 @@ const isDragging = ref(false);
 const parsing = ref(false);
 // 未通过校验的行（含原因），供预览区提示
 const skippedRows = shallowRef<SkippedRow[]>([]);
+// 车费/船费等表尾支出（随首片一起提交）
+const importExpenses = shallowRef<ParsedExpense[]>([]);
 const showSkipped = ref(false);
 
 // ===== 品种库校验：标注不在品种库中的品种（导入时后端会自动新建） =====
@@ -752,6 +755,7 @@ const cancelImport = () => {
   importDone.value = 0;
   importTotal.value = 0;
   skippedRows.value = [];
+  importExpenses.value = [];
   showSkipped.value = false;
   isDragging.value = false;
   parsing.value = false;
@@ -836,6 +840,7 @@ const processFile = (f: File) => {
       });
       const allValid = [];
       const allSkipped = [];
+      const allExpenses: ParsedExpense[] = [];
       let firstCols = null;
 
       for (const sn of wb.SheetNames) {
@@ -984,9 +989,11 @@ const processFile = (f: File) => {
 
         allValid.push(...result.validRows);
         allSkipped.push(...result.skippedRows);
+        allExpenses.push(...(result.expenseRows ?? []));
       }
       importRows.value = allValid;
       skippedRows.value = allSkipped;
+      importExpenses.value = allExpenses;
       // 新文件重新从第一屏开始预览
       previewLimit.value = PREVIEW_CHUNK;
       // 服务费合并单元格：连续相同的 fee_value > 0 归为一组，首行保留原值，其余行清零
@@ -1072,7 +1079,7 @@ const confirmImport = async () => {
         importTotal.value = total;
         importProgress.value = `正在导入 ${done}/${total} 批...`;
       },
-      { replace: overwriteSameDate.value },
+      { replace: overwriteSameDate.value, expenses: importExpenses.value },
     );
     importResult.value = {
       success_count: result.success_count,

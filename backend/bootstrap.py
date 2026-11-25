@@ -31,6 +31,7 @@ _COLUMN_FIXES = {
         ("suixi_amount", "ALTER TABLE bills ADD COLUMN suixi_amount NUMERIC(12,2)"),
         ("unit", "ALTER TABLE bills ADD COLUMN unit VARCHAR(10)"),
         ("unit_jin", "ALTER TABLE bills ADD COLUMN unit_jin NUMERIC(10,4)"),
+        ("paid_amount", "ALTER TABLE bills ADD COLUMN paid_amount NUMERIC(12,2)"),
     ],
     "users": [
         ("must_change_password", "ALTER TABLE users ADD COLUMN must_change_password BOOLEAN DEFAULT {false}"),

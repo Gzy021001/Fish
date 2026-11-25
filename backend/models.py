@@ -51,11 +51,24 @@ class Bill(Base):
     alipay_amount = Column(Numeric(12, 2), nullable=True)
     wechat_amount = Column(Numeric(12, 2), nullable=True)
     suixi_amount = Column(Numeric(12, 2), nullable=True)
+    # 实付：模板「实付」列里记的实际付款（常写在该批首行，其余行空）。人工录入为空。
+    paid_amount = Column(Numeric(12, 2), nullable=True)
     created_at = Column(DateTime, default=datetime.now, index=True)
     is_deleted = Column(Boolean, default=False, index=True)
 
     user = relationship("User")
     species = relationship("Species")
+
+class WeekExpense(Base):
+    """按放生日期记录的车费/船费等非物命支出（模板表尾的行）。"""
+
+    __tablename__ = "week_expenses"
+    id = Column(Integer, primary_key=True, index=True)
+    release_date = Column(Date, nullable=True, index=True)
+    name = Column(String(20))
+    amount = Column(Numeric(12, 2))
+    created_at = Column(DateTime, default=datetime.now, index=True)
+    is_deleted = Column(Boolean, default=False, index=True)
 
 class AuditLog(Base):
     __tablename__ = "audit_logs"

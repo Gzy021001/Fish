@@ -86,6 +86,8 @@ class BillBase(BaseModel):
     alipay_amount: Optional[float] = None
     wechat_amount: Optional[float] = None
     suixi_amount: Optional[float] = None
+    # 实付：模板里记录的实际付款（人工录入可留空）
+    paid_amount: Optional[float] = None
 
     @field_validator('currency')
     @classmethod
@@ -187,6 +189,8 @@ class BatchImportRow(BaseModel):
     alipay_amount: Optional[float] = None
     wechat_amount: Optional[float] = None
     suixi_amount: Optional[float] = None
+    # 实付：模板「实付」列的值（一般只写在该批首行），没有则留空
+    paid_amount: Optional[float] = None
     payment_method: Optional[str] = Field(None, max_length=20)
 
     @field_validator('payment_method', mode='before')
@@ -216,15 +220,27 @@ class BatchImportRow(BaseModel):
         except (ValueError, TypeError):
             return None
 
+class BatchExpenseRow(BaseModel):
+    """车费/船费等非物命支出（模板表尾的行）。"""
+
+    name: str = Field(..., max_length=20)
+    amount: float
+    release_date: Optional[date] = None
+
 class BatchImportRequest(BaseModel):
     rows: list[BatchImportRow] = Field(..., max_length=5000)
+    expenses: list[BatchExpenseRow] = Field(default_factory=list, max_length=500)
     replace: bool = False
+    # 覆盖模式下一次清空哪些放生日的支出（分片导入时由首片带上全量日期）
+    expense_dates: Optional[list[date]] = None
     # 覆盖模式下一次清空哪些放生日的数据（分片导入时由首片带上全量日期，避免跨片重复）
     replace_dates: Optional[list[date]] = None
 
 class BatchImportResult(BaseModel):
     success_count: int
     skip_count: int
+    # 车费/船费落库条数
+    expense_count: int = 0
     # 不再回传完整 bills（会触发每行一次 species 懒加载 N+1，且前端只用数量/错误）
     affected_species_ids: list[int] = []
     errors: list[str] = []

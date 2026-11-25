@@ -282,6 +282,37 @@ class PriorityFixesTests(unittest.TestCase):
         self.assertEqual(all_bills["total"], 3)
         self.assertEqual(float(all_bills["sum_wechat"]), 25.5)
 
+    # ---- 导入实付与车费/船费：paid_amount 落库、费用单独成表、列表合计口径 ----
+    def test_batch_import_paid_amount_and_expenses(self):
+        payload = schemas.BatchImportRequest(
+            rows=[
+                schemas.BatchImportRow(
+                    name_zh="回填测试鱼", weight=10, unit_price=5, fee_value=0,
+                    release_date=date(2026, 11, 21), paid_amount=48,
+                ),
+                schemas.BatchImportRow(
+                    name_zh="回填测试鱼", weight=4, unit_price=5, fee_value=0,
+                    release_date=date(2026, 11, 21),
+                ),
+            ],
+            expenses=[
+                schemas.BatchExpenseRow(name="车费", amount=30, release_date=date(2026, 11, 21)),
+                schemas.BatchExpenseRow(name="船费", amount=20, release_date=date(2026, 11, 21)),
+            ],
+        )
+        result = batch_create_bills(payload, self.user, self.db)
+        self.assertEqual(result.success_count, 2)
+        self.assertEqual(result.expense_count, 2)
+
+        bills = self.db.query(models.Bill).filter(models.Bill.release_date == date(2026, 11, 21)).all()
+        self.assertEqual(sorted(float(b.paid_amount or 0) for b in bills), [0.0, 48.0])
+        expenses = self.db.query(models.WeekExpense).all()
+        self.assertEqual(sorted(float(e.amount) for e in expenses), [20.0, 30.0])
+
+        summary = list_bills(self.db, page=1, page_size=10, date="2026-11-21")
+        self.assertEqual(float(summary["sum_paid_amount"]), 48.0)
+        self.assertEqual(float(summary["sum_expense"]), 50.0)
+
     # ---- 随喜汇总按放生日期聚合：一行一天，金额取当天合计，微信拆两列 ----
     def test_list_bills_group_by_date(self):
         sp = self.db.query(models.Species).first()

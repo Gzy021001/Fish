@@ -10,6 +10,15 @@ export interface ImportRow {
   /** 源表原始计价单位（件/个），导出还原模板写法用；null/缺省=按斤 */
   unit?: string | null
   unit_jin?: number | null
+  /** 模板「实付」列的值（一般只写在该批首行），没有则留空 */
+  paid_amount?: number | null
+}
+
+/** 车费/船费等表尾支出（不打进物命单据） */
+export interface ImportExpenseRow {
+  name: string
+  amount: number
+  release_date?: string
 }
 
 export interface BillEntryInput {
@@ -110,15 +119,19 @@ const CHUNK_SIZE = 25
 export async function saveImportedRowsChunked(
   rows: ImportRow[],
   onProgress?: (done: number, total: number) => void,
-  options?: { replace?: boolean },
+  options?: { replace?: boolean; expenses?: ImportExpenseRow[] },
 ): Promise<{ success_count: number; skip_count: number; errors: string[] }> {
   // 快速健康检查，唤醒 serverless 冷启动
   try { await api.get('/bills?limit=1', { timeout: 15000 }) } catch (_) { /* 忽略 */ }
 
   const replaceEnabled = options?.replace ?? true
+  const expenses = options?.expenses ?? []
   // 整份文件涉及的所有放生日期（覆盖时一次性清空，避免跨分片重复）
   const allDates = Array.from(
-    new Set(rows.map((r) => r.release_date).filter((d): d is string => !!d)),
+    new Set([
+      ...rows.map((r) => r.release_date).filter((d): d is string => !!d),
+      ...expenses.map((e) => e.release_date).filter((d): d is string => !!d),
+    ]),
   )
 
   const chunks: ImportRow[][] = []
@@ -140,6 +153,11 @@ export async function saveImportedRowsChunked(
       }
       if (replace && allDates.length > 0) {
         payload.replace_dates = allDates
+      }
+      // 车费/船费只需在首片随同提交（后端按日期覆盖），避免重复插入
+      if (isFirst && expenses.length > 0) {
+        payload.expenses = expenses
+        payload.expense_dates = allDates
       }
       const res = await api.post('/bills/batch', payload, { timeout: 45000 })
       totalSuccess += res.data.success_count ?? 0
