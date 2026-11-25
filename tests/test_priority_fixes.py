@@ -305,7 +305,11 @@ class PriorityFixesTests(unittest.TestCase):
         self.assertEqual(result.expense_count, 2)
 
         bills = self.db.query(models.Bill).filter(models.Bill.release_date == date(2026, 11, 21)).all()
-        self.assertEqual(sorted(float(b.paid_amount or 0) for b in bills), [0.0, 48.0])
+        # 实付按批次分摊到每一行：两行合计仍为 48，且都不为空
+        paid_values = sorted(float(b.paid_amount or 0) for b in bills)
+        self.assertEqual(len(paid_values), 2)
+        self.assertAlmostEqual(sum(paid_values), 48.0, places=2)
+        self.assertTrue(all(v > 0 for v in paid_values))
         expenses = self.db.query(models.WeekExpense).all()
         self.assertEqual(sorted(float(e.amount) for e in expenses), [20.0, 30.0])
 
