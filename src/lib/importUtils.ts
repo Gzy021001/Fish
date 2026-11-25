@@ -212,6 +212,8 @@ export interface ParsedRow {
   paid_amount?: number | null
   /** 本周现场随喜（模板表尾一行，只挂到当天第一张单据上） */
   weekly_donation?: number | null
+  /** 上周余款（模板表尾一行，只挂到当天第一张单据上，导出照抄模板用） */
+  week_carry_in?: number | null
   alipay_amount?: number | null
   wechat_amount?: number | null
   suixi_amount?: number | null
@@ -276,16 +278,40 @@ export interface ParseResult {
   expenseRows: ParsedExpense[]
   /** 本周现场随喜（模板表尾一行，记到当天第一张单据上） */
   onsiteDonation?: number | null
+  /** 上周余款（模板表尾一行，记到当天第一张单据上） */
+  weekCarryIn?: number | null
 }
 
 /** 表尾费用行：金额写在「实付」列 */
 const EXPENSE_KW = ["车费", "船费"]
+
+/**
+ * 表尾汇总行（本周现场随喜 / 上周余款）的金额取值。
+ *
+ * 这类行没有稳定表头：值一般写在「总计」列（模板 F 列），个别文件写在「实付」列。
+ * 旧逻辑按 columns 里的 实付/服务费/重量/单价 逐个取，遇到「总计」列会全部取空，
+ * 于是导入后「本周现场随喜」恒为空、导出整年都是 0（2026 模板 43 个 sheet 全是这种写法）。
+ * 这里从「品种」标签所在列往右找第一个数字格，与列名无关，模板换列也取得到。
+ */
+function pickSummaryAmount(raw: Record<string, unknown>, labelKey?: string | null): number | null {
+  const keys = Object.keys(raw)
+  const start = labelKey ? keys.indexOf(labelKey) : -1
+  if (start < 0) return null
+  for (let i = start + 1; i < keys.length; i++) {
+    const value = raw[keys[i]]
+    if (value === null || value === undefined || value === "") continue
+    const n = typeof value === "number" ? value : parseFloat(String(value).replace(/,/g, ""))
+    if (Number.isFinite(n)) return n
+  }
+  return null
+}
 
 export function parseImportRows(jsonData: Record<string, unknown>[], columns: Record<string, string | null>, fallbackReleaseDate?: string | null): ParseResult {
   const validRows: ParsedRow[] = []
   const skippedRows: SkippedRow[] = []
   const expenseRows: ParsedExpense[] = []
   let onsiteDonation: number | null = null
+  let weekCarryIn: number | null = null
   const fallbackYear = fallbackReleaseDate ? parseInt(fallbackReleaseDate.substring(0, 4)) : undefined
 
   for (const [idx, raw] of jsonData.entries()) {
@@ -315,15 +341,15 @@ export function parseImportRows(jsonData: Record<string, unknown>[], columns: Re
       }
       continue
     }
-    // 本周现场随喜：模板表尾的一行（值写在总计/实付那一列），记到当天第一张单据上，
-    // 导出时用来还原「本周现场随喜」和「上周余款」链条
+    // 本周现场随喜：模板表尾的一行（值写在「总计」列，个别模板写在「实付」列），
+    // 记到当天第一张单据上，导出时用来还原「本周现场随喜」和「本周随喜累计」链条
     if (rawName.includes("现场随喜") && !rawName.includes("累计")) {
-      const candidates = [columns.paid_amount, columns.fee_value, columns.weight, columns.unit_price]
-        .filter((key): key is string => !!key)
-        .map((key) => parseFloat(String(raw[key] ?? "")))
-        .filter((v) => !isNaN(v) && v !== 0)
-      const amount = candidates[0]
-      if (amount !== undefined && onsiteDonation === null) onsiteDonation = amount
+      if (onsiteDonation === null) onsiteDonation = pickSummaryAmount(raw, columns.species)
+      continue
+    }
+    // 上周余款：同样是表尾一行，导出时优先照抄模板原值（bills.week_carry_in）
+    if (rawName.includes("上周余款")) {
+      if (weekCarryIn === null) weekCarryIn = pickSummaryAmount(raw, columns.species)
       continue
     }
     // 汇总行（本周现场随喜/累计等）不是错误，直接忽略，不进入"查看原因"列表
@@ -357,5 +383,5 @@ export function parseImportRows(jsonData: Record<string, unknown>[], columns: Re
       paid_amount: !isNaN(paidNum) && paidNum > 0 ? paidNum : null,
     })
   }
-  return { validRows, skippedRows, expenseRows, onsiteDonation }
+  return { validRows, skippedRows, expenseRows, onsiteDonation, weekCarryIn }
 }

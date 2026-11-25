@@ -14,6 +14,8 @@ export interface ImportRow {
   paid_amount?: number | null
   /** 本周现场随喜（整周一个值，挂到当天第一张单据上） */
   weekly_donation?: number | null
+  /** 上周余款（整周一个值，挂到当天第一张单据上，导出照抄模板用） */
+  week_carry_in?: number | null
 }
 
 /** 车费/船费等表尾支出（不打进物命单据） */

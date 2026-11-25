@@ -40,6 +40,39 @@ describe("parseImportRows", () => {
     expect(result.skippedRows).toHaveLength(0)
   })
 
+  it("本周现场随喜写在「总计」列也能取到（2026 模板实际写法，历史恒为 0）", () => {
+    // 模板：C 列标签、F 列「总计」写金额，服务费/实付都为空。
+    // 旧逻辑只从 实付/服务费/重量/单价 取，取不到 → 导出整年都是 0。
+    const cols = {
+      species: "品种",
+      weight: "重量(斤)",
+      unit_price: "单价(元)",
+      fee_value: "服务费",
+      paid_amount: "实付",
+      release_date: "放生日期",
+    }
+    const rows = [
+      { 序号: 1, 品种: "草鱼", "重量(斤)": 100, "单价(元)": 6, 总计: 600, 服务费: 0, 实付: 600, 放生日期: "2026-11-21" },
+      { 序号: 20, 品种: "上周余款", "重量(斤)": "", "单价(元)": "", 总计: 2388.91, 服务费: "", 实付: "" },
+      { 序号: 21, 品种: "本周现场随喜", "重量(斤)": "", "单价(元)": "", 总计: 3500, 服务费: "", 实付: "" },
+      { 序号: 22, 品种: "本周随喜累计", "重量(斤)": "", "单价(元)": "", 总计: 20531.86, 服务费: "", 实付: "" },
+    ]
+    const result = parseImportRows(rows, cols, "2026-11-21")
+    expect(result.validRows).toHaveLength(1)
+    expect(result.onsiteDonation).toBe(3500)
+    expect(result.weekCarryIn).toBe(2388.91)
+  })
+
+  it("现场随喜沿用「实付」列写法的老模板也能取到", () => {
+    const cols = { species: "品种", weight: "重量(斤)", unit_price: "单价(元)", paid_amount: "实付", release_date: "放生日期" }
+    const rows = [
+      { 品种: "草鱼", "重量(斤)": 100, "单价(元)": 6, 实付: 600, 放生日期: "2026-11-21" },
+      { 品种: "本周现场随喜", "重量(斤)": "", "单价(元)": "", 实付: 5200, 放生日期: "2026-11-21" },
+    ]
+    const result = parseImportRows(rows, cols, "2026-11-21")
+    expect(result.onsiteDonation).toBe(5200)
+  })
+
   it("打包耗材行（冰块/打包袋等）直接忽略，不导入也不进跳过列表", () => {
     const rows = [
       { 品种: "冰块", "重量(斤)": 100, "单价(元)": 2, 服务费: 0, 放生日期: "2026-01-03" },

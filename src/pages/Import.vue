@@ -987,9 +987,15 @@ const processFile = (f: File) => {
           }
         });
 
-        // 本周现场随喜（整周一个值）：挂到当天第一张单据上，导出「上周余款」链条要用
-        if (result.onsiteDonation != null && result.validRows.length > 0) {
-          result.validRows[0].weekly_donation = result.onsiteDonation;
+        // 本周现场随喜 / 上周余款（整周各一个值）：挂到当天第一张单据上，
+        // 导出「本周现场随喜」「上周余款」链条要用
+        if (result.validRows.length > 0) {
+          if (result.onsiteDonation != null) {
+            result.validRows[0].weekly_donation = result.onsiteDonation;
+          }
+          if (result.weekCarryIn != null) {
+            result.validRows[0].week_carry_in = result.weekCarryIn;
+          }
         }
         allValid.push(...result.validRows);
         allSkipped.push(...result.skippedRows);
