@@ -88,6 +88,8 @@ class BillBase(BaseModel):
     suixi_amount: Optional[float] = None
     # 实付：模板里记录的实际付款（人工录入可留空）
     paid_amount: Optional[float] = None
+    # 本批实付：模板该批的原始实付总额（同批每行相同），paid_amount 是摊到本行的份额
+    batch_paid: Optional[float] = None
 
     @field_validator('currency')
     @classmethod
@@ -191,6 +193,8 @@ class BatchImportRow(BaseModel):
     suixi_amount: Optional[float] = None
     # 实付：模板「实付」列的值（一般只写在该批首行），没有则留空
     paid_amount: Optional[float] = None
+    # 本批实付：模板该批的原始总额（导入时由服务端写入）
+    batch_paid: Optional[float] = None
     payment_method: Optional[str] = Field(None, max_length=20)
 
     @field_validator('payment_method', mode='before')

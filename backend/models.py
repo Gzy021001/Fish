@@ -53,6 +53,8 @@ class Bill(Base):
     suixi_amount = Column(Numeric(12, 2), nullable=True)
     # 实付：模板「实付」列里记的实际付款（常写在该批首行，其余行空）。人工录入为空。
     paid_amount = Column(Numeric(12, 2), nullable=True)
+    # 本批实付：该批在模板里的原始实付总额（同批每一行都相同；paid_amount 是按比例摊到本行的份额）
+    batch_paid = Column(Numeric(12, 2), nullable=True)
     created_at = Column(DateTime, default=datetime.now, index=True)
     is_deleted = Column(Boolean, default=False, index=True)
 

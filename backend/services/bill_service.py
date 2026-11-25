@@ -63,6 +63,7 @@ def create_bill(data: schemas.BillCreate, user: models.User, db: Session, commit
         wechat_amount=data.wechat_amount,
         suixi_amount=data.suixi_amount,
         paid_amount=data.paid_amount,
+        batch_paid=data.batch_paid,
     )
     db.add(bill)
     db.flush()
@@ -447,6 +448,9 @@ def update_bill(bill_id: int, data: schemas.BillCreate, user: models.User, db: S
     bill.wechat_amount = data.wechat_amount
     bill.suixi_amount = data.suixi_amount
     bill.paid_amount = data.paid_amount
+    # 编辑表单不带本批实付：为空时保留原值，避免手工改单价把「本批实付」清掉
+    if data.batch_paid is not None:
+        bill.batch_paid = data.batch_paid
 
     db.flush()
 

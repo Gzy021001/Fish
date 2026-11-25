@@ -1250,6 +1250,18 @@
                   }}</span
                 >
               </div>
+              <!-- 本批实付：模板里这一批的原始实付总额（导入时记下，同批每行相同） -->
+              <div
+                v-if="viewingBill?.batch_paid != null"
+                class="flex justify-between items-center py-2 px-2 -mx-2"
+              >
+                <span class="text-dunhuang-text/45 text-xs"
+                  >本批实付（元）</span
+                >
+                <span class="tabular-nums text-dunhuang-text/70 text-sm">{{
+                  formatMoney(viewingBill.batch_paid)
+                }}</span>
+              </div>
 
               <div class="flex justify-between items-center pt-4 mt-auto">
                 <span class="text-dunhuang-text/40 text-xs">放生日期</span>

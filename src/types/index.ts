@@ -40,8 +40,10 @@ export interface Bill {
   alipay_amount: number | null
   wechat_amount: number | null
   suixi_amount: number | null
-  /** 模板「实付」列的实际付款（一般只写在该批首行，其余为空） */
+  /** 模板「实付」列的实际付款（按批次摊到本行的份额） */
   paid_amount?: number | null
+  /** 本批实付：模板该批的原始实付总额（同批每行相同） */
+  batch_paid?: number | null
   created_at: string
   subtotal: number
   total_amount: number
