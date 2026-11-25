@@ -517,6 +517,7 @@ import { computed, ref, shallowRef, onMounted } from "vue";
 import { useRouter } from "vue-router";
 import * as XLSX from "xlsx";
 import { apiErrorMessage, isAuthError } from "../lib/error";
+import type { ApiError } from "../types";
 import { dateStr, formatMoney, toJin, toJinPrice } from "../lib/utils";
 import { useToast } from "../composables/useToast";
 import { useSpecies } from "../composables/useSpecies";
@@ -1105,12 +1106,18 @@ const confirmImport = async () => {
     if (isAuthError(err)) return;
     console.error(err);
     importProgress.value = "";
+    // 导入服务自己抛的错误（服务未就绪 / 中途停止）没有 response，用原文更好懂
+    const apiErr = err as ApiError;
+    const msg =
+      apiErr?.response || !(err instanceof Error) || !err.message
+        ? apiErrorMessage(apiErr, "导入")
+        : err.message;
     importResult.value = {
       success_count: 0,
       skip_count: 0,
-      errors: [apiErrorMessage(err, "导入")],
+      errors: [msg],
     };
-    toast.error(apiErrorMessage(err, "导入"));
+    toast.error(msg);
   } finally {
     importing.value = false;
   }

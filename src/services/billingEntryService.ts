@@ -1,6 +1,7 @@
 import api from '../api'
 import type { Species, ApiError } from '../types'
 import { splitIntoBatchGroups } from '../lib/importUtils'
+import { apiErrorMessage } from '../lib/error'
 
 export interface ImportRow {
   name_zh: string
@@ -118,6 +119,30 @@ export async function saveImportedRowsBatch(rows: ImportRow[], replace = false):
 
 const CHUNK_SIZE = 25
 
+/**
+ * 等后端真正就绪再开始导入。
+ *
+ * 线上（Vercel Serverless）冷启动时，除 /api/health 外的请求都会被 503 拦下并提示
+ * 「服务器正在启动，请稍后重试」；而写请求明确不能自动重试（避免重复落库），
+ * 所以导入前必须先轮询 /api/health 直到 initialized，别让第一片白白撞上 503。
+ */
+export async function waitForBackendReady(timeoutMs = 60_000): Promise<void> {
+  const deadline = Date.now() + timeoutMs
+  let last = '服务器正在启动'
+  while (Date.now() < deadline) {
+    try {
+      const res = await api.get('/health', { timeout: 8000 })
+      const data = res.data || {}
+      if (data.initialized) return
+      last = data.status === 'error' ? '服务初始化失败（数据库连接异常）' : '服务器正在启动'
+    } catch (err) {
+      last = apiErrorMessage(err as ApiError, '连接服务器')
+    }
+    await new Promise((resolve) => setTimeout(resolve, 1500))
+  }
+  throw new Error(`${last}，已等待 ${Math.round(timeoutMs / 1000)} 秒仍未就绪，请稍后重试`)
+}
+
 /** Chunked batch import: splits large imports into small chunks to avoid serverless timeout.
  *  覆盖模式（默认开启）：首片带上整份文件的全部放生日期，先按日期清空旧数据；其余分片只追加。
  *  这样跨多个日期的导入（如整年模板）也能正确覆盖，不会留下重复数据。
@@ -127,8 +152,8 @@ export async function saveImportedRowsChunked(
   onProgress?: (done: number, total: number) => void,
   options?: { replace?: boolean; expenses?: ImportExpenseRow[] },
 ): Promise<{ success_count: number; skip_count: number; errors: string[] }> {
-  // 快速健康检查，唤醒 serverless 冷启动
-  try { await api.get('/bills?limit=1', { timeout: 15000 }) } catch (_) { /* 忽略 */ }
+  // 冷启动保护：等后端初始化完成再发第一片（写请求不自动重试，撞上 503 会白丢一片）
+  await waitForBackendReady()
 
   const replaceEnabled = options?.replace ?? true
   const expenses = options?.expenses ?? []
@@ -182,7 +207,14 @@ export async function saveImportedRowsChunked(
     } catch (err: unknown) {
       const error = err as ApiError
       const msg = error.response?.data?.detail || error.message || '未知错误'
-      allErrors.push(`分片 ${ci + 1}/${chunks.length} 失败: ${msg}`)
+      // 一片失败就整单停下：首片失败说明「按日期覆盖」根本没执行，继续追加会和旧数据重复；
+      // 中途失败则会留下「一半已覆盖、一半没写」的半套数据。停下并提示重试更安全
+      // （重试仍是覆盖模式，会按日期重新清空后再写）。
+      throw new Error(
+        `导入已停止：第 ${ci + 1}/${chunks.length} 片失败（${msg}）。` +
+          (ci === 0 ? '未写入任何数据。' : `已写入前 ${ci} 片，数据不完整。`) +
+          '请稍后重试。',
+      )
     }
     if (onProgress) onProgress(ci + 1, chunks.length)
   }
