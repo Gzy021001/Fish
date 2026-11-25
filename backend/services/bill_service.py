@@ -10,6 +10,7 @@ import models
 import schemas
 from utils import calculate_bill_amounts, get_bill_or_404, money
 from services.audit_service import record_create, record_update, record_delete, record_replace
+from services.paid_service import apportion_rows
 
 
 def _money_or_none(value):
@@ -566,6 +567,9 @@ def batch_create_bills(data: schemas.BatchImportRequest, user: models.User, db: 
             )
 
     existing_species = {s.name_zh: s for s in db.query(models.Species).filter(models.Species.is_deleted.is_(False)).all()}
+
+    # 模板「实付」只写在该批首行：导入时按小计比例摊到同一批的每一行，列表才不会一片空白
+    apportion_rows(data.rows)
 
     for row in data.rows:
         name_zh = row.name_zh.strip()
