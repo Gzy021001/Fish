@@ -12,6 +12,8 @@ export interface ImportRow {
   unit_jin?: number | null
   /** 模板「实付」列的值（一般只写在该批首行），没有则留空 */
   paid_amount?: number | null
+  /** 本周现场随喜（整周一个值，挂到当天第一张单据上） */
+  weekly_donation?: number | null
 }
 
 /** 车费/船费等表尾支出（不打进物命单据） */

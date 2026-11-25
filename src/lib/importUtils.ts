@@ -210,6 +210,8 @@ export interface ParsedRow {
   unit_jin?: number | null
   /** 模板「实付」列的值（一般只写在该批首行） */
   paid_amount?: number | null
+  /** 本周现场随喜（模板表尾一行，只挂到当天第一张单据上） */
+  weekly_donation?: number | null
   alipay_amount?: number | null
   wechat_amount?: number | null
   suixi_amount?: number | null
@@ -268,7 +270,13 @@ export function extractRowPayments(matrix: any[][]): RowPayment[] {
   return result
 }
 export interface SkippedRow { rowIndex: number; reason: string; rawData: Record<string, unknown> }
-export interface ParseResult { validRows: ParsedRow[]; skippedRows: SkippedRow[]; expenseRows: ParsedExpense[] }
+export interface ParseResult {
+  validRows: ParsedRow[]
+  skippedRows: SkippedRow[]
+  expenseRows: ParsedExpense[]
+  /** 本周现场随喜（模板表尾一行，记到当天第一张单据上） */
+  onsiteDonation?: number | null
+}
 
 /** 表尾费用行：金额写在「实付」列 */
 const EXPENSE_KW = ["车费", "船费"]
@@ -277,6 +285,7 @@ export function parseImportRows(jsonData: Record<string, unknown>[], columns: Re
   const validRows: ParsedRow[] = []
   const skippedRows: SkippedRow[] = []
   const expenseRows: ParsedExpense[] = []
+  let onsiteDonation: number | null = null
   const fallbackYear = fallbackReleaseDate ? parseInt(fallbackReleaseDate.substring(0, 4)) : undefined
 
   for (const [idx, raw] of jsonData.entries()) {
@@ -304,6 +313,17 @@ export function parseImportRows(jsonData: Record<string, unknown>[], columns: Re
       if (!isNaN(amt) && amt > 0) {
         expenseRows.push({ name: expenseKw, amount: amt, release_date: parseExcelDate(rd, fallbackYear) })
       }
+      continue
+    }
+    // 本周现场随喜：模板表尾的一行（值写在总计/实付那一列），记到当天第一张单据上，
+    // 导出时用来还原「本周现场随喜」和「上周余款」链条
+    if (rawName.includes("现场随喜") && !rawName.includes("累计")) {
+      const candidates = [columns.paid_amount, columns.fee_value, columns.weight, columns.unit_price]
+        .filter((key): key is string => !!key)
+        .map((key) => parseFloat(String(raw[key] ?? "")))
+        .filter((v) => !isNaN(v) && v !== 0)
+      const amount = candidates[0]
+      if (amount !== undefined && onsiteDonation === null) onsiteDonation = amount
       continue
     }
     // 汇总行（本周现场随喜/累计等）不是错误，直接忽略，不进入"查看原因"列表
@@ -337,5 +357,5 @@ export function parseImportRows(jsonData: Record<string, unknown>[], columns: Re
       paid_amount: !isNaN(paidNum) && paidNum > 0 ? paidNum : null,
     })
   }
-  return { validRows, skippedRows, expenseRows }
+  return { validRows, skippedRows, expenseRows, onsiteDonation }
 }

@@ -7,9 +7,10 @@
 - 数据行第 4 行起：总计=重量×单价（公式）、实付=总计+服务费（公式，7 列版）
 - 右侧收款区：与数据行同排起固定四行 支付宝 / 微信 / 微信 / 随喜放生（金额取自单据录入金额，
   微信按录入顺序拆两行；没有金额的行留空，不影响导出），末行「本周随喜」=SUM 公式
-- 表尾汇总块：车费（灰底）/船费（黄底）留空行、购生总重量 =SUM、慈悲护生购生实付金额 =SUM（绿底，
-  含车费/船费行）、上周余款（=上个 sheet 本周余款）、本周随喜（=收款区合计）、本周现场随喜（同日第一条录入值）、
+- 表尾汇总块：车费（灰底）/船费（黄底）取当天的车费/船费记录、购生总重量 =SUM、慈悲护生购生实付金额 =SUM（绿底，
+  含车费/船费行）、上周余款（=该日期之前所有周的 随喜-实付 累计）、本周随喜（=收款区合计）、本周现场随喜（同日第一条录入值，无则 0.00）、
   本周随喜累计 =SUM、本周余款 =累计-实付；每行整行 thin 边框 + 模板对应底色
+- 实付列：按「该批实付」写在该批首行（与模板一致），人工录入且没有批次金额时退回「总计+服务费」公式
 - 样式：微软雅黑 10、标题浅棕底 FFF8CBAD、表头灰底 FFD9D9D9、thin 边框、金额列 0.00 数字格式、列宽照模板
 """
 from datetime import date, timedelta
@@ -95,7 +96,8 @@ def _payment_columns(has_fee: bool):
     return 9, 10
 
 
-def _build_sheet(wb: openpyxl.Workbook, d: date, bills: list, carry_in, multi_year: bool = False):
+def _build_sheet(wb: openpyxl.Workbook, d: date, bills: list, carry_in, multi_year: bool = False,
+                 car_amount=None, ship_amount=None, other_amount=None):
     """构建单日 sheet，返回本周余款（供下一 sheet 的「上周余款」使用）。"""
     has_fee = any((b.fee_value is not None and _dec(b.fee_value) > 0) for b in bills)
     end_col = 8 if has_fee else 7  # H(8) / G(7)
@@ -133,7 +135,8 @@ def _build_sheet(wb: openpyxl.Workbook, d: date, bills: list, carry_in, multi_ye
         if i >= 2:  # 重量及之后的数值列表头
             cell.number_format = MONEY_FMT_HEADER
 
-    # 数据行（第 4 行起）：总计/实付用公式，与模板一致
+    # 数据行（第 4 行起）：总计用公式；实付列按「该批实付」写在该批首行（与模板一致）
+    prev_batch = None
     for idx, b in enumerate(bills, start=1):
         row = 3 + idx
         _write(ws, row, 2, idx, align=CENTER_WRAP)
@@ -159,9 +162,18 @@ def _build_sheet(wb: openpyxl.Workbook, d: date, bills: list, carry_in, multi_ye
         if has_fee:
             fee = b.fee_value if b.fee_value is not None else 0
             _write(ws, row, 7, _q(_dec(fee)), align=CENTER, number_format=MONEY_FMT)
-            _write(ws, row, 8, f"=F{row}+G{row}", align=CENTER, number_format=MONEY_FMT)
+
+        # 实付列：同一批只在首行写「该批实付」，其余行留空（与模板的合并观感一致）
+        batch_val = _dec(b.batch_paid) if b.batch_paid is not None else None
+        if batch_val is not None:
+            if batch_val != prev_batch:
+                _write(ws, row, end_col, _q(batch_val), align=CENTER, number_format=MONEY_FMT)
+            prev_batch = batch_val
+        elif b.paid_amount is not None:
+            _write(ws, row, end_col, _q(_dec(b.paid_amount)), align=CENTER, number_format=MONEY_FMT)
         else:
-            _write(ws, row, 7, _q(_dec(b.total_amount)), align=CENTER, number_format=MONEY_FMT)
+            formula = f"=F{row}+G{row}" if has_fee else f"=F{row}"
+            _write(ws, row, end_col, formula, align=CENTER, number_format=MONEY_FMT)
 
     last_data_row = 3 + len(bills)
 
@@ -231,19 +243,51 @@ def _build_sheet(wb: openpyxl.Workbook, d: date, bills: list, carry_in, multi_ye
                 cell.fill = fill
             cell.border = BORDER
 
-    # 车费（灰底）/ 船费（黄底）：金额由使用者在导出文件里手工填写
+    # 车费（灰底）/ 船费（黄底）：取当天的车费/船费记录（模板里这两行金额写在实付列）
     _write(ws, row, 2, seq, align=CENTER_WRAP)
     _write(ws, row, 3, "车费", font=LABEL_FONT, align=CENTER_WRAP)
+    if car_amount is not None:
+        _write(ws, row, end_col, _q(car_amount), align=CENTER_WRAP, number_format=MONEY_FMT_SUM)
     fill_row(row, GREY_FILL)
     seq += 1
     boat_row = row + 1
     _write(ws, boat_row, 2, seq, align=CENTER_WRAP)
     _write(ws, boat_row, 3, "船费", font=LABEL_FONT, align=CENTER_WRAP)
+    if ship_amount is not None:
+        _write(ws, boat_row, end_col, _q(ship_amount), align=CENTER_WRAP, number_format=MONEY_FMT_SUM)
     fill_row(boat_row, YELLOW_FILL)
+
+    # 耗材（冰块/打包袋等，灰底）：只补「没有被任何批次实付覆盖」的那部分，
+    # 否则会和批次实付行重复计数（批次已含耗材份额时不再单列）
+    paid_sum = sum((_dec(b.paid_amount) for b in bills if b.paid_amount is not None), Decimal("0.00"))
+    # 与写入列一致：同一批只在「批次值变化」处计一次（相邻同额的不同批次会被合并，两边同口径）
+    batch_sum = Decimal("0.00")
+    prev_val = None
+    for b in bills:
+        if b.batch_paid is None:
+            continue
+        val = _dec(b.batch_paid)
+        if val != prev_val:
+            batch_sum += val
+        prev_val = val
+    other_row_amount = (other_amount or Decimal("0.00")) - (batch_sum - paid_sum)
+    if other_row_amount < 0:
+        other_row_amount = Decimal("0.00")
+
+    last_expense_row = boat_row
+    if other_row_amount > 0:
+        seq += 1
+        other_row = boat_row + 1
+        _write(ws, other_row, 2, seq, align=CENTER_WRAP)
+        _write(ws, other_row, 3, "耗材", font=LABEL_FONT, align=CENTER_WRAP)
+        _write(ws, other_row, end_col, _q(other_row_amount), align=CENTER_WRAP,
+               number_format=MONEY_FMT_SUM)
+        fill_row(other_row, GREY_FILL)
+        last_expense_row = other_row
 
     # 购生总重量（无底色，标签/重量红字）
     seq += 1
-    weight_sum_row = boat_row + 1
+    weight_sum_row = last_expense_row + 1
     _write(ws, weight_sum_row, 2, seq, align=CENTER_WRAP)
     _write(ws, weight_sum_row, 3, "购生总重量", font=RED_FONT, align=CENTER_WRAP)
     _write(ws, weight_sum_row, 4, f"=SUM(D4:D{last_data_row})", font=RED_FONT,
@@ -256,18 +300,18 @@ def _build_sheet(wb: openpyxl.Workbook, d: date, bills: list, carry_in, multi_ye
     _write(ws, total_row, 2, seq, fill=GREEN_FILL, align=CENTER_WRAP)
     _write(ws, total_row, 3, "慈悲护生购生实付金额", font=LABEL_FONT, fill=GREEN_FILL,
            align=CENTER_WRAP, number_format=MONEY_FMT_SUM)
-    _write(ws, total_row, end_col, f"=SUM({end_letter}4:{end_letter}{boat_row})",
+    _write(ws, total_row, end_col, f"=SUM({end_letter}4:{end_letter}{last_expense_row})",
            fill=GREEN_FILL, align=CENTER_WRAP, number_format=MONEY_FMT_SUM)
     # 先合并再整行上色：openpyxl 合并会把被合并格样式重置，需在合并后补
     ws.merge_cells(f"C{total_row}:F{total_row}")
     fill_row(total_row, GREEN_FILL)
 
-    # 上周余款（米色底，数值格深米色）
+    # 上周余款（米色底，数值格深米色）：= 该日期之前所有周的（随喜 - 实付）累计
     seq += 1
     last_week_row = total_row + 1
     _write(ws, last_week_row, 2, seq, fill=CREAM_FILL, align=CENTER_WRAP)
     _write(ws, last_week_row, 3, "上周余款", font=LABEL_FONT, fill=CREAM_FILL, align=CENTER_WRAP)
-    _write(ws, last_week_row, 6, _q(carry_in) if carry_in is not None else None,
+    _write(ws, last_week_row, 6, _q(carry_in if carry_in is not None else Decimal("0.00")),
            fill=PINK_FILL, align=CENTER_WRAP, number_format=MONEY_FMT_SUM)
     fill_row(last_week_row, CREAM_FILL)
     ws.cell(row=last_week_row, column=6).fill = PINK_FILL
@@ -284,13 +328,12 @@ def _build_sheet(wb: openpyxl.Workbook, d: date, bills: list, carry_in, multi_ye
     onsite_row = week_sum_row + 1
     weekly = next(
         (_dec(b.weekly_donation) for b in bills if b.weekly_donation is not None),
-        None,
+        Decimal("0.00"),
     )
     _write(ws, onsite_row, 2, seq, fill=CREAM_FILL, align=CENTER_WRAP)
     _write(ws, onsite_row, 3, "本周现场随喜", font=LABEL_FONT, fill=CREAM_FILL, align=CENTER_WRAP)
-    if weekly is not None:
-        _write(ws, onsite_row, 6, _q(weekly), fill=CREAM_FILL,
-               align=CENTER_WRAP, number_format=MONEY_FMT_SUM)
+    _write(ws, onsite_row, 6, _q(weekly), fill=CREAM_FILL,
+           align=CENTER_WRAP, number_format=MONEY_FMT_SUM)
     fill_row(onsite_row, CREAM_FILL)
 
     seq += 1
@@ -311,27 +354,103 @@ def _build_sheet(wb: openpyxl.Workbook, d: date, bills: list, carry_in, multi_ye
     fill_row(remain_row, PINK_FILL)
 
     # 本周余款（数值，供下一 sheet「上周余款」链条）
-    actual_total = sum((_dec(b.total_amount) for b in bills), Decimal("0.00"))
+    # 实付口径与表内「慈悲护生购生实付金额」一致：单据实付 + 车费 + 船费
+    actual_total = (
+        sum((_dec(b.paid_amount) for b in bills if b.paid_amount is not None), Decimal("0.00"))
+        + (car_amount or Decimal("0.00"))
+        + (ship_amount or Decimal("0.00"))
+    )
+    if actual_total == 0:
+        # 老数据没有实付字段时退回「总计+服务费」，避免整周余款失真
+        actual_total = sum((_dec(b.total_amount) for b in bills), Decimal("0.00"))
     carry_out = ((carry_in if carry_in is not None else Decimal("0.00"))
                  + entries_total
-                 + (weekly if weekly is not None else Decimal("0.00"))
+                 + weekly
                  - actual_total)
     return carry_out
 
 
-def _build_workbook(bills: list):
+def _expenses_by_date(db: Session, d_from: date, d_to: date) -> dict:
+    """导出范围内的车费/船费：{日期: {"car": Decimal, "ship": Decimal, "other": Decimal}}。"""
+    from sqlalchemy import func
+
+    rows = (
+        db.query(
+            models.WeekExpense.release_date,
+            models.WeekExpense.name,
+            func.sum(models.WeekExpense.amount),
+        )
+        .filter(
+            models.WeekExpense.is_deleted.is_(False),
+            models.WeekExpense.release_date >= d_from,
+            models.WeekExpense.release_date <= d_to,
+        )
+        .group_by(models.WeekExpense.release_date, models.WeekExpense.name)
+        .all()
+    )
+    result: dict = {}
+    for day, name, amount in rows:
+        bucket = result.setdefault(day, {"car": Decimal("0.00"), "ship": Decimal("0.00"),
+                                         "other": Decimal("0.00")})
+        value = _dec(amount).quantize(CENT, rounding=ROUND_HALF_UP)
+        if name == "车费":
+            bucket["car"] += value
+        elif name == "船费":
+            bucket["ship"] += value
+        else:
+            bucket["other"] += value
+    return result
+
+
+def _carry_before(db: Session, day: date) -> Decimal:
+    """该日期之前所有周的余款累计 =（随喜 + 现场随喜）-（单据实付 + 车船费）。"""
+    from sqlalchemy import func
+
+    suixi, wechat, suixi_donation, weekly, paid = (
+        db.query(
+            func.coalesce(func.sum(models.Bill.alipay_amount), 0),
+            func.coalesce(func.sum(models.Bill.wechat_amount), 0),
+            func.coalesce(func.sum(models.Bill.suixi_amount), 0),
+            func.coalesce(func.sum(models.Bill.weekly_donation), 0),
+            func.coalesce(func.sum(models.Bill.paid_amount), 0),
+        )
+        .filter(
+            models.Bill.is_deleted.is_(False),
+            models.Bill.release_date < day,
+        )
+        .first()
+    )
+    expense = (
+        db.query(func.coalesce(func.sum(models.WeekExpense.amount), 0))
+        .filter(
+            models.WeekExpense.is_deleted.is_(False),
+            models.WeekExpense.release_date < day,
+        )
+        .scalar()
+    )
+    total = (_dec(suixi) + _dec(wechat) + _dec(suixi_donation) + _dec(weekly)
+             - _dec(paid) - _dec(expense))
+    return total.quantize(CENT, rounding=ROUND_HALF_UP)
+
+
+def _build_workbook(db: Session, bills: list):
     groups: dict = {}
     for b in bills:
         groups.setdefault(b.release_date, []).append(b)
 
     dates = sorted(groups.keys())
     multi_year = len({d.year for d in dates}) > 1
+    expenses = _expenses_by_date(db, dates[0], dates[-1])
 
     wb = openpyxl.Workbook()
     wb.remove(wb.active)
-    carry = None
     for d in dates:
-        carry = _build_sheet(wb, d, groups[d], carry, multi_year=multi_year)
+        day_expense = expenses.get(d) or {}
+        _build_sheet(
+            wb, d, groups[d], _carry_before(db, d), multi_year=multi_year,
+            car_amount=day_expense.get("car"), ship_amount=day_expense.get("ship"),
+            other_amount=day_expense.get("other"),
+        )
 
     content = BytesIO()
     wb.save(content)
@@ -370,7 +489,7 @@ def build_bills_export(db: Session, date_from: str, date_to: str):
     if not bills:
         raise HTTPException(status_code=404, detail="该日期范围内没有单据")
 
-    return _build_workbook(bills)
+    return _build_workbook(db, bills)
 
 
 def build_bills_export_by_ids(db: Session, bill_ids: list):
@@ -399,7 +518,7 @@ def build_bills_export_by_ids(db: Session, bill_ids: list):
             detail=f"选中的单据中有 {len(missing_date)} 条缺少放生日期，无法按模板导出",
         )
 
-    return _build_workbook(bills)
+    return _build_workbook(db, bills)
 
 
 def build_bills_export_all(db: Session):
@@ -418,7 +537,7 @@ def build_bills_export_all(db: Session):
     if not bills:
         raise HTTPException(status_code=404, detail="暂无单据可导出")
 
-    return _build_workbook(bills)
+    return _build_workbook(db, bills)
 
 
 def build_species_export(db: Session, species_ids: list | None = None):

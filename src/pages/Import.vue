@@ -987,6 +987,10 @@ const processFile = (f: File) => {
           }
         });
 
+        // 本周现场随喜（整周一个值）：挂到当天第一张单据上，导出「上周余款」链条要用
+        if (result.onsiteDonation != null && result.validRows.length > 0) {
+          result.validRows[0].weekly_donation = result.onsiteDonation;
+        }
         allValid.push(...result.validRows);
         allSkipped.push(...result.skippedRows);
         allExpenses.push(...(result.expenseRows ?? []));
