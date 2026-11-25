@@ -58,6 +58,7 @@ export function useBillTable(speciesList: Ref<Species[]>) {
   const tableSumTotal = ref(0)
   // 实付口径：单据 paid_amount 合计 + 车费/船费合计（对齐模板「慈悲护生购生实付金额」）
   const tableSumPaid = ref(0)
+  const exporting = ref(false)
   const tableSumExpense = ref(0)
   const tableSumExpenseCar = ref(0)
   const tableSumExpenseShip = ref(0)
@@ -191,6 +192,8 @@ export function useBillTable(speciesList: Ref<Species[]>) {
   }
 
   const exportBills = async () => {
+    if (exporting.value) return
+    exporting.value = true
     // 有勾选 -> 只导勾选的单据；没勾选 -> 全量导出（不再要求先设置日期范围）
     const params: Record<string, string> = {}
     if (selectedBillIds.value.length > 0) {
@@ -239,10 +242,14 @@ export function useBillTable(speciesList: Ref<Species[]>) {
       anchor.click()
       anchor.remove()
       URL.revokeObjectURL(url)
-      toast.success('导出完成')
+      toast.success(
+        `导出完成：${filename}（若浏览器拦截了下载，请点地址栏右侧的下载图标允许）`,
+      )
     } catch (error: unknown) {
       if (isAuthError(error as ApiError)) return
       toast.error(apiErrorMessage(error as ApiError, '导出明细表'))
+    } finally {
+      exporting.value = false
     }
   }
 
@@ -321,6 +328,7 @@ export function useBillTable(speciesList: Ref<Species[]>) {
     refetchFromFirstPage,
     clearDateFilter,
     exportBills,
+    exporting,
     confirmDeleteBill,
     confirmBatchDeleteBills,
     executeDeleteBill,

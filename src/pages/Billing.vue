@@ -728,9 +728,14 @@
               v-if="selectedBillIds.length > 0"
               @click="exportBills"
               type="button"
-              class="h-10 px-5 rounded-lg text-sm font-semibold transition-all duration-200 text-dunhuang-blue bg-dunhuang-blue/8 border border-dunhuang-blue/30 hover:bg-dunhuang-blue/15 hover:border-dunhuang-blue/50"
+              :disabled="exporting"
+              class="h-10 px-5 rounded-lg text-sm font-semibold transition-all duration-200 text-dunhuang-blue bg-dunhuang-blue/8 border border-dunhuang-blue/30 hover:bg-dunhuang-blue/15 hover:border-dunhuang-blue/50 disabled:opacity-60 disabled:cursor-not-allowed"
             >
-              批量导出 ({{ selectedBillIds.length }})
+              {{
+                exporting
+                  ? "导出中…"
+                  : `批量导出 (${selectedBillIds.length})`
+              }}
             </button>
 
             <!-- 导入 -->
@@ -747,9 +752,30 @@
             <button
               @click="exportBills"
               type="button"
-              class="h-10 px-5 rounded-lg text-sm font-medium transition-all duration-200 text-dunhuang-blue/80 hover:text-dunhuang-blue hover:bg-dunhuang-blue/6 border border-dunhuang-blue/15 hover:border-dunhuang-blue/35"
+              :disabled="exporting"
+              class="h-10 px-5 rounded-lg text-sm font-medium transition-all duration-200 text-dunhuang-blue/80 hover:text-dunhuang-blue hover:bg-dunhuang-blue/6 border border-dunhuang-blue/15 hover:border-dunhuang-blue/35 disabled:opacity-60 disabled:cursor-not-allowed flex items-center gap-1.5"
             >
-              导出
+              <svg
+                v-if="exporting"
+                class="w-3.5 h-3.5 animate-spin"
+                fill="none"
+                viewBox="0 0 24 24"
+              >
+                <circle
+                  class="opacity-25"
+                  cx="12"
+                  cy="12"
+                  r="10"
+                  stroke="currentColor"
+                  stroke-width="4"
+                />
+                <path
+                  class="opacity-75"
+                  fill="currentColor"
+                  d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"
+                />
+              </svg>
+              {{ exporting ? "导出中…" : "导出" }}
             </button>
 
             <!-- 新增（仅管理员可写，其他账号只读） -->
@@ -1382,6 +1408,7 @@ const {
   refetchFromFirstPage,
   clearDateFilter,
   exportBills,
+  exporting,
   confirmDeleteBill,
   confirmBatchDeleteBills,
   executeDeleteBill,
