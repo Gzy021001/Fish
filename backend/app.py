@@ -129,10 +129,6 @@ def create_app() -> FastAPI:
     app.include_router(species.router)
     app.include_router(bills.router)
     app.include_router(logs.router)
-    # 一次性维护接口（管理员）：线上补列/补表用，补完即删
-    from routers import maintenance
-
-    app.include_router(maintenance.router)
     app.include_router(stats.router)
 
     @app.middleware("http")
