@@ -1189,14 +1189,6 @@
                 }}</span>
               </div>
               <div
-                class="flex justify-between items-center py-2.5 border-b border-dunhuang-yellow/10"
-              >
-                <span class="text-dunhuang-text/50 text-sm">随喜类型</span>
-                <span class="text-dunhuang-text/70 text-sm">{{
-                  viewingBill?.payment_method || "—"
-                }}</span>
-              </div>
-              <div
                 v-if="viewingBill?.alipay_amount != null"
                 class="flex justify-between items-center py-2.5 border-b border-dunhuang-yellow/10"
               >
@@ -1223,17 +1215,6 @@
                   formatMoney(viewingBill.suixi_amount)
                 }}</span>
               </div>
-              <div
-                class="flex justify-between items-center py-2.5 border-b border-dunhuang-yellow/10"
-              >
-                <span class="text-dunhuang-text/50 text-sm">本周现场随喜（元）</span>
-                <span class="tabular-nums text-dunhuang-text/70 text-sm">{{
-                  viewingBill?.weekly_donation != null
-                    ? formatMoney(viewingBill.weekly_donation)
-                    : "—"
-                }}</span>
-              </div>
-
               <!-- 实付金额——加背景强调 -->
               <div
                 class="flex justify-between items-center py-3 bg-dunhuang-red/5 -mx-2 px-2 rounded-lg border border-dunhuang-red/10"
