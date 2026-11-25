@@ -87,15 +87,14 @@
             :key="row.release_date ?? `row-${index}`"
           >
             <div
-              class="grid suixi-grid text-sm transition-all duration-200 border-b border-dunhuang-yellow/15"
+              class="grid suixi-grid text-sm transition-colors duration-200 border-b border-dunhuang-yellow/15 select-none outline-none"
               :class="
                 expandedKeys.has(rowKey(row, index))
-                  ? 'bg-[#fdf7ea] shadow-[inset_3px_0_0_rgba(191,160,95,0.75)]'
+                  ? 'bg-[#fdf7ea]'
                   : row.expense_total
                     ? 'cursor-pointer hover:bg-[#fbf6ec]'
                     : 'hover:bg-[#fbf6ec]'
               "
-              :title="row.expense_total ? '点击展开/收起当天费用明细' : ''"
               @click="row.expense_total && toggleExpanded(rowKey(row, index))"
             >
               <div
@@ -161,17 +160,11 @@
             <!-- 车费/船费/耗材：点日期行展开，缩进 + 色点标识 -->
             <template v-if="expandedKeys.has(rowKey(row, index))">
               <div
-                v-for="(item, subIndex) in dayExpenses(row)"
+                v-for="item in dayExpenses(row)"
                 :key="`${rowKey(row, index)}-${item.label}`"
-                class="grid suixi-grid text-xs bg-[#fdfaf2] border-b border-dunhuang-yellow/10 last-of-type:border-dunhuang-yellow/25"
+                class="grid suixi-grid text-xs bg-[#fdfaf2] border-b border-dunhuang-yellow/10 select-none"
               >
-                <div
-                  class="flex items-center justify-center"
-                  :class="subIndex === 0 ? 'border-l-[3px]' : 'border-l-[3px]'"
-                  :style="{ borderLeftColor: 'rgba(191,160,95,0.35)' }"
-                >
-                  <span class="w-1 h-1 rounded-full bg-dunhuang-yellow/50"></span>
-                </div>
+                <div></div>
                 <div class="px-4 py-1.5 pl-5 flex items-center gap-1.5">
                   <span
                     class="w-1.5 h-1.5 rounded-full shrink-0"
