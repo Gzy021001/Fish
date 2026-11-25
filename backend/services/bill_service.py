@@ -616,6 +616,7 @@ def batch_create_bills(data: schemas.BatchImportRequest, user: models.User, db: 
             wechat_amount=row.wechat_amount,
             suixi_amount=row.suixi_amount,
             paid_amount=row.paid_amount,
+            batch_paid=row.batch_paid,
         )
         create_bill(bill_create, user, db, commit=False, allow_zero_weight=True)
         affected_species_ids.add(species.id)
