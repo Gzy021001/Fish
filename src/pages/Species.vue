@@ -82,7 +82,7 @@
             放生日期
           </div>
           <div class="px-3 flex items-center justify-center whitespace-nowrap">
-            单价（元）
+            单价（元/斤）
           </div>
           <div class="px-3 flex items-center justify-center whitespace-nowrap">
             单位
@@ -168,7 +168,7 @@
                 :title="authStore.isAdmin ? '点击修改单价' : ''"
                 @click="startEditPrice(sp)"
               >
-                {{ formatMoney(sp.default_price) }}
+                {{ formatMoney(toJinPrice(sp.default_price)) }}
               </button>
             </div>
             <div
@@ -388,7 +388,7 @@
                 <div>
                   <label
                     class="block text-sm font-medium text-dunhuang-text mb-2"
-                    >单价（元）</label
+                    >单价（元/斤）</label
                   >
                   <div class="relative">
                     <input
@@ -645,7 +645,7 @@
                   <div>
                     <label
                       class="block text-xs font-medium text-dunhuang-text/60 mb-1.5"
-                      >单价（元）</label
+                      >单价（元/斤）</label
                     >
                     <input
                       v-model="editForm.default_price"
@@ -667,7 +667,7 @@
                     <input
                       v-model="editForm.default_unit"
                       type="text"
-                      placeholder="公斤 / 只"
+                      placeholder="斤 / 只"
                       class="w-full bg-dunhuang-bg border border-dunhuang-yellow/50 rounded-lg py-2 px-3 text-sm outline-none focus:ring-0 focus:border-dunhuang-blue/50"
                     />
                   </div>
@@ -754,7 +754,13 @@
 import { onMounted, onBeforeUnmount, ref, shallowRef, computed, watch, nextTick } from "vue";
 import api from "../api";
 import { apiErrorMessage, isAuthError } from "../lib/error";
-import { formatMoney, compressImage, dateStr } from "../lib/utils";
+import {
+  formatMoney,
+  compressImage,
+  dateStr,
+  toJinPrice,
+  toPerKgPrice,
+} from "../lib/utils";
 import { useToast } from "../composables/useToast";
 import { useSpecies } from "../composables/useSpecies";
 import ConfirmDialog from "../components/ConfirmDialog.vue";
@@ -835,7 +841,7 @@ const savingPrice = ref(false);
 const startEditPrice = (sp: SpeciesItem) => {
   if (!authStore.isAdmin) return;
   editingPriceId.value = sp.id;
-  editingPrice.value = Number(sp.default_price ?? 0).toFixed(2);
+  editingPrice.value = toJinPrice(sp.default_price ?? 0).toFixed(2);
   nextTick(() => {
     const el = document.querySelector<HTMLInputElement>(".price-edit-input");
     el?.focus();
@@ -855,7 +861,7 @@ const editFormError = ref("");
 const editTarget = ref<SpeciesItem | null>(null);
 const editForm = ref({
   name_zh: "",
-  default_unit: "公斤",
+  default_unit: "斤",
   default_price: "0.00",
   supplier_note: "",
 });
@@ -873,8 +879,8 @@ const openEditModal = (sp: SpeciesItem) => {
   editTarget.value = sp;
   editForm.value = {
     name_zh: sp.name_zh,
-    default_unit: sp.default_unit || "公斤",
-    default_price: Number(sp.default_price ?? 0).toFixed(2),
+    default_unit: sp.default_unit || "斤",
+    default_price: toJinPrice(sp.default_price ?? 0).toFixed(2),
     supplier_note: sp.supplier_note || "",
   };
   editPhotoFile.value = null;
@@ -939,7 +945,7 @@ const saveEditSpecies = async () => {
     await api.put(`/species/${sp.id}`, {
       name_zh: name,
       default_unit: unit,
-      default_price: price,
+      default_price: toPerKgPrice(price),
       release_date: sp.release_date || sp.last_release_date || todayIso(),
       supplier_name: sp.supplier_name ?? null,
       supplier_note: editForm.value.supplier_note.trim() || null,
@@ -1017,7 +1023,7 @@ const savePrice = async (sp: SpeciesItem) => {
     errorMsg.value = "单价必须大于0";
     return;
   }
-  if (Math.abs(value - Number(sp.default_price ?? 0)) < 0.005) {
+  if (Math.abs(value - toJinPrice(sp.default_price ?? 0)) < 0.005) {
     cancelEditPrice();
     return;
   }
@@ -1027,7 +1033,7 @@ const savePrice = async (sp: SpeciesItem) => {
     await api.put(`/species/${sp.id}`, {
       name_zh: sp.name_zh,
       default_unit: sp.default_unit,
-      default_price: value,
+      default_price: toPerKgPrice(value),
       release_date: sp.release_date ?? null,
       supplier_name: sp.supplier_name ?? null,
       supplier_note: sp.supplier_note ?? null,
@@ -1116,7 +1122,7 @@ const saving = ref(false);
 
 const newSp = ref({
   name_zh: "",
-  default_unit: "公斤",
+  default_unit: "斤",
   default_price: "0.00",
   image_url: null as string | null,
   release_date: "",
@@ -1126,7 +1132,7 @@ const selectedFile = ref<File | null>(null);
 const previewUrl = ref<string | null>(null);
 const fileInputRef = ref<HTMLInputElement | null>(null);
 
-const unitOptions = ["公斤", "只", "个"];
+const unitOptions = ["斤", "只", "个"];
 
 const triggerFileInput = () => {
   fileInputRef.value?.click();
@@ -1176,7 +1182,7 @@ const closeAddModal = () => {
   showAddModal.value = false;
   newSp.value = {
     name_zh: "",
-    default_unit: "公斤",
+    default_unit: "斤",
     default_price: "0.00",
     image_url: null,
     release_date: "",
@@ -1260,7 +1266,7 @@ const addSpecies = async () => {
     // 1. Create species first
     const res = await api.post("/species", {
       ...newSp.value,
-      default_price: Number(newSp.value.default_price),
+      default_price: toPerKgPrice(newSp.value.default_price),
     });
     const createdSpecies = res.data;
 

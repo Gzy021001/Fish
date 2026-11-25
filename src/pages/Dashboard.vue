@@ -232,9 +232,9 @@
           <div class="text-xs text-gray-500 mb-1.5 font-medium">总重量</div>
           <div class="flex items-baseline gap-1.5">
             <span class="text-2xl font-bold text-gray-800 tabular-nums">{{
-              formatPrice(grandTotals.weight)
+              formatPrice(toJin(grandTotals.weight))
             }}</span>
-            <span class="text-sm text-gray-500">公斤</span>
+            <span class="text-sm text-gray-500">斤</span>
           </div>
         </div>
         <div
@@ -262,9 +262,9 @@
           </div>
           <div class="flex items-baseline gap-1.5">
             <span class="text-xl font-bold text-gray-800 tabular-nums">{{
-              formatPrice(halfYearStats.h1Weight)
+              formatPrice(toJin(halfYearStats.h1Weight))
             }}</span>
-            <span class="text-xs text-gray-500">公斤</span>
+            <span class="text-xs text-gray-500">斤</span>
           </div>
           <div class="flex items-baseline gap-1 mt-0.5">
             <span class="text-sm font-bold text-dunhuang-red tabular-nums">{{
@@ -281,9 +281,9 @@
           </div>
           <div class="flex items-baseline gap-1.5">
             <span class="text-xl font-bold text-gray-800 tabular-nums">{{
-              formatPrice(halfYearStats.h2Weight)
+              formatPrice(toJin(halfYearStats.h2Weight))
             }}</span>
-            <span class="text-xs text-gray-500">公斤</span>
+            <span class="text-xs text-gray-500">斤</span>
           </div>
           <div class="flex items-baseline gap-1 mt-0.5">
             <span class="text-sm font-bold text-dunhuang-red tabular-nums">{{
@@ -411,6 +411,8 @@ import {
   formatMoney,
   getSpeciesCategory,
   dayLabel,
+  toJin,
+  toJinPrice,
 } from "../lib/utils";
 
 echarts.use([
@@ -562,7 +564,7 @@ const priceFluctuationData = computed(() => {
     if (isPackagingItem(sp.name_zh)) continue;
 
     const prices = dataArray
-      .map((item: any) => Number(item.avg_price))
+      .map((item: any) => toJinPrice(item.avg_price))
       .filter((p: number) => !isNaN(p));
     if (prices.length === 0) continue;
 
@@ -624,7 +626,7 @@ const priceTrendGrouped = computed(() => {
     if (sorted.length < 2) continue;
 
     const dates = sorted.map((i: any) => i.date);
-    const prices = sorted.map((i: any) => Number(i.avg_price));
+    const prices = sorted.map((i: any) => toJinPrice(i.avg_price));
 
     const minPrice = Number(Math.min(...prices).toFixed(2));
     const maxPrice = Number(Math.max(...prices).toFixed(2));
@@ -1263,7 +1265,7 @@ const renderBillsChart = async () => {
       itemHeight: 4,
       // 紧凑布局去掉坐标轴名称，单位改由图例表达，省下两行纵向空间
       formatter: compact
-        ? (name: string) => (name === "总重量" ? "重量(公斤)" : "金额(元)")
+        ? (name: string) => (name === "总重量" ? "重量(斤)" : "金额(元)")
         : undefined,
     },
     tooltip: {
@@ -1287,7 +1289,7 @@ const renderBillsChart = async () => {
         const amount = params.find((p: any) => p.seriesName === "总金额");
         let html = `<div style="font-weight:bold;margin-bottom:5px;color:#374151;">${params[0].axisValue}</div>`;
         if (weight && weight.value != null) {
-          html += `<div>${weight.marker} 总重量：<b>${formatPrice(weight.value)}</b> 公斤</div>`;
+          html += `<div>${weight.marker} 总重量：<b>${formatPrice(toJin(weight.value))}</b> 斤</div>`;
         }
         if (amount && amount.value != null) {
           html += `<div>${amount.marker} 总金额：<b>${fmtYuan(amount.value)}</b></div>`;
@@ -1318,13 +1320,13 @@ const renderBillsChart = async () => {
     yAxis: [
       {
         type: "value",
-        name: compact ? "" : "总重量 (公斤)",
+        name: compact ? "" : "总重量 (斤)",
         boundaryGap: [0, 0.08],
         nameTextStyle: { color: "#9ca3af", fontSize: 10 },
         axisLine: { show: true, lineStyle: { color: "#d1d5db" } },
         axisLabel: {
           color: "#9ca3af",
-          formatter: (v: number) => v.toFixed(1),
+          formatter: (v: number) => toJin(v).toFixed(1),
           fontSize: compact ? 9 : 10,
         },
         splitLine: {
@@ -1591,9 +1593,9 @@ const renderSpeciesWeightChart = async () => {
         let total = 0;
         for (const p of items) {
           total += Number(p.value);
-          html += `<div style="display:flex;justify-content:space-between;gap:${compact ? 12 : 24}px;"><span>${p.marker} ${p.seriesName}</span><b style="color:#374151;">${formatPrice(p.value)} 公斤</b></div>`;
+          html += `<div style="display:flex;justify-content:space-between;gap:${compact ? 12 : 24}px;"><span>${p.marker} ${p.seriesName}</span><b style="color:#374151;">${formatPrice(toJin(p.value))} 斤</b></div>`;
         }
-        html += `<div style="margin-top:4px;padding-top:4px;border-top:1px solid #e5e7eb;display:flex;justify-content:space-between;"><span style="color:#9ca3af;">合计</span><b style="color:#374151;">${formatPrice(Number(total.toFixed(2)))} 公斤</b></div>`;
+        html += `<div style="margin-top:4px;padding-top:4px;border-top:1px solid #e5e7eb;display:flex;justify-content:space-between;"><span style="color:#9ca3af;">合计</span><b style="color:#374151;">${formatPrice(toJin(Number(total.toFixed(2))))} 斤</b></div>`;
         return html;
       },
     },
@@ -1620,13 +1622,13 @@ const renderSpeciesWeightChart = async () => {
     yAxis: {
       type: "value",
       scale: true,
-      name: "重量 (公斤)",
+      name: "重量 (斤)",
       nameGap: compact ? 6 : 15,
       nameTextStyle: { color: "#9ca3af", fontSize: compact ? 9 : 10 },
       axisLine: { show: true, lineStyle: { color: "#d1d5db" } },
       axisLabel: {
         color: "#9ca3af",
-        formatter: (v: number) => v.toFixed(1),
+        formatter: (v: number) => toJin(v).toFixed(1),
         fontSize: compact ? 9 : 10,
       },
       splitLine: {
@@ -1714,7 +1716,7 @@ const renderPieChart = async () => {
     textStyle: { color: "#374151", fontSize: tooltipFs },
     formatter: (params: any) => {
       return `<div style="font-size:${tooltipFs + 1}px;font-weight:bold;margin-bottom:5px;">${params.marker} ${params.name}</div>
-                <div style="color:#6b7280;">放生重量：<b style="color:#374151;">${formatPrice(params.value)}</b> 公斤</div>
+                <div style="color:#6b7280;">放生重量：<b style="color:#374151;">${formatPrice(toJin(params.value))}</b> 斤</div>
                 <div style="color:#6b7280;">占比：<b style="color:#374151;">${pctOf(params.value)}%</b></div>`;
     },
   };

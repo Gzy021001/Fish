@@ -515,7 +515,7 @@ def batch_create_bills(data: schemas.BatchImportRequest, user: models.User, db: 
                     species = models.Species(
                         name_zh=name_zh,
                         default_price=row.unit_price,
-                        default_unit="公斤",
+                        default_unit="斤",
                         release_date=row.release_date,
                     )
                     db.add(species)

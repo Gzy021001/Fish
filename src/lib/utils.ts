@@ -25,6 +25,32 @@ export function formatMoney(value: number | undefined | null): string {
   })
 }
 
+// ============================================================
+//  单位换算：系统内部存「公斤 / 元每公斤」，界面与模板统一按「斤 / 元每斤」展示
+//  1 公斤 = 2 斤；总计 = 重量 × 单价，换算前后金额不变
+// ============================================================
+export const KG_TO_JIN = 2
+
+/** 公斤 -> 斤（用于展示） */
+export function toJin(kg: number | string | null | undefined): number {
+  return Number(kg ?? 0) * KG_TO_JIN
+}
+
+/** 元/公斤 -> 元/斤（用于展示） */
+export function toJinPrice(perKg: number | string | null | undefined): number {
+  return Number(perKg ?? 0) / KG_TO_JIN
+}
+
+/** 斤 -> 公斤（用于提交） */
+export function toKg(jin: number | string | null | undefined): number {
+  return Number(jin ?? 0) / KG_TO_JIN
+}
+
+/** 元/斤 -> 元/公斤（用于提交） */
+export function toPerKgPrice(perJin: number | string | null | undefined): number {
+  return Number(perJin ?? 0) * KG_TO_JIN
+}
+
 /**
  * 解析 JWT payload（兼容 base64url 无 padding 的情况）。
  * 仅用于读取服务端签发的展示字段（sub/role/mcp），不校验签名——校验在后端完成。

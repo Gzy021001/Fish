@@ -1,6 +1,7 @@
 import { ref, computed, type Ref } from 'vue'
 import api from '../api'
 import { apiErrorMessage, isAuthError } from '../lib/error'
+import { toJin, toJinPrice, toKg, toPerKgPrice } from '../lib/utils'
 import { saveEntry } from '../services/billingEntryService'
 import { useToast } from './useToast'
 import type { Species, Bill, ApiError } from '../types'
@@ -74,12 +75,13 @@ export function useBillForm(speciesList: Ref<Species[]>) {
     )
   }
 
+  // 表单里重量/单价一律按「斤 / 元每斤」录入与展示，提交时再换算回内部的公斤口径
   const newEntryDefaults = (speciesId: number): BillEntry => {
     const sp = speciesMap.value.get(speciesId)
     return {
       species_id: speciesId,
       weight: '0.00',
-      unit_price: (sp?.default_price ?? 0).toFixed(2),
+      unit_price: toJinPrice(sp?.default_price).toFixed(2),
       fee_value: '0.00',
       release_date: '',
     }
@@ -176,9 +178,9 @@ export function useBillForm(speciesList: Ref<Species[]>) {
       const payload = {
         ...bill.value,
         species_id: Number(bill.value.species_id),
-        weight: Number(bill.value.weight),
+        weight: toKg(bill.value.weight),
         fee_value: Number(bill.value.fee_value),
-        unit_price: Number(bill.value.unit_price),
+        unit_price: toPerKgPrice(bill.value.unit_price),
         status: 'DRAFT',
         release_date: bill.value.release_date || null,
         payment_method: bill.value.payment_method || null,
@@ -232,8 +234,8 @@ export function useBillForm(speciesList: Ref<Species[]>) {
       for (const entry of validEntries) {
         const data = await saveEntry({
           ...entry,
-          weight: Number(entry.weight),
-          unit_price: Number(entry.unit_price),
+          weight: toKg(entry.weight),
+          unit_price: toPerKgPrice(entry.unit_price),
           fee_value: Number(entry.fee_value),
           release_date: entry.release_date || bill.value.release_date,
           payment_method: bill.value.payment_method || null,
@@ -286,8 +288,8 @@ export function useBillForm(speciesList: Ref<Species[]>) {
     bill.value = {
       id: b.id,
       species_id: String(b.species_id),
-      weight: Number(b.weight ?? 0).toFixed(2),
-      unit_price: Number(b.unit_price ?? 0).toFixed(2),
+      weight: toJin(b.weight).toFixed(2),
+      unit_price: toJinPrice(b.unit_price).toFixed(2),
       currency: b.currency,
       fee_type: 'FIXED',
       fee_value:

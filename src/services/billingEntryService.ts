@@ -39,7 +39,7 @@ export async function ensureSpecies(
   const spRes = await api.post('/species', {
     name_zh: nameZh,
     default_price: defaultPrice,
-    default_unit: '公斤',
+    default_unit: '斤',
     release_date: releaseDate || new Date().toLocaleDateString('sv-SE'),
   })
   const species = spRes.data as Species

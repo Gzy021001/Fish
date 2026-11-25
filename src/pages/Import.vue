@@ -261,8 +261,8 @@
                   <tr class="bg-[#fbf6ec] text-dunhuang-blue">
                     <th class="px-3 py-2.5 border-b border-dunhuang-yellow/40 text-center text-xs font-semibold">#</th>
                     <th class="px-4 py-2.5 border-b border-dunhuang-yellow/40 text-left text-xs font-semibold">品种</th>
-                    <th class="px-4 py-2.5 border-b border-dunhuang-yellow/40 text-right text-xs font-semibold">重量（公斤）</th>
-                    <th class="px-4 py-2.5 border-b border-dunhuang-yellow/40 text-right text-xs font-semibold">单价（元/公斤）</th>
+                    <th class="px-4 py-2.5 border-b border-dunhuang-yellow/40 text-right text-xs font-semibold">重量（斤）</th>
+                    <th class="px-4 py-2.5 border-b border-dunhuang-yellow/40 text-right text-xs font-semibold">单价（元/斤）</th>
                     <th class="px-4 py-2.5 border-b border-dunhuang-yellow/40 text-center text-xs font-semibold">放生日期</th>
                   </tr>
                 </thead>
@@ -289,10 +289,10 @@
                       </span>
                     </td>
                     <td class="px-4 py-2.5 text-right text-sm tabular-nums text-dunhuang-text/80 border-b border-dunhuang-yellow/10">
-                      {{ formatMoney(row.weight) }}
+                      {{ formatMoney(toJin(row.weight)) }}
                     </td>
                     <td class="px-4 py-2.5 text-right text-sm tabular-nums text-dunhuang-text/80 border-b border-dunhuang-yellow/10">
-                      {{ formatMoney(row.unit_price) }}
+                      {{ formatMoney(toJinPrice(row.unit_price)) }}
                     </td>
                     <td class="px-4 py-2.5 text-center text-sm text-dunhuang-text/60 whitespace-nowrap border-b border-dunhuang-yellow/10">
                       {{ dateStr(row.release_date) || "-" }}
@@ -517,7 +517,7 @@ import { computed, ref, shallowRef, onMounted } from "vue";
 import { useRouter } from "vue-router";
 import * as XLSX from "xlsx";
 import { apiErrorMessage, isAuthError } from "../lib/error";
-import { dateStr, formatMoney } from "../lib/utils";
+import { dateStr, formatMoney, toJin, toJinPrice } from "../lib/utils";
 import { useToast } from "../composables/useToast";
 import { useSpecies } from "../composables/useSpecies";
 import { saveImportedRowsBatch, saveImportedRowsChunked } from "../services/billingEntryService";
@@ -704,8 +704,8 @@ const todayLabel = computed(() => {
 
 const summaryItems = computed(() => [
   { label: "品种", value: `${previewStats.value.species} 个` },
-  { label: "重量", value: `${formatMoney(previewStats.value.weight)} 公斤` },
-  { label: "单价", value: `平均 ${formatMoney(previewStats.value.avgPrice)} 元/公斤` },
+  { label: "重量", value: `${formatMoney(toJin(previewStats.value.weight))} 斤` },
+  { label: "单价", value: `平均 ${formatMoney(toJinPrice(previewStats.value.avgPrice))} 元/斤` },
   { label: "服务费", value: `${formatMoney(previewStats.value.fee)} 元` },
   { label: "日期", value: `${todayLabel.value}（导入当天）` },
 ]);

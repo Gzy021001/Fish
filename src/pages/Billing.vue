@@ -83,7 +83,7 @@
                     参考价
                     <span
                       class="text-dunhuang-red font-mono font-bold text-base"
-                      >{{ formatMoney(editingSpecies.default_price) }}</span
+                      >{{ formatMoney(toJinPrice(editingSpecies.default_price)) }}</span
                     >
                     元/{{ editingSpecies.default_unit }}
                   </div>
@@ -97,7 +97,7 @@
                 <div>
                   <label
                     class="block text-sm font-medium text-dunhuang-text mb-2"
-                    >{{ t("billing.unit_price") }}（元/公斤）</label
+                    >{{ t("billing.unit_price") }}（元/斤）</label
                   >
                   <input
                     type="text"
@@ -111,7 +111,7 @@
                 <div>
                   <label
                     class="block text-sm font-medium text-dunhuang-text mb-2"
-                    >重量 ({{ editingSpecies?.default_unit ?? "公斤" }})</label
+                    >重量 ({{ editingSpecies?.default_unit ?? "斤" }})</label
                   >
                   <input
                     type="text"
@@ -322,7 +322,7 @@
                               {{ sp.name_zh }}
                             </h4>
                             <div class="text-xs text-dunhuang-text/50 mt-0.5">
-                              {{ formatMoney(sp.default_price) }}（元/公斤）
+                              {{ formatMoney(toJinPrice(sp.default_price)) }}（元/斤）
                             </div>
                           </div>
                         </div>
@@ -488,7 +488,7 @@
                             <span class="text-dunhuang-red font-mono">{{
                               (+entry.unit_price || 0).toFixed(2)
                             }}</span>
-                            元/公斤
+                            元/斤
                           </span>
                         </div>
                         <button
@@ -536,7 +536,7 @@
                           <label
                             class="block text-xs font-medium text-dunhuang-text/60 mb-1 truncate"
                             >总重 ({{
-                              getEntryUnit(entry.species_id) || "公斤"
+                              getEntryUnit(entry.species_id) || "斤"
                             }})</label
                           >
                           <div class="relative">
@@ -1374,7 +1374,7 @@ import { onMounted, ref, computed } from "vue";
 import { useI18n } from "vue-i18n";
 import { useRouter } from "vue-router";
 import { useAuthStore } from "../stores/auth";
-import { dateStr, dateTimeStr, formatMoney } from "../lib/utils";
+import { dateStr, dateTimeStr, formatMoney, toJin, toJinPrice } from "../lib/utils";
 import ConfirmDialog from "../components/ConfirmDialog.vue";
 import DateInput from "../components/DateInput.vue";
 import DateRangeInput from "../components/DateRangeInput.vue";
@@ -1394,10 +1394,10 @@ const tableHeaderRef = ref<HTMLElement | null>(null);
 const tableBodyRef = ref<HTMLElement | null>(null);
 const tableFooterRef = ref<HTMLElement | null>(null);
 
-// 系统内部单位：重量=公斤、单价=元/公斤（导入按斤换算 ×0.5 / ×2，导出再换算回去）。
+// 系统内部单位：重量=公斤、单价=元/公斤（导入按斤换算、导出再换算回去）。
 // 界面统一按模板的「斤 / 元每斤」展示：重量 ×2、单价 ÷2，总计/实付金额不变。
-const inJin = (kg?: number | string | null) => Number(kg ?? 0) * 2;
-const pricePerJin = (perKg?: number | string | null) => Number(perKg ?? 0) / 2;
+const inJin = toJin;
+const pricePerJin = toJinPrice;
 
 const handleTableScroll = (e: Event) => {
   const target = e.target as HTMLElement;
