@@ -1104,16 +1104,16 @@
     <Transition name="slide-up">
       <div
         v-if="showViewModal"
-        class="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-50 bg-white rounded-2xl shadow-2xl border border-dunhuang-yellow/30 w-[calc(100vw-1.5rem)] max-w-4xl max-h-[85vh] flex flex-col overflow-hidden"
+        class="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-50 bg-white rounded-2xl shadow-2xl border border-dunhuang-yellow/30 w-[calc(100vw-1.5rem)] max-w-xl max-h-[85vh] flex flex-col overflow-hidden"
       >
         <!-- 标题栏 -->
         <div
-          class="flex items-center justify-between px-4 sm:px-8 pt-6 pb-4 border-b border-dunhuang-yellow/20 shrink-0"
+          class="flex items-center justify-between px-6 pt-5 pb-4 border-b border-dunhuang-yellow/20 shrink-0"
         >
           <div class="flex items-center gap-3">
-            <div class="w-1 h-6 bg-dunhuang-red rounded-full"></div>
-            <h3 class="text-xl font-serif text-dunhuang-blue font-bold">
-              单据详情与记录
+            <div class="w-1 h-5 bg-dunhuang-red rounded-full"></div>
+            <h3 class="text-lg font-serif text-dunhuang-blue font-bold">
+              单据详情
             </h3>
           </div>
           <button
@@ -1136,254 +1136,117 @@
           </button>
         </div>
 
-        <!-- 内容区 -->
-        <div
-          class="grid grid-cols-1 md:grid-cols-2 gap-0 overflow-hidden flex-1"
-        >
-          <!-- 左侧：单据信息 -->
-          <div class="flex flex-col p-4 sm:p-8 md:border-r border-dunhuang-yellow/20">
-            <h4
-              class="text-base font-serif text-dunhuang-blue font-bold mb-5 flex items-center gap-2"
-            >
-              <svg
-                class="w-4 h-4 text-dunhuang-red"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-                />
-              </svg>
-              基本信息
-            </h4>
-
-            <div class="flex flex-col flex-1 justify-start space-y-1">
+        <!-- 内容区：单据信息 -->
+        <div class="px-6 py-5 overflow-y-auto">
+          <!-- 品种 + 放生日期 -->
+          <div
+            class="flex items-start justify-between gap-6 pb-5 border-b border-dunhuang-yellow/15"
+          >
+            <div class="min-w-0">
+              <div class="text-xs text-dunhuang-text/45 mb-1.5">品种</div>
               <div
-                class="flex justify-between items-center py-2.5 border-b border-dunhuang-yellow/10"
+                class="text-lg font-serif font-bold text-dunhuang-blue truncate"
               >
-                <span class="text-dunhuang-text/50 text-sm">品种</span>
-                <span class="font-medium text-dunhuang-blue text-sm">{{
+                {{
                   getSpeciesName(
                     viewingBill?.species_id,
                     viewingBill?.species?.name_zh,
                   )
-                }}</span>
+                }}
               </div>
-              <div
-                class="flex justify-between items-center py-2.5 border-b border-dunhuang-yellow/10"
-              >
-                <span class="text-dunhuang-text/50 text-sm">重量（斤）</span>
-                <span class="font-medium text-sm">{{
-                  formatMoney(inJin(viewingBill?.weight))
-                }}</span>
-              </div>
-              <div
-                class="flex justify-between items-center py-2.5 border-b border-dunhuang-yellow/10"
-              >
-                <span class="text-dunhuang-text/50 text-sm">单价（元/斤）</span>
-                <span class="tabular-nums text-dunhuang-red text-sm">{{
-                  formatMoney(pricePerJin(viewingBill?.unit_price))
-                }}</span>
-              </div>
-
-              <!-- 总计——加背景强调 -->
-              <div
-                class="flex justify-between items-center py-2.5 border-b border-dunhuang-yellow/10 bg-dunhuang-yellow/5 -mx-2 px-2 rounded"
-              >
-                <span class="text-dunhuang-text/50 text-sm">总计（元）</span>
-                <span class="tabular-nums text-dunhuang-green text-sm">{{
-                  formatMoney(viewingBill?.subtotal)
-                }}</span>
-              </div>
-              <div
-                class="flex justify-between items-center py-2.5 border-b border-dunhuang-yellow/10"
-              >
-                <span class="text-dunhuang-text/50 text-sm">服务费（元）</span>
-                <span class="tabular-nums text-dunhuang-text/70 text-sm">{{
-                  viewingBill ? formatFee(viewingBill) : ""
-                }}</span>
-              </div>
-              <div
-                v-if="viewingBill?.alipay_amount != null"
-                class="flex justify-between items-center py-2.5 border-b border-dunhuang-yellow/10"
-              >
-                <span class="text-dunhuang-text/50 text-sm">支付宝（元）</span>
-                <span class="tabular-nums text-dunhuang-text/70 text-sm">{{
-                  formatMoney(viewingBill.alipay_amount)
-                }}</span>
-              </div>
-              <div
-                v-if="viewingBill?.wechat_amount != null"
-                class="flex justify-between items-center py-2.5 border-b border-dunhuang-yellow/10"
-              >
-                <span class="text-dunhuang-text/50 text-sm">微信（元）</span>
-                <span class="tabular-nums text-dunhuang-text/70 text-sm">{{
-                  formatMoney(viewingBill.wechat_amount)
-                }}</span>
-              </div>
-              <div
-                v-if="viewingBill?.suixi_amount != null"
-                class="flex justify-between items-center py-2.5 border-b border-dunhuang-yellow/10"
-              >
-                <span class="text-dunhuang-text/50 text-sm">随喜放生（元）</span>
-                <span class="tabular-nums text-dunhuang-text/70 text-sm">{{
-                  formatMoney(viewingBill.suixi_amount)
-                }}</span>
-              </div>
-              <!-- 实付金额——加背景强调 -->
-              <div
-                class="flex justify-between items-center py-3 bg-dunhuang-red/5 -mx-2 px-2 rounded-lg border border-dunhuang-red/10"
-              >
-                <span class="text-dunhuang-text/70 text-sm font-medium"
-                  >实付（元）</span
-                >
-                <span
-                  class="tabular-nums font-bold text-dunhuang-red text-base"
-                  >{{
-                    viewingBill?.paid_amount != null
-                      ? formatMoney(viewingBill.paid_amount)
-                      : "—"
-                  }}</span
-                >
-              </div>
-              <!-- 本批实付：模板里这一批的原始实付总额（导入时记下，同批每行相同） -->
-              <div
-                v-if="viewingBill?.batch_paid != null"
-                class="flex justify-between items-center py-2 px-2 -mx-2"
-              >
-                <span class="text-dunhuang-text/45 text-xs"
-                  >本批实付（元）</span
-                >
-                <span class="tabular-nums text-dunhuang-text/70 text-sm">{{
-                  formatMoney(viewingBill.batch_paid)
-                }}</span>
-              </div>
-
-              <div class="flex justify-between items-center pt-4 mt-auto">
-                <span class="text-dunhuang-text/40 text-xs">放生日期</span>
-                <span class="text-xs text-dunhuang-blue font-medium">{{
-                  dateStr(
-                    viewingBill?.release_date || viewingBill?.created_at,
-                  ) || "-"
-                }}</span>
-              </div>
-
-              <div class="flex justify-between items-center pt-4 mt-auto">
-                <span class="text-dunhuang-text/40 text-xs">记录添加时间</span>
-                <span class="text-xs text-dunhuang-text/50">{{
-                  dateTimeStr(viewingBill?.created_at)
-                }}</span>
+            </div>
+            <div class="text-right shrink-0">
+              <div class="text-xs text-dunhuang-text/45 mb-1.5">放生日期</div>
+              <div class="text-sm font-medium text-dunhuang-blue tabular-nums">
+                {{ dateStr(viewingBill?.release_date || viewingBill?.created_at) || "-" }}
               </div>
             </div>
           </div>
 
-          <!-- 右侧：操作记录 -->
-          <div class="flex flex-col p-4 sm:p-8 overflow-hidden min-h-0">
-            <h4
-              class="text-base font-serif text-dunhuang-blue font-bold mb-5 flex items-center gap-2"
-            >
-              <svg
-                class="w-4 h-4 text-dunhuang-blue"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
-                />
-              </svg>
-              操作记录
-            </h4>
-            <div class="overflow-y-auto pr-2 max-h-[340px]">
-              <div v-if="filteredViewingBillLogs.length > 0" class="space-y-3">
-                <div
-                  v-for="log in filteredViewingBillLogs"
-                  :key="log.id"
-                  class="bg-dunhuang-bg/50 rounded-lg px-4 py-3 text-sm border border-dunhuang-yellow/10 hover:border-dunhuang-yellow/30 transition-colors"
-                >
-                  <div class="flex justify-between items-center mb-2">
-                    <span
-                      :class="[
-                        'px-2.5 py-0.5 rounded-full text-xs font-medium',
-                        log.action === 'CREATE'
-                          ? 'bg-dunhuang-green/10 text-dunhuang-green'
-                          : log.action === 'UPDATE' ||
-                              log.action === 'COMPLETED'
-                            ? 'bg-dunhuang-blue/10 text-dunhuang-blue'
-                            : 'bg-dunhuang-red/10 text-dunhuang-red',
-                      ]"
-                      >{{ formatAction(log.action) }}</span
-                    >
-                    <span class="text-dunhuang-text/40 text-xs">{{
-                      dateTimeStr(log.created_at)
-                    }}</span>
-                  </div>
-                  <div
-                    v-if="log.action === 'UPDATE'"
-                    class="text-dunhuang-text/80 text-xs space-y-1.5"
-                  >
-                    <div
-                      v-for="item in formatUpdateDiff(
-                        log.old_data,
-                        log.new_data,
-                      )"
-                      :key="item.label"
-                      class="flex items-center gap-2 px-2.5 py-1.5 rounded-md bg-dunhuang-red/[0.06] border-l-[3px] border-dunhuang-red/40"
-                    >
-                      <span
-                        class="shrink-0 text-dunhuang-red font-semibold text-[11px] min-w-[3.5rem]"
-                        >{{ item.label }}</span
-                      >
-                      <span class="text-dunhuang-red/40 line-through">{{
-                        item.old
-                      }}</span>
-                      <span class="text-dunhuang-blue mx-0.5">→</span>
-                      <span class="text-dunhuang-green font-semibold">{{
-                        item.new
-                      }}</span>
-                    </div>
-                  </div>
-                  <div
-                    v-else-if="log.action === 'CREATE'"
-                    class="text-dunhuang-text/50 text-xs"
-                  >
-                    创建了该单据
-                  </div>
-                  <div
-                    v-else-if="log.action === 'COMPLETED'"
-                    class="text-dunhuang-text/50 text-xs"
-                  >
-                    单据已归档
-                  </div>
-                </div>
-              </div>
-              <div
-                v-else
-                class="text-dunhuang-text/40 text-center py-12 text-sm"
-              >
-                <svg
-                  class="w-12 h-12 mx-auto mb-3 opacity-30"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    stroke-width="1.5"
-                    d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4"
-                  />
-                </svg>
-                暂无操作记录
+          <!-- 数量与金额 -->
+          <div class="grid grid-cols-2 gap-x-6 gap-y-5 py-5">
+            <div>
+              <div class="text-xs text-dunhuang-text/45 mb-1.5">重量（斤）</div>
+              <div class="tabular-nums text-sm text-dunhuang-text/80">
+                {{ formatMoney(inJin(viewingBill?.weight)) }}
               </div>
             </div>
+            <div>
+              <div class="text-xs text-dunhuang-text/45 mb-1.5">
+                单价（元/斤）
+              </div>
+              <div class="tabular-nums text-sm text-dunhuang-red">
+                {{ formatMoney(pricePerJin(viewingBill?.unit_price)) }}
+              </div>
+            </div>
+            <div>
+              <div class="text-xs text-dunhuang-text/45 mb-1.5">总计（元）</div>
+              <div
+                class="tabular-nums text-sm text-dunhuang-green font-medium"
+              >
+                {{ formatMoney(viewingBill?.subtotal) }}
+              </div>
+            </div>
+            <div>
+              <div class="text-xs text-dunhuang-text/45 mb-1.5">服务费（元）</div>
+              <div class="tabular-nums text-sm text-dunhuang-text/70">
+                {{ viewingBill ? formatFee(viewingBill) : "" }}
+              </div>
+            </div>
+            <div v-if="viewingBill?.alipay_amount != null">
+              <div class="text-xs text-dunhuang-text/45 mb-1.5">支付宝（元）</div>
+              <div class="tabular-nums text-sm text-dunhuang-text/70">
+                {{ formatMoney(viewingBill.alipay_amount) }}
+              </div>
+            </div>
+            <div v-if="viewingBill?.wechat_amount != null">
+              <div class="text-xs text-dunhuang-text/45 mb-1.5">微信（元）</div>
+              <div class="tabular-nums text-sm text-dunhuang-text/70">
+                {{ formatMoney(viewingBill.wechat_amount) }}
+              </div>
+            </div>
+            <div v-if="viewingBill?.suixi_amount != null">
+              <div class="text-xs text-dunhuang-text/45 mb-1.5">
+                随喜放生（元）
+              </div>
+              <div class="tabular-nums text-sm text-dunhuang-text/70">
+                {{ formatMoney(viewingBill.suixi_amount) }}
+              </div>
+            </div>
+          </div>
+
+          <!-- 实付：本行分摊 + 本批总额 -->
+          <div
+            class="rounded-xl border border-dunhuang-red/15 bg-dunhuang-red/[0.04] px-4 py-3.5 flex items-end justify-between"
+          >
+            <div>
+              <div class="text-xs text-dunhuang-text/55">实付（元）</div>
+              <div
+                v-if="viewingBill?.batch_paid != null"
+                class="text-[11px] text-dunhuang-text/45 mt-1 tabular-nums"
+              >
+                本批实付 {{ formatMoney(viewingBill.batch_paid) }}
+              </div>
+            </div>
+            <div
+              class="tabular-nums font-bold text-dunhuang-red text-2xl leading-none"
+            >
+              {{
+                viewingBill?.paid_amount != null
+                  ? formatMoney(viewingBill.paid_amount)
+                  : "—"
+              }}
+            </div>
+          </div>
+
+          <!-- 记录时间 -->
+          <div
+            class="flex items-center justify-between pt-4 mt-5 border-t border-dunhuang-yellow/15 text-[11px] text-dunhuang-text/40"
+          >
+            <span>记录添加时间</span>
+            <span class="tabular-nums">{{
+              dateTimeStr(viewingBill?.created_at)
+            }}</span>
           </div>
         </div>
       </div>
@@ -1532,14 +1395,7 @@ const {
 const tableMinWidth = 1112;
 const tableHeaderMinWidth = tableMinWidth + 6;
 
-const {
-  showViewModal,
-  viewingBill,
-  filteredViewingBillLogs,
-  viewBill,
-  formatAction,
-  formatUpdateDiff,
-} = useBillAudit(speciesList);
+const { showViewModal, viewingBill, viewBill } = useBillAudit();
 
 const goToImport = () => {
   router.push("/import");
