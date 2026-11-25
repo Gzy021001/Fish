@@ -202,11 +202,24 @@ export function useBillTable(speciesList: Ref<Species[]>) {
         : '正在导出全部单据...',
     )
     try {
-      const res = await api.get('/bills/export', {
-        params,
-        responseType: 'blob',
-        timeout: 120000,
-      })
+      // 导出是 GET：服务端偶发 5xx（部署切换/冷启动）时自动重试，避免白白失败
+      let res: { data: Blob; headers?: Record<string, unknown> } | null = null
+      for (let attempt = 0; attempt < 3; attempt += 1) {
+        try {
+          res = await api.get('/bills/export', {
+            params,
+            responseType: 'blob',
+            timeout: 120000,
+          })
+          break
+        } catch (error: unknown) {
+          const status = (error as ApiError).response?.status
+          const retryable = status == null || status >= 500
+          if (!retryable || attempt === 2) throw error
+          await new Promise((resolve) => setTimeout(resolve, 4000))
+        }
+      }
+      if (!res) throw new Error('导出请求未返回')
       const blob = res.data as Blob
       if (!blob || blob.size === 0) {
         toast.error('导出失败：文件为空')
