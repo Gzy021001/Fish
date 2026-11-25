@@ -385,3 +385,32 @@ export function parseImportRows(jsonData: Record<string, unknown>[], columns: Re
   }
   return { validRows, skippedRows, expenseRows, onsiteDonation, weekCarryIn }
 }
+
+/**
+ * 把导入行切成「不可拆的批次组」：后端 apportion_rows 只在单个分片内按批分摊实付，
+ * 同一批实付被分片切断时，两片会各自把整批金额摊一遍（整批金额重复计）——
+ * 表现为列表里同一批的实付合计翻倍、导出「批次实付合计 - 已摊实付」为负、
+ * 凭空多出一条金额为正的「耗材」行。分片前先用这个函数成组，只在组边界切开。
+ *
+ * 成组规则与后端一致：一批 = 有实付的行 + 紧跟其后没写实付的行
+ * （合并单元格被广播成同额的行也算同一批），遇到另一笔实付才断开。
+ */
+export function splitIntoBatchGroups<T extends { release_date?: string | null; paid_amount?: number | null }>(
+  rows: T[],
+): T[][] {
+  const groups: T[][] = []
+  let i = 0
+  while (i < rows.length) {
+    const start = i
+    const day = rows[i].release_date
+    const paid = rows[i].paid_amount ?? null
+    i++
+    while (i < rows.length && rows[i].release_date === day) {
+      const next = rows[i].paid_amount ?? null
+      if (next !== null && (paid === null || Number(next) !== Number(paid))) break
+      i++
+    }
+    groups.push(rows.slice(start, i))
+  }
+  return groups
+}

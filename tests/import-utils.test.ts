@@ -5,6 +5,7 @@ import {
   extractRowPayments,
   normalizeSpeciesName,
   parseImportRows,
+  splitIntoBatchGroups,
 } from "../src/lib/importUtils"
 
 const COLUMNS = {
@@ -177,6 +178,31 @@ describe("parseImportRows", () => {
     expect(normalizeSpeciesName("大冰块（块）")).toBe("冰块")
     expect(normalizeSpeciesName("带子（个）")).toBe("带子")
     expect(normalizeSpeciesName("带子(件)")).toBe("带子")
+  })
+})
+
+describe("splitIntoBatchGroups", () => {
+  it("同一批实付不会被拆开（合并单元格广播成同额 / 后续行没写实付都算本批）", () => {
+    const rows = [
+      { release_date: "2026-03-01", paid_amount: 3800 }, // 批 1 首行
+      { release_date: "2026-03-01", paid_amount: null }, // 批 1 后续（没有实付）
+      { release_date: "2026-03-01", paid_amount: null },
+      { release_date: "2026-03-01", paid_amount: 5056 }, // 批 2 首行
+      { release_date: "2026-03-01", paid_amount: 5056 }, // 合并单元格广播成同额
+      { release_date: "2026-03-01", paid_amount: 5056 },
+      { release_date: "2026-03-01", paid_amount: 5056 },
+      { release_date: "2026-03-01", paid_amount: 2170 }, // 批 3（另一笔实付）
+      { release_date: "2026-03-02", paid_amount: null }, // 另一天
+    ]
+    expect(splitIntoBatchGroups(rows).map((g) => g.length)).toEqual([3, 4, 1, 1])
+  })
+
+  it("相邻但金额不同的两笔实付各成一批", () => {
+    const rows = [
+      { release_date: "2026-03-01", paid_amount: 100 },
+      { release_date: "2026-03-01", paid_amount: 200 },
+    ]
+    expect(splitIntoBatchGroups(rows).map((g) => g.length)).toEqual([1, 1])
   })
 })
 

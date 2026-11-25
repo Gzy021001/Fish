@@ -1,5 +1,6 @@
 import api from '../api'
 import type { Species, ApiError } from '../types'
+import { splitIntoBatchGroups } from '../lib/importUtils'
 
 export interface ImportRow {
   name_zh: string
@@ -119,7 +120,8 @@ const CHUNK_SIZE = 25
 
 /** Chunked batch import: splits large imports into small chunks to avoid serverless timeout.
  *  覆盖模式（默认开启）：首片带上整份文件的全部放生日期，先按日期清空旧数据；其余分片只追加。
- *  这样跨多个日期的导入（如整年模板）也能正确覆盖，不会留下重复数据。 */
+ *  这样跨多个日期的导入（如整年模板）也能正确覆盖，不会留下重复数据。
+ *  分片只在批次边界处切开，同一批实付不会被拆到两个分片里重复分摊。 */
 export async function saveImportedRowsChunked(
   rows: ImportRow[],
   onProgress?: (done: number, total: number) => void,
@@ -139,9 +141,19 @@ export async function saveImportedRowsChunked(
   )
 
   const chunks: ImportRow[][] = []
-  for (let i = 0; i < rows.length; i += CHUNK_SIZE) {
-    chunks.push(rows.slice(i, i + CHUNK_SIZE))
+  let current: ImportRow[] = []
+  for (const group of splitIntoBatchGroups(rows)) {
+    if (current.length > 0 && current.length + group.length > CHUNK_SIZE) {
+      chunks.push(current)
+      current = []
+    }
+    current.push(...group)
+    if (current.length >= CHUNK_SIZE) {
+      chunks.push(current)
+      current = []
+    }
   }
+  if (current.length > 0) chunks.push(current)
 
   let totalSuccess = 0
   let totalSkip = 0
