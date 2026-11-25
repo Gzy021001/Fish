@@ -805,17 +805,17 @@
                 <div
                   class="col-th flex-1 min-w-[104px] flex items-center"
                 >
-                  重量（公斤）
+                  重量（斤）
                 </div>
                 <div
                   class="col-th flex-1 min-w-[88px] flex items-center"
                 >
-                  单价（元）
+                  单价（元/斤）
                 </div>
                 <div
                   class="col-th flex-1 min-w-[96px] flex items-center"
                 >
-                  小计（元）
+                  总计（元）
                 </div>
                 <div
                   class="col-th flex-1 min-w-[104px] flex items-center"
@@ -825,7 +825,7 @@
                 <div
                   class="col-th flex-1 min-w-[104px] flex items-center"
                 >
-                  总金额（元）
+                  实付（元）
                 </div>
                 <div
                   class="col-th flex-1 min-w-[96px] flex items-center"
@@ -884,12 +884,12 @@
                 <div
                   class="col-td tabular-nums flex-1 min-w-[104px] flex items-center"
                 >
-                  {{ formatMoney(b.weight) }}
+                  {{ formatMoney(inJin(b.weight)) }}
                 </div>
                 <div
                   class="col-td-mono-red flex-1 min-w-[88px] flex items-center"
                 >
-                  {{ formatMoney(b.unit_price) }}
+                  {{ formatMoney(pricePerJin(b.unit_price)) }}
                 </div>
                 <div
                   class="col-td-green flex-1 min-w-[96px] flex items-center"
@@ -1022,7 +1022,7 @@
                 class="px-4 py-2 flex-1 min-w-[104px] flex items-center"
               >
                 <span class="tabular-nums text-xs text-dunhuang-text/60">{{
-                  formatMoney(tableSumWeight)
+                  formatMoney(inJin(tableSumWeight))
                 }}</span>
               </div>
               <div
@@ -1157,25 +1157,25 @@
               <div
                 class="flex justify-between items-center py-2.5 border-b border-dunhuang-yellow/10"
               >
-                <span class="text-dunhuang-text/50 text-sm">重量（公斤）</span>
+                <span class="text-dunhuang-text/50 text-sm">重量（斤）</span>
                 <span class="font-medium text-sm">{{
-                  formatMoney(viewingBill?.weight)
+                  formatMoney(inJin(viewingBill?.weight))
                 }}</span>
               </div>
               <div
                 class="flex justify-between items-center py-2.5 border-b border-dunhuang-yellow/10"
               >
-                <span class="text-dunhuang-text/50 text-sm">单价（元）</span>
+                <span class="text-dunhuang-text/50 text-sm">单价（元/斤）</span>
                 <span class="tabular-nums text-dunhuang-red text-sm">{{
-                  formatMoney(viewingBill?.unit_price)
+                  formatMoney(pricePerJin(viewingBill?.unit_price))
                 }}</span>
               </div>
 
-              <!-- 小计——加背景强调 -->
+              <!-- 总计——加背景强调 -->
               <div
                 class="flex justify-between items-center py-2.5 border-b border-dunhuang-yellow/10 bg-dunhuang-yellow/5 -mx-2 px-2 rounded"
               >
-                <span class="text-dunhuang-text/50 text-sm">小计（元）</span>
+                <span class="text-dunhuang-text/50 text-sm">总计（元）</span>
                 <span class="tabular-nums text-dunhuang-green text-sm">{{
                   formatMoney(viewingBill?.subtotal)
                 }}</span>
@@ -1393,6 +1393,11 @@ const authStore = useAuthStore();
 const tableHeaderRef = ref<HTMLElement | null>(null);
 const tableBodyRef = ref<HTMLElement | null>(null);
 const tableFooterRef = ref<HTMLElement | null>(null);
+
+// 系统内部单位：重量=公斤、单价=元/公斤（导入按斤换算 ×0.5 / ×2，导出再换算回去）。
+// 界面统一按模板的「斤 / 元每斤」展示：重量 ×2、单价 ÷2，总计/实付金额不变。
+const inJin = (kg?: number | string | null) => Number(kg ?? 0) * 2;
+const pricePerJin = (perKg?: number | string | null) => Number(perKg ?? 0) / 2;
 
 const handleTableScroll = (e: Event) => {
   const target = e.target as HTMLElement;
