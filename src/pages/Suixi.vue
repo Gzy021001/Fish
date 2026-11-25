@@ -1,7 +1,7 @@
 <template>
   <div class="h-full flex flex-col gap-3 sm:gap-4 min-h-0">
-    <!-- 四类合计：支付宝 / 微信1 / 微信2 / 随喜放生 -->
-    <div class="shrink-0 grid grid-cols-2 xl:grid-cols-4 gap-3 sm:gap-4">
+    <!-- 六类合计：支付宝 / 微信1 / 微信2 / 随喜放生 / 车费 / 船费 -->
+    <div class="shrink-0 grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-6 gap-3 sm:gap-4">
       <div
         v-for="card in summaryCards"
         :key="card.label"
@@ -14,13 +14,13 @@
         >
           {{ card.label }}
         </div>
-        <div class="flex items-baseline gap-1.5">
+        <div class="flex items-baseline gap-1 min-w-0">
           <span
-            class="text-[24px] sm:text-[28px] leading-none font-bold tabular-nums"
+            class="text-[19px] sm:text-[21px] leading-none font-bold tabular-nums whitespace-nowrap"
             :class="card.valueClass"
             >{{ formatMoney(card.value) }}</span
           >
-          <span class="text-xs font-medium text-dunhuang-text/40">元</span>
+          <span class="text-[11px] font-medium text-dunhuang-text/40">元</span>
         </div>
       </div>
     </div>
@@ -87,7 +87,13 @@
             :key="row.release_date ?? `row-${index}`"
           >
             <div
-              class="grid suixi-grid text-sm border-b border-dunhuang-yellow/15 hover:bg-[#fbf6ec] transition-colors"
+              class="grid suixi-grid text-sm border-b border-dunhuang-yellow/15 transition-colors"
+              :class="
+                row.expense_total
+                  ? 'cursor-pointer hover:bg-[#fbf6ec]'
+                  : 'hover:bg-[#fbf6ec]'
+              "
+              @click="row.expense_total && toggleExpanded(rowKey(row, index))"
             >
               <div
                 class="px-3 py-2 text-center text-dunhuang-text/80 tabular-nums"
@@ -111,29 +117,55 @@
               >
                 {{ formatMoney(row.suixi_amount) }}
               </div>
-              <div class="px-4 py-2 text-center tabular-nums text-dunhuang-text/35">
-                {{ row.expense_total ? formatMoney(row.expense_total) : "—" }}
+              <div
+                class="px-4 py-2 flex items-center justify-center gap-1.5 tabular-nums"
+                :class="
+                  row.expense_total ? 'text-dunhuang-text/70' : 'text-dunhuang-text/35'
+                "
+              >
+                <span>{{
+                  row.expense_total ? formatMoney(row.expense_total) : "—"
+                }}</span>
+                <svg
+                  v-if="row.expense_total"
+                  class="w-3.5 h-3.5 text-dunhuang-text/35 transition-transform duration-200"
+                  :class="
+                    expandedKeys.has(rowKey(row, index)) ? 'rotate-90' : ''
+                  "
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M9 5l7 7-7 7"
+                  />
+                </svg>
               </div>
             </div>
 
-            <!-- 车费/船费：模板表尾的费用行，按天单独列出 -->
-            <div
-              v-for="item in dayExpenses(row)"
-              :key="`${row.release_date}-${item.label}`"
-              class="grid suixi-grid text-xs border-b border-dashed border-dunhuang-yellow/20 bg-[#fdf9f1]"
-            >
-              <div></div>
-              <div class="px-4 py-1.5 pl-6 text-dunhuang-text/55">
-                └ {{ item.label }}
-              </div>
-              <div class="col-span-4"></div>
+            <!-- 车费/船费：模板表尾的费用行，点日期行展开 -->
+            <template v-if="expandedKeys.has(rowKey(row, index))">
               <div
-                class="px-4 py-1.5 text-center tabular-nums"
-                :class="item.cls"
+                v-for="item in dayExpenses(row)"
+                :key="`${rowKey(row, index)}-${item.label}`"
+                class="grid suixi-grid text-xs border-b border-dashed border-dunhuang-yellow/20 bg-[#fdf9f1]"
               >
-                {{ formatMoney(item.value) }}
+                <div></div>
+                <div class="px-4 py-1.5 pl-6 text-dunhuang-text/55">
+                  <span :title="item.tip">└ {{ item.label }}</span>
+                </div>
+                <div class="col-span-4"></div>
+                <div
+                  class="px-4 py-1.5 text-center tabular-nums"
+                  :class="item.cls"
+                >
+                  {{ formatMoney(item.value) }}
+                </div>
               </div>
-            </div>
+            </template>
           </template>
           <div
             v-if="rows.length === 0"
@@ -189,7 +221,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted } from "vue";
+import { computed, onMounted, ref } from "vue";
 import DateRangeInput from "../components/DateRangeInput.vue";
 import Pagination from "../components/Pagination.vue";
 import { dateStr, formatMoney } from "../lib/utils";
@@ -208,6 +240,8 @@ const {
   sumWechat1,
   sumWechat2,
   sumSuixi,
+  sumExpenseCar,
+  sumExpenseShip,
   sumExpense,
   fetchSummary,
   applyFilters,
@@ -220,12 +254,35 @@ const dayExpenses = (row: {
   expense_ship?: number;
   expense_other?: number;
 }) => {
-  const items: { label: string; value: number; cls: string }[] = [
+  const items: { label: string; value: number; cls: string; tip?: string }[] = [
     { label: "车费", value: row.expense_car || 0, cls: "text-dunhuang-orange/85" },
     { label: "船费", value: row.expense_ship || 0, cls: "text-dunhuang-orange/85" },
-    { label: "其它支出", value: row.expense_other || 0, cls: "text-dunhuang-text/50" },
+    {
+      label: "耗材",
+      value: row.expense_other || 0,
+      cls: "text-dunhuang-text/50",
+      tip: "打包耗材：冰块/打包袋等（模板里没有对应物命单据的支出）",
+    },
   ];
   return items.filter((item) => item.value);
+};
+
+/** 行的稳定键：同一天一行，没有日期时退回序号 */
+const rowKey = (
+  row: { release_date: string | null },
+  index: number,
+): string => row.release_date || `row-${index}`;
+
+/** 展开中的日期行（点整行切换） */
+const expandedKeys = ref<Set<string>>(new Set());
+const toggleExpanded = (key: string) => {
+  const next = new Set(expandedKeys.value);
+  if (next.has(key)) {
+    next.delete(key);
+  } else {
+    next.add(key);
+  }
+  expandedKeys.value = next;
 };
 
 // 四张合计卡：标签/强调色随分类走，颜色类名保持字面量以便 Tailwind 扫描
@@ -257,6 +314,20 @@ const summaryCards = computed(() => [
     bar: "bg-dunhuang-red",
     labelClass: "text-dunhuang-red/80",
     valueClass: "text-dunhuang-red",
+  },
+  {
+    label: "车费",
+    value: sumExpenseCar.value,
+    bar: "bg-dunhuang-orange",
+    labelClass: "text-dunhuang-orange/80",
+    valueClass: "text-dunhuang-ink",
+  },
+  {
+    label: "船费",
+    value: sumExpenseShip.value,
+    bar: "bg-dunhuang-yellow",
+    labelClass: "text-dunhuang-yellow/90",
+    valueClass: "text-dunhuang-ink",
   },
 ]);
 
