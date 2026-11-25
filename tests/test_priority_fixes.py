@@ -322,13 +322,14 @@ class PriorityFixesTests(unittest.TestCase):
     # ---- 随喜汇总按放生日期聚合：一行一天，金额取当天合计，微信拆两列 ----
     def test_list_bills_group_by_date(self):
         sp = self.db.query(models.Species).first()
-        # 11-08 两张单据：支付宝 10 + 微信 25.5 + 随喜放生 1300
+        # 11-08 两张单据：支付宝 10 + 微信 25.5 + 随喜放生 1300；当天第一张带本周现场随喜
         create_bill(
             schemas.BillCreate(
                 species_id=sp.id, weight=2, unit_price=10, fee_value=0,
                 release_date=date(2026, 11, 8), status="COMPLETED",
                 payment_method="微信", alipay_amount=10,
                 wechat_amount=25.5, suixi_amount=0,
+                weekly_donation=1234.56,
             ),
             self.user, self.db, commit=True,
         )
@@ -390,6 +391,9 @@ class PriorityFixesTests(unittest.TestCase):
         self.assertEqual(float(older["wechat1_amount"]), 25.5)
         self.assertEqual(float(older["wechat2_amount"]), 40.0)
         self.assertEqual(float(older["suixi_amount"]), 1300.0)
+        # 本周现场随喜按天带出（整周一个值，落在该周第一张单据那天）
+        self.assertEqual(float(older["weekly_donation"]), 1234.56)
+        self.assertEqual(float(newest["weekly_donation"]), 0.0)
 
         # 表尾合计仍按全量口径（与分页无关）
         self.assertEqual(float(result["sum_alipay"]), 15.0)
@@ -397,6 +401,8 @@ class PriorityFixesTests(unittest.TestCase):
         self.assertEqual(float(result["sum_wechat1"]), 25.5)
         self.assertEqual(float(result["sum_wechat2"]), 40.0)
         self.assertEqual(float(result["sum_suixi"]), 1300.0)
+        # 现场随喜合计（随喜汇总顶部卡片/表尾用）
+        self.assertEqual(float(result["sum_weekly_donation"]), 1234.56)
 
         # 分页按天：第 2 页只剩更早的一天
         paged = list_bills(

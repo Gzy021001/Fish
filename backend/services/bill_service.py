@@ -121,8 +121,8 @@ def _apply_bill_filters(query, status=None, date_from=None, date_to=None, date_s
                 models.Species.name_zh.like("%袋%"),
             )
         )
-    # 随喜汇总视图：只留真正带随喜记录的单据（有随喜类型，或三类金额至少一项大于 0），
-    # 避免历史导入的 700+ 条空记录把明细淹掉
+    # 随喜汇总视图：只留真正带随喜记录的单据（有随喜类型，或三类金额至少一项大于 0，
+    # 或这一天记了本周现场随喜），避免历史导入的 700+ 条空记录把明细淹掉
     if has_suixi:
         query = query.filter(
             or_(
@@ -130,6 +130,7 @@ def _apply_bill_filters(query, status=None, date_from=None, date_to=None, date_s
                 models.Bill.alipay_amount > 0,
                 models.Bill.wechat_amount > 0,
                 models.Bill.suixi_amount > 0,
+                models.Bill.weekly_donation > 0,
             )
         )
     return query
@@ -160,7 +161,7 @@ def _week_expense_totals(db: Session, date_str: str = None, date_from: str = Non
 
 
 def _bill_totals(db: Session, status: str = None, date_str: str = None, date_from: str = None, date_to: str = None, q: str = None, exclude_packaging: bool = False, has_suixi: bool = False):
-    """全量口径合计（与分页无关）：重量/小计/总金额/实付 + 随喜三分类，供列表表尾直接展示。"""
+    """全量口径合计（与分页无关）：重量/小计/总金额/实付 + 随喜三分类 + 现场随喜，供列表表尾直接展示。"""
     sum_query = db.query(
         func.sum(models.Bill.weight),
         func.sum(models.Bill.subtotal),
@@ -168,13 +169,14 @@ def _bill_totals(db: Session, status: str = None, date_str: str = None, date_fro
         func.sum(models.Bill.alipay_amount),
         func.sum(models.Bill.wechat_amount),
         func.sum(models.Bill.suixi_amount),
-        func.sum(models.Bill.paid_amount)
+        func.sum(models.Bill.paid_amount),
+        func.sum(models.Bill.weekly_donation),
     ).join(models.Species).filter(models.Bill.is_deleted.is_(False))
     sum_query = _apply_bill_filters(sum_query, status, date_from, date_to, date_str, q, exclude_packaging, has_suixi)
 
     sum_result = sum_query.first()
     if not sum_result:
-        return (0, 0, 0, 0, 0, 0, 0)
+        return (0, 0, 0, 0, 0, 0, 0, 0)
     return tuple((value or 0) for value in sum_result)
 
 
@@ -237,13 +239,15 @@ def _split_wechat_by_day(db: Session, status: str = None, date_str: str = None, 
 
 def _list_bills_by_day(db: Session, page: int = 1, page_size: int = 10, status: str = None, date_str: str = None, date_from: str = None, date_to: str = None, q: str = None, exclude_packaging: bool = False, has_suixi: bool = False):
     """随喜汇总：按放生日期聚合，一行一天（分页按天）。
-    微信拆两列（微信1 = 当天第一笔，微信2 = 当天其余合计），三分类合计供表尾使用。"""
+    微信拆两列（微信1 = 当天第一笔，微信2 = 当天其余合计），三分类合计供表尾使用；
+    本周现场随喜按天汇总（整周一个值，挂在该周第一张单据上）。"""
     day = _bill_day()
     grouped = (
         db.query(
             day.label("release_date"),
             func.sum(models.Bill.alipay_amount).label("alipay_amount"),
             func.sum(models.Bill.suixi_amount).label("suixi_amount"),
+            func.sum(models.Bill.weekly_donation).label("weekly_donation"),
         )
         .join(models.Species)
         .filter(models.Bill.is_deleted.is_(False))
@@ -266,6 +270,7 @@ def _list_bills_by_day(db: Session, page: int = 1, page_size: int = 10, status: 
         sum_wechat,
         sum_suixi,
         sum_paid_amount,
+        sum_weekly_donation,
     ) = _bill_totals(
         db, status=status, date_str=date_str, date_from=date_from, date_to=date_to,
         q=q, exclude_packaging=exclude_packaging, has_suixi=has_suixi,
@@ -289,6 +294,8 @@ def _list_bills_by_day(db: Session, page: int = 1, page_size: int = 10, status: 
             "wechat1_amount": wechat_first.get(key, 0),
             "wechat2_amount": wechat_rest.get(key, 0),
             "suixi_amount": row.suixi_amount or 0,
+            # 本周现场随喜（整周一个值，记在该周第一张单据上）
+            "weekly_donation": row.weekly_donation or 0,
             # 当天车费/船费（模板表尾的费用行，随喜汇总里按天单独列出）
             "expense_car": expense["car"],
             "expense_ship": expense["ship"],
@@ -308,6 +315,7 @@ def _list_bills_by_day(db: Session, page: int = 1, page_size: int = 10, status: 
         "sum_wechat1": sum_wechat1,
         "sum_wechat2": sum_wechat2,
         "sum_suixi": sum_suixi,
+        "sum_weekly_donation": sum_weekly_donation,
         "sum_paid_amount": sum_paid_amount,
         "sum_expense_car": sum(v["car"] for v in expenses_by_day.values()),
         "sum_expense_ship": sum(v["ship"] for v in expenses_by_day.values()),
@@ -349,6 +357,7 @@ def list_bills(db: Session, page: int = 1, page_size: int = 10, limit: int = 100
         sum_alipay = sum((item.alipay_amount or 0) for item in items)
         sum_wechat = sum((item.wechat_amount or 0) for item in items)
         sum_suixi = sum((item.suixi_amount or 0) for item in items)
+        sum_weekly_donation = sum((item.weekly_donation or 0) for item in items)
         sum_paid_amount = sum((item.paid_amount or 0) for item in items)
         sum_expense, sum_expense_car, sum_expense_ship = _week_expense_totals(db, date, date_from, date_to)
 
@@ -361,6 +370,7 @@ def list_bills(db: Session, page: int = 1, page_size: int = 10, limit: int = 100
             "sum_alipay": sum_alipay,
             "sum_wechat": sum_wechat,
             "sum_suixi": sum_suixi,
+            "sum_weekly_donation": sum_weekly_donation,
             "sum_paid_amount": sum_paid_amount,
             "sum_expense": sum_expense,
             "sum_expense_car": sum_expense_car,
@@ -377,6 +387,7 @@ def list_bills(db: Session, page: int = 1, page_size: int = 10, limit: int = 100
         sum_wechat,
         sum_suixi,
         sum_paid_amount,
+        sum_weekly_donation,
     ) = _bill_totals(
         db, status=status, date_str=date, date_from=date_from, date_to=date_to,
         q=q, exclude_packaging=exclude_packaging, has_suixi=has_suixi,
@@ -394,6 +405,7 @@ def list_bills(db: Session, page: int = 1, page_size: int = 10, limit: int = 100
             "sum_alipay": sum_alipay,
             "sum_wechat": sum_wechat,
             "sum_suixi": sum_suixi,
+            "sum_weekly_donation": sum_weekly_donation,
             "sum_paid_amount": sum_paid_amount,
             "sum_expense": sum_expense,
             "sum_expense_car": sum_expense_car,
@@ -413,6 +425,7 @@ def list_bills(db: Session, page: int = 1, page_size: int = 10, limit: int = 100
         "sum_alipay": sum_alipay,
         "sum_wechat": sum_wechat,
         "sum_suixi": sum_suixi,
+        "sum_weekly_donation": sum_weekly_donation,
         "sum_paid_amount": sum_paid_amount,
         "sum_expense": sum_expense,
         "sum_expense_car": sum_expense_car,

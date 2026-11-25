@@ -1,7 +1,7 @@
 <template>
   <div class="h-full flex flex-col gap-3 sm:gap-4 min-h-0">
-    <!-- 六类合计：支付宝 / 微信1 / 微信2 / 随喜放生 / 车费 / 船费 -->
-    <div class="shrink-0 grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-6 gap-3 sm:gap-4">
+    <!-- 七类合计：支付宝 / 微信1 / 微信2 / 随喜放生 / 现场随喜 / 车费 / 船费 -->
+    <div class="shrink-0 grid grid-cols-2 sm:grid-cols-4 xl:grid-cols-7 gap-3 sm:gap-4">
       <div
         v-for="card in summaryCards"
         :key="card.label"
@@ -76,6 +76,9 @@
             随喜放生（元）
           </div>
           <div class="px-4 py-2.5 text-center whitespace-nowrap">
+            现场随喜（元）
+          </div>
+          <div class="px-4 py-2.5 text-center whitespace-nowrap">
             车费/船费（元）
           </div>
         </div>
@@ -118,6 +121,9 @@
                 class="px-4 py-2 text-center tabular-nums text-dunhuang-red font-medium"
               >
                 {{ formatMoney(row.suixi_amount) }}
+              </div>
+              <div class="px-4 py-2 text-center tabular-nums">
+                {{ row.weekly_donation ? formatMoney(row.weekly_donation) : "—" }}
               </div>
               <div
                 class="px-4 py-2 flex items-center justify-center gap-1.5 tabular-nums"
@@ -176,12 +182,12 @@
                 </div>
                 <div
                   v-if="item.detail"
-                  class="col-span-4 px-3 py-1.5 text-[11px] text-dunhuang-text/40 truncate"
+                  class="col-span-5 px-3 py-1.5 text-[11px] text-dunhuang-text/40 truncate"
                   :title="item.detail"
                 >
                   {{ item.detail }}
                 </div>
-                <div v-else class="col-span-4"></div>
+                <div v-else class="col-span-5"></div>
                 <div
                   class="px-4 py-1.5 text-center tabular-nums"
                   :class="item.cls"
@@ -219,6 +225,9 @@
           </div>
           <div class="px-4 py-2 text-center tabular-nums text-dunhuang-red">
             {{ formatMoney(sumSuixi) }}
+          </div>
+          <div class="px-4 py-2 text-center tabular-nums text-dunhuang-blue">
+            {{ formatMoney(sumWeeklyDonation) }}
           </div>
           <div class="px-4 py-2 text-center tabular-nums text-dunhuang-orange">
             {{ formatMoney(sumExpense) }}
@@ -264,6 +273,7 @@ const {
   sumWechat1,
   sumWechat2,
   sumSuixi,
+  sumWeeklyDonation,
   sumExpenseCar,
   sumExpenseShip,
   sumExpense,
@@ -332,7 +342,7 @@ const toggleExpanded = (key: string) => {
   expandedKeys.value = next;
 };
 
-// 四张合计卡：标签/强调色随分类走，颜色类名保持字面量以便 Tailwind 扫描
+// 七张合计卡：标签/强调色随分类走，颜色类名保持字面量以便 Tailwind 扫描
 const summaryCards = computed(() => [
   {
     label: "支付宝",
@@ -363,6 +373,13 @@ const summaryCards = computed(() => [
     valueClass: "text-dunhuang-red",
   },
   {
+    label: "现场随喜",
+    value: sumWeeklyDonation.value,
+    bar: "bg-dunhuang-red/70",
+    labelClass: "text-dunhuang-red/70",
+    valueClass: "text-dunhuang-ink",
+  },
+  {
     label: "车费",
     value: sumExpenseCar.value,
     bar: "bg-dunhuang-orange",
@@ -387,7 +404,7 @@ onMounted(() => {
 /* 表头 / 数据行 / 总计行共用同一套列宽，保证三处对齐 */
 .suixi-grid {
   grid-template-columns:
-    64px minmax(88px, 1.15fr) repeat(4, minmax(72px, 1fr))
+    64px minmax(88px, 1.15fr) repeat(5, minmax(72px, 1fr))
     minmax(96px, 0.95fr);
 }
 </style>
