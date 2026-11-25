@@ -162,15 +162,15 @@ export function useBillForm(speciesList: Ref<Species[]>) {
 
   const saveSingleBill = async (onSaved?: (data: unknown) => void) => {
     if (!Number.isFinite(+bill.value.weight) || +bill.value.weight <= 0) {
-      toast.warning('重量必须大于0')
+      toast.warning('重量需大于 0')
       return
     }
     if (!Number.isFinite(+bill.value.unit_price) || +bill.value.unit_price <= 0) {
-      toast.warning('单价必须大于0')
+      toast.warning('单价需大于 0')
       return
     }
     if (!hasAllSuixiAmounts()) {
-      toast.warning('请填写三个随喜金额（支付宝 / 微信 / 随喜放生）')
+      toast.warning('请填写三类随喜金额')
       return
     }
     saving.value = true
@@ -203,12 +203,12 @@ export function useBillForm(speciesList: Ref<Species[]>) {
       }
       const response = await api.put(`/bills/${bill.value.id}`, payload)
       if (onSaved) onSaved(response.data)
-      toast.success('单据更新成功')
+      toast.success('已保存')
       bill.value.id = null
       showForm.value = false
     } catch (error: unknown) {
       if (isAuthError(error as ApiError)) return
-      toast.error(apiErrorMessage(error as ApiError, '保存单据'))
+      toast.error(apiErrorMessage(error as ApiError, '保存'))
     } finally {
       saving.value = false
     }
@@ -220,11 +220,11 @@ export function useBillForm(speciesList: Ref<Species[]>) {
     )
     const skippedCount = billEntries.value.length - validEntries.length
     if (validEntries.length === 0) {
-      toast.warning('请选择品种并填写重量和单价')
+      toast.warning('请选择品种并填写重量、单价')
       return
     }
     if (!hasAllSuixiAmounts()) {
-      toast.warning('请填写三个随喜金额（支付宝 / 微信 / 随喜放生）')
+      toast.warning('请填写三类随喜金额')
       return
     }
 
@@ -264,10 +264,10 @@ export function useBillForm(speciesList: Ref<Species[]>) {
       showForm.value = false
       if (skippedCount > 0) {
         toast.warning(
-          `成功保存 ${saved} 条，另有 ${skippedCount} 条因重量或单价无效被跳过`,
+          `已保存 ${saved} 条，${skippedCount} 条无效跳过`,
         )
       } else {
-        toast.success(`成功保存 ${saved} 条`)
+        toast.success(`已保存 ${saved} 条`)
       }
     } catch (error: unknown) {
       if (isAuthError(error as ApiError)) return
@@ -275,9 +275,9 @@ export function useBillForm(speciesList: Ref<Species[]>) {
         billEntries.value = []
         bill.value.release_date = ''
         showForm.value = false
-        toast.warning(`已保存 ${saved} 条，其余保存失败`)
+        toast.warning(`已保存 ${saved} 条，其余失败`)
       } else {
-        toast.error(apiErrorMessage(error as ApiError, '保存单据'))
+        toast.error(apiErrorMessage(error as ApiError, '保存'))
       }
     } finally {
       saving.value = false

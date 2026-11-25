@@ -961,7 +961,7 @@ const saveEditSpecies = async () => {
 
     closeEditModal();
     await fetchSpecies();
-    toast.success("品种已更新");
+    toast.success("已保存");
   } catch (error: any) {
     if (isAuthError(error)) return;
     console.error("Failed to update species", error);
@@ -1005,7 +1005,7 @@ const handlePhotoPicked = async (event: Event) => {
       headers: { "Content-Type": "multipart/form-data" },
     });
     await fetchSpecies();
-    toast.success("照片已更新");
+    toast.success("照片已保存");
   } catch (error: any) {
     if (isAuthError(error)) return;
     console.error("Failed to upload species image", error);
@@ -1039,7 +1039,7 @@ const savePrice = async (sp: SpeciesItem) => {
       supplier_note: sp.supplier_note ?? null,
     });
     cancelEditPrice();
-    toast.success(`「${sp.name_zh}」单价已更新`);
+    toast.success("单价已更新");
     await invalidateCache();
     await fetchSpecies();
   } catch (error: any) {
@@ -1093,7 +1093,7 @@ const exportSpecies = async () => {
     });
     const blob = res.data as Blob;
     if (!blob || blob.size === 0) {
-      toast.error("导出失败：文件为空");
+      toast.error("导出失败");
       return;
     }
     let filename = "慈悲组品种库.xlsx";
@@ -1112,7 +1112,7 @@ const exportSpecies = async () => {
     URL.revokeObjectURL(url);
     toast.success("导出完成");
   } catch (error) {
-    toast.error(apiErrorMessage(error, "导出品种库"));
+    toast.error(apiErrorMessage(error, "导出"));
   } finally {
     exportingSpecies.value = false;
   }

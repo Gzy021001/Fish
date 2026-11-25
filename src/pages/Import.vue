@@ -1036,7 +1036,7 @@ const processFile = (f: File) => {
       currentStep.value = 2;
     } catch (err) {
       console.error(err);
-      toast.error("解析 Excel 失败，请检查文件格式");
+      toast.error("Excel 解析失败");
     } finally {
       parsing.value = false;
     }
@@ -1092,10 +1092,8 @@ const confirmImport = async () => {
     };
     importProgress.value = "";
     toast.success(
-      "成功导入 " +
-        result.success_count +
-        " 条" +
-        (result.skip_count > 0 ? "，" + result.skip_count + " 条被跳过" : ""),
+      `已导入 ${result.success_count} 条` +
+        (result.skip_count > 0 ? `，跳过 ${result.skip_count} 条` : ""),
     );
   } catch (err) {
     if (isAuthError(err)) return;
@@ -1104,9 +1102,9 @@ const confirmImport = async () => {
     importResult.value = {
       success_count: 0,
       skip_count: 0,
-      errors: [apiErrorMessage(err, "导入单据")],
+      errors: [apiErrorMessage(err, "导入")],
     };
-    toast.error(apiErrorMessage(err, "导入单据"));
+    toast.error(apiErrorMessage(err, "导入"));
   } finally {
     importing.value = false;
   }

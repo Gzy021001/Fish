@@ -5,12 +5,12 @@
         <div
           v-for="t in toasts"
           :key="t.id"
-          class="pointer-events-auto w-[340px] rounded-2xl shadow-2xl overflow-hidden"
+          class="pointer-events-auto w-[300px] rounded-xl shadow-xl overflow-hidden"
           :class="bgClass(t.type)"
           @mouseenter="hoveredId = t.id"
           @mouseleave="hoveredId = null"
         >
-          <div class="flex items-start gap-3 px-4 py-3.5">
+          <div class="flex items-center gap-2.5 px-3.5 py-3">
             <div
               class="shrink-0 mt-0.5 w-6 h-6 rounded-full flex items-center justify-center"
               :class="iconBgClass(t.type)"
@@ -34,10 +34,7 @@
               </svg>
             </div>
 
-            <div class="flex-1 min-w-0 pt-0.5">
-              <p class="text-xs font-bold tracking-wider uppercase mb-0.5" :class="labelClass(t.type)">
-                {{ typeLabel(t.type) }}
-              </p>
+            <div class="flex-1 min-w-0">
               <p class="text-sm leading-snug" :class="textClass(t.type)">
                 {{ t.message }}
               </p>
@@ -79,16 +76,6 @@ const hoveredId = ref<number | null>(null)
 
 const removeToast = (id: number) => remove(id)
 
-const typeLabel = (type: string) => {
-  const map: Record<string, string> = {
-    success: "成功",
-    error: "错误",
-    warning: "提醒",
-    info: "消息",
-  }
-  return map[type] || type
-}
-
 const bgClass = (type: string) => ({
   success: "bg-dunhuang-card border border-dunhuang-green/20",
   error: "bg-dunhuang-card border border-red-300/30",
@@ -102,13 +89,6 @@ const iconBgClass = (type: string) => ({
   warning: "bg-dunhuang-orange",
   info: "bg-dunhuang-blue",
 }[type] || "bg-dunhuang-blue")
-
-const labelClass = (type: string) => ({
-  success: "text-dunhuang-green",
-  error: "text-red-500",
-  warning: "text-dunhuang-orange",
-  info: "text-dunhuang-blue",
-}[type] || "text-dunhuang-blue")
 
 const textClass = (type: string) => ({
   success: "text-dunhuang-text/80",

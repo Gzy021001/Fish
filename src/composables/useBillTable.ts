@@ -201,8 +201,8 @@ export function useBillTable(speciesList: Ref<Species[]>) {
     }
     toast.info(
       selectedBillIds.value.length > 0
-        ? `正在导出选中的 ${selectedBillIds.value.length} 条单据...`
-        : '正在导出全部单据...',
+        ? `导出选中 ${selectedBillIds.value.length} 条…`
+        : '导出中…',
     )
     try {
       // 导出是 GET：服务端偶发 5xx（部署切换/冷启动）时自动重试，避免白白失败
@@ -225,7 +225,7 @@ export function useBillTable(speciesList: Ref<Species[]>) {
       if (!res) throw new Error('导出请求未返回')
       const blob = res.data as Blob
       if (!blob || blob.size === 0) {
-        toast.error('导出失败：文件为空')
+        toast.error('导出失败')
         return
       }
       let filename = '慈悲组购生明细表.xlsx'
@@ -242,12 +242,10 @@ export function useBillTable(speciesList: Ref<Species[]>) {
       anchor.click()
       anchor.remove()
       URL.revokeObjectURL(url)
-      toast.success(
-        `导出完成：${filename}（若浏览器拦截了下载，请点地址栏右侧的下载图标允许）`,
-      )
+      toast.success('导出完成')
     } catch (error: unknown) {
       if (isAuthError(error as ApiError)) return
-      toast.error(apiErrorMessage(error as ApiError, '导出明细表'))
+      toast.error(apiErrorMessage(error as ApiError, '导出'))
     } finally {
       exporting.value = false
     }
@@ -268,11 +266,11 @@ export function useBillTable(speciesList: Ref<Species[]>) {
         await Promise.all(selectedBillIds.value.map((id) => api.delete(`/bills/${id}`)))
         selectedBillIds.value = []
         deleteConfirm.value.show = false
-        toast.success('批量删除成功！')
+        toast.success('删除成功')
         await fetchBills()
       } catch (error: unknown) {
         if (isAuthError(error as ApiError)) return
-        toast.error(apiErrorMessage(error as ApiError, '批量删除'))
+        toast.error(apiErrorMessage(error as ApiError, '删除'))
         deleteConfirm.value.show = false
         await fetchBills()
       }
@@ -286,7 +284,7 @@ export function useBillTable(speciesList: Ref<Species[]>) {
         await fetchBills()
       } catch (error: unknown) {
         if (isAuthError(error as ApiError)) return
-        toast.error(apiErrorMessage(error as ApiError, '删除单据'))
+        toast.error(apiErrorMessage(error as ApiError, '删除'))
       }
     }
   }

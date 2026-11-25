@@ -108,7 +108,7 @@ const handleChangePassword = async () => {
   try {
     await api.post('/change-password', { password: newPassword.value })
     authStore.mustChangePassword = false
-    toast.success('密码修改成功')
+    toast.success('密码已修改')
     router.replace('/dashboard')
   } catch (error: any) {
     if (isAuthError(error)) return
