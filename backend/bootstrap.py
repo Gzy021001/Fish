@@ -38,6 +38,24 @@ _COLUMN_FIXES = {
     ],
 }
 
+# 新增表：缺表时补建（与 migrations 里的 DDL 一致；两边都支持 SQLite / PostgreSQL）
+_NEW_TABLES = {
+    "week_expenses": {
+        "postgresql": (
+            "CREATE TABLE IF NOT EXISTS week_expenses ("
+            "id SERIAL PRIMARY KEY, release_date DATE, name VARCHAR(20), "
+            "amount NUMERIC(12,2), created_at TIMESTAMP WITHOUT TIME ZONE, "
+            "is_deleted BOOLEAN DEFAULT FALSE)"
+        ),
+        "sqlite": (
+            "CREATE TABLE IF NOT EXISTS week_expenses ("
+            "id INTEGER PRIMARY KEY AUTOINCREMENT, release_date DATE, name VARCHAR(20), "
+            "amount NUMERIC(12,2), created_at DATETIME, "
+            "is_deleted BOOLEAN DEFAULT 0)"
+        ),
+    },
+}
+
 
 def _pg_table_columns(conn, table_names):
     """PostgreSQL：一条 SQL 取回所有目标表的列集合，替代 inspector 逐表往返。"""
@@ -59,12 +77,16 @@ def ensure_db_schema_updates():
         false_default = "FALSE" if is_pg else "0"
 
         with engine.begin() as conn:
+            dialect_key = "postgresql" if is_pg else "sqlite"
             if is_pg:
                 # 远程库：单条 SQL 拿全部目标表的列（少则 1 次往返，多则只有缺列时补 ALTER）
                 tables_by_cols = _pg_table_columns(conn, list(_COLUMN_FIXES.keys()))
                 if "species" not in tables_by_cols:
                     logger.info("Species table does not exist yet, skipping manual column checks.")
                     return
+                # 先补新增表，再补缺列
+                for ddl in _NEW_TABLES.values():
+                    conn.execute(text(ddl[dialect_key]))
                 for table_name, fixes in _COLUMN_FIXES.items():
                     if table_name not in tables_by_cols:
                         continue  # 表不存在则跳过该表的列检查（与历史行为一致）
@@ -79,6 +101,8 @@ def ensure_db_schema_updates():
                 if "species" not in tables:
                     logger.info("Species table does not exist yet, skipping manual column checks.")
                     return
+                for ddl in _NEW_TABLES.values():
+                    conn.execute(text(ddl[dialect_key]))
                 for table_name, fixes in _COLUMN_FIXES.items():
                     if table_name not in tables:
                         continue

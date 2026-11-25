@@ -61,7 +61,15 @@ def init_app():
     logger.info("Initializing application...")
     try:
         if os.getenv("VERCEL"):
-            logger.info("Vercel environment detected. Skipping create_all and bootstrap for cold start speed.")
+            # Vercel Serverless：不阻塞启动，通过 503 中间件优雅降级。
+            # 这里只做一次“缺列/缺表”的轻量补丁（幂等、只在缺的时候 ALTER/CREATE），
+            # 保证新增字段上线后首次请求就能用；失败也只记日志，不影响其它接口。
+            try:
+                from bootstrap import ensure_db_schema_updates
+
+                ensure_db_schema_updates()
+            except Exception as exc:  # pragma: no cover - 仅线上兜底
+                logger.warning("Vercel schema ensure skipped: %s", exc)
             _initialized = True
             return
 
