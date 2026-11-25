@@ -53,3 +53,6 @@ _tmp_*.log
 _dev_*.log
 _dev_*.err.log
 
+
+# local sqlite backups (never commit)
+backend/*.db.bak-*

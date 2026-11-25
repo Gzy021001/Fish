@@ -41,7 +41,9 @@ export default defineConfig({
       // Windows 上 watch 其中的临时文件会 EBUSY 导致 Vite 崩溃，这里直接忽略。
       // _tmp_chrome 是浏览器自动化留下的 Chrome 用户数据目录，GPU 缓存文件
       // 会被周期性锁定，同样会触发 EBUSY 崩溃，一并忽略。
-      ignored: ['**/.*.tmpdir/**', '**/_tmp_chrome*/**'],
+      // 仓库根目录的临时调试脚本/截图/日志（_tmp_* / _dev_*）写完就删，
+      // watcher 撞上删除中的文件同样会 EBUSY 把整个 dev server 带崩。
+      ignored: ['**/.*.tmpdir/**', '**/_tmp_chrome*/**', '**/_tmp_*', '**/_dev_*'],
     },
     hmr: {
       protocol: 'ws',
