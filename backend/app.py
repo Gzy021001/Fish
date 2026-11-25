@@ -1,4 +1,4 @@
-﻿import logging
+import logging
 import traceback
 import os
 import time
@@ -29,6 +29,9 @@ _last_init_attempt = 0.0
 _init_lock = threading.Lock()
 # 初始化失败后的重试间隔（秒）：冷启动时 DB 抖动导致的失败，后续请求会触发重试而不是永久 503
 _INIT_RETRY_INTERVAL = 10.0
+# 冷启动时单个请求最多等初始化多久（秒）再回 503：要小于 Serverless 单次调用上限（默认 10s），
+# 让请求"等一下就成功"，而不是立刻失败把客户端逼成重试风暴
+_INIT_WAIT_SECONDS = 8.0
 
 
 def _tables_exist():
@@ -145,18 +148,34 @@ def create_app() -> FastAPI:
             ):
                 loop = asyncio.get_running_loop()
                 loop.run_in_executor(None, init_app)
-            response = JSONResponse(
-                status_code=503,
-                content={
-                    # 初始化失败时给准确提示，避免用户误以为"服务器还在启动"
-                    "detail": (
-                        "服务暂时不可用：数据库连接失败，正在自动重试，请稍后刷新"
-                        if _init_error
-                        else "服务器正在启动，请稍后重试"
-                    ),
-                    "error": "初始化失败，请检查数据库连接配置" if _init_error else None,
-                },
-            )
+            # 冷启动时先等一小会儿初始化完成，再决定是否回 503。
+            # 以前是立刻 503：客户端拿到"立刻失败"就会马上重发，Vercel 把请求分散到
+            # 更多冷实例上，每个实例又各自初始化，形成"越重试越 503"的风暴（导入 38 片时
+            # 出现过 1/4/5/6…/18 片连环 503）。这里让请求等初始化，实例保持"忙"而不是
+            # 立刻失败，既不会扩散实例，也能让第一个请求直接成功。
+            waited = 0.0
+            while (
+                not _initialized
+                and not _init_error
+                and waited < _INIT_WAIT_SECONDS
+            ):
+                await asyncio.sleep(0.2)
+                waited += 0.2
+            if _initialized:
+                response = await call_next(request)
+            else:
+                response = JSONResponse(
+                    status_code=503,
+                    content={
+                        # 初始化失败时给准确提示，避免用户误以为"服务器还在启动"
+                        "detail": (
+                            "服务暂时不可用：数据库连接失败，正在自动重试，请稍后刷新"
+                            if _init_error
+                            else "服务器正在启动，请稍后重试"
+                        ),
+                        "error": "初始化失败，请检查数据库连接配置" if _init_error else None,
+                    },
+                )
         else:
             response = await call_next(request)
 

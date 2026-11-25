@@ -143,6 +143,15 @@ export async function waitForBackendReady(timeoutMs = 60_000): Promise<void> {
   throw new Error(`${last}，已等待 ${Math.round(timeoutMs / 1000)} 秒仍未就绪，请稍后重试`)
 }
 
+/** 只认「启动守卫」的 503：它由后端中间件在进入业务代码之前返回，绝对没有落库，
+ *  重试是安全的。其它 503（如数据库瞬时异常）可能已执行一部分，按项目约定写请求不重试。 */
+function isStartingUpError(error: ApiError): boolean {
+  return (
+    error?.response?.status === 503 &&
+    String(error.response.data?.detail || '').includes('服务器正在启动')
+  )
+}
+
 /** Chunked batch import: splits large imports into small chunks to avoid serverless timeout.
  *  覆盖模式（默认开启）：首片带上整份文件的全部放生日期，先按日期清空旧数据；其余分片只追加。
  *  这样跨多个日期的导入（如整年模板）也能正确覆盖，不会留下重复数据。
@@ -152,7 +161,7 @@ export async function saveImportedRowsChunked(
   onProgress?: (done: number, total: number) => void,
   options?: { replace?: boolean; expenses?: ImportExpenseRow[] },
 ): Promise<{ success_count: number; skip_count: number; errors: string[] }> {
-  // 冷启动保护：等后端初始化完成再发第一片（写请求不自动重试，撞上 503 会白丢一片）
+  // 冷启动保护：先等后端初始化完成，再发第一片（守卫 503 在片内还会补发一次）
   await waitForBackendReady()
 
   const replaceEnabled = options?.replace ?? true
@@ -187,34 +196,44 @@ export async function saveImportedRowsChunked(
   for (let ci = 0; ci < chunks.length; ci++) {
     const isFirst = ci === 0
     const replace = isFirst && replaceEnabled
-    try {
-      const payload: Record<string, unknown> = {
-        rows: chunks[ci],
-        replace,
+    let attempt = 0
+    for (;;) {
+      try {
+        const payload: Record<string, unknown> = {
+          rows: chunks[ci],
+          replace,
+        }
+        if (replace && allDates.length > 0) {
+          payload.replace_dates = allDates
+        }
+        // 车费/船费只需在首片随同提交（后端按日期覆盖），避免重复插入
+        if (isFirst && expenses.length > 0) {
+          payload.expenses = expenses
+          payload.expense_dates = allDates
+        }
+        const res = await api.post('/bills/batch', payload, { timeout: 45000 })
+        totalSuccess += res.data.success_count ?? 0
+        totalSkip += res.data.skip_count ?? 0
+        if (res.data.errors) allErrors.push(...res.data.errors)
+        break
+      } catch (err: unknown) {
+        const error = err as ApiError
+        // 冷启动守卫：等实例初始化完再重发同一片，最多补 2 次（不会写入脏数据）
+        if (isStartingUpError(error) && attempt < 2) {
+          attempt += 1
+          await waitForBackendReady()
+          continue
+        }
+        const msg = error.response?.data?.detail || error.message || '未知错误'
+        // 一片失败就整单停下：首片失败说明「按日期覆盖」根本没执行，继续追加会和旧数据重复；
+        // 中途失败则会留下「一半已覆盖、一半没写」的半套数据。停下并提示重试更安全
+        // （重试仍是覆盖模式，会按日期重新清空后再写）。
+        throw new Error(
+          `导入已停止：第 ${ci + 1}/${chunks.length} 片失败（${msg}）。` +
+            (ci === 0 ? '未写入任何数据。' : `已写入前 ${ci} 片，数据不完整。`) +
+            '请稍后重试。',
+        )
       }
-      if (replace && allDates.length > 0) {
-        payload.replace_dates = allDates
-      }
-      // 车费/船费只需在首片随同提交（后端按日期覆盖），避免重复插入
-      if (isFirst && expenses.length > 0) {
-        payload.expenses = expenses
-        payload.expense_dates = allDates
-      }
-      const res = await api.post('/bills/batch', payload, { timeout: 45000 })
-      totalSuccess += res.data.success_count ?? 0
-      totalSkip += res.data.skip_count ?? 0
-      if (res.data.errors) allErrors.push(...res.data.errors)
-    } catch (err: unknown) {
-      const error = err as ApiError
-      const msg = error.response?.data?.detail || error.message || '未知错误'
-      // 一片失败就整单停下：首片失败说明「按日期覆盖」根本没执行，继续追加会和旧数据重复；
-      // 中途失败则会留下「一半已覆盖、一半没写」的半套数据。停下并提示重试更安全
-      // （重试仍是覆盖模式，会按日期重新清空后再写）。
-      throw new Error(
-        `导入已停止：第 ${ci + 1}/${chunks.length} 片失败（${msg}）。` +
-          (ci === 0 ? '未写入任何数据。' : `已写入前 ${ci} 片，数据不完整。`) +
-          '请稍后重试。',
-      )
     }
     if (onProgress) onProgress(ci + 1, chunks.length)
   }
