@@ -29,9 +29,9 @@ _last_init_attempt = 0.0
 _init_lock = threading.Lock()
 # 初始化失败后的重试间隔（秒）：冷启动时 DB 抖动导致的失败，后续请求会触发重试而不是永久 503
 _INIT_RETRY_INTERVAL = 10.0
-# 冷启动时单个请求最多等初始化多久（秒）再回 503：要小于 Serverless 单次调用上限（默认 10s），
-# 让请求"等一下就成功"，而不是立刻失败把客户端逼成重试风暴
-_INIT_WAIT_SECONDS = 8.0
+# 冷启动时单个请求最多等初始化多久（秒）再回 503：要留够余量给业务处理，
+# 别把 Vercel 单次调用（默认 10s）耗在等待上；等不到就回 503，客户端会等就绪后补发
+_INIT_WAIT_SECONDS = 5.0
 
 
 def _tables_exist():
