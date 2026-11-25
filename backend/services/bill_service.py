@@ -182,6 +182,31 @@ def _day_key(value):
     return value.isoformat() if hasattr(value, "isoformat") else value
 
 
+def _expenses_by_day(db: Session, date_from: str = None, date_to: str = None):
+    """按放生日期汇总车费/船费（随喜汇总列表按天展示用）。"""
+    query = db.query(
+        models.WeekExpense.release_date,
+        models.WeekExpense.name,
+        func.sum(models.WeekExpense.amount),
+    ).filter(models.WeekExpense.is_deleted.is_(False))
+    if date_from:
+        query = query.filter(models.WeekExpense.release_date >= date_from)
+    if date_to:
+        query = query.filter(models.WeekExpense.release_date <= date_to)
+
+    result: dict = {}
+    for day, name, amount in query.group_by(models.WeekExpense.release_date, models.WeekExpense.name).all():
+        bucket = result.setdefault(_day_key(day), {"car": 0.0, "ship": 0.0, "other": 0.0})
+        value = float(amount or 0)
+        if name == "车费":
+            bucket["car"] += value
+        elif name == "船费":
+            bucket["ship"] += value
+        else:
+            bucket["other"] += value
+    return result
+
+
 def _split_wechat_by_day(db: Session, status: str = None, date_str: str = None, date_from: str = None, date_to: str = None, q: str = None, exclude_packaging: bool = False, has_suixi: bool = False):
     """微信两列口径（与导出模板的「微信 / 微信」两行一致）：
     当天第一笔微信 -> 微信1，当天其余微信合计 -> 微信2；按单据创建顺序取「第一笔」。"""
@@ -248,15 +273,22 @@ def _list_bills_by_day(db: Session, page: int = 1, page_size: int = 10, status: 
     sum_wechat2 = sum(wechat_rest.values(), 0)
 
     items = []
+    expenses_by_day = _expenses_by_day(db, date_from, date_to)
     for row in rows:
         release = row.release_date
         key = _day_key(release)
+        expense = expenses_by_day.get(key) or {"car": 0.0, "ship": 0.0, "other": 0.0}
         items.append({
             "release_date": key,
             "alipay_amount": row.alipay_amount or 0,
             "wechat1_amount": wechat_first.get(key, 0),
             "wechat2_amount": wechat_rest.get(key, 0),
             "suixi_amount": row.suixi_amount or 0,
+            # 当天车费/船费（模板表尾的费用行，随喜汇总里按天单独列出）
+            "expense_car": expense["car"],
+            "expense_ship": expense["ship"],
+            "expense_other": expense["other"],
+            "expense_total": expense["car"] + expense["ship"] + expense["other"],
         })
 
     return {
@@ -271,6 +303,11 @@ def _list_bills_by_day(db: Session, page: int = 1, page_size: int = 10, status: 
         "sum_wechat2": sum_wechat2,
         "sum_suixi": sum_suixi,
         "sum_paid_amount": sum_paid_amount,
+        "sum_expense_car": sum(v["car"] for v in expenses_by_day.values()),
+        "sum_expense_ship": sum(v["ship"] for v in expenses_by_day.values()),
+        "sum_expense": sum(
+            v["car"] + v["ship"] + v["other"] for v in expenses_by_day.values()
+        ),
     }
 
 

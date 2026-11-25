@@ -75,36 +75,66 @@
           <div class="px-4 py-2.5 text-center whitespace-nowrap">
             随喜放生（元）
           </div>
+          <div class="px-4 py-2.5 text-center whitespace-nowrap">
+            车费/船费（元）
+          </div>
         </div>
 
         <!-- 表体（区域内滚动） -->
         <div class="flex-1 min-h-0 overflow-auto panel-scrollbar">
-          <div
+          <template
             v-for="(row, index) in rows"
             :key="row.release_date ?? `row-${index}`"
-            class="grid suixi-grid text-sm border-b border-dunhuang-yellow/15 hover:bg-[#fbf6ec] transition-colors"
           >
-            <div class="px-3 py-2 text-center text-dunhuang-text/80 tabular-nums">
-              {{ (currentPage - 1) * pageSize + index + 1 }}
-            </div>
-            <div class="px-4 py-2 text-center font-medium whitespace-nowrap">
-              {{ dateStr(row.release_date) || "—" }}
-            </div>
-            <div class="px-4 py-2 text-center tabular-nums">
-              {{ formatMoney(row.alipay_amount) }}
-            </div>
-            <div class="px-4 py-2 text-center tabular-nums">
-              {{ formatMoney(row.wechat1_amount) }}
-            </div>
-            <div class="px-4 py-2 text-center tabular-nums">
-              {{ formatMoney(row.wechat2_amount) }}
-            </div>
             <div
-              class="px-4 py-2 text-center tabular-nums text-dunhuang-red font-medium"
+              class="grid suixi-grid text-sm border-b border-dunhuang-yellow/15 hover:bg-[#fbf6ec] transition-colors"
             >
-              {{ formatMoney(row.suixi_amount) }}
+              <div
+                class="px-3 py-2 text-center text-dunhuang-text/80 tabular-nums"
+              >
+                {{ (currentPage - 1) * pageSize + index + 1 }}
+              </div>
+              <div class="px-4 py-2 text-center font-medium whitespace-nowrap">
+                {{ dateStr(row.release_date) || "—" }}
+              </div>
+              <div class="px-4 py-2 text-center tabular-nums">
+                {{ formatMoney(row.alipay_amount) }}
+              </div>
+              <div class="px-4 py-2 text-center tabular-nums">
+                {{ formatMoney(row.wechat1_amount) }}
+              </div>
+              <div class="px-4 py-2 text-center tabular-nums">
+                {{ formatMoney(row.wechat2_amount) }}
+              </div>
+              <div
+                class="px-4 py-2 text-center tabular-nums text-dunhuang-red font-medium"
+              >
+                {{ formatMoney(row.suixi_amount) }}
+              </div>
+              <div class="px-4 py-2 text-center tabular-nums text-dunhuang-text/35">
+                {{ row.expense_total ? formatMoney(row.expense_total) : "—" }}
+              </div>
             </div>
-          </div>
+
+            <!-- 车费/船费：模板表尾的费用行，按天单独列出 -->
+            <div
+              v-for="item in dayExpenses(row)"
+              :key="`${row.release_date}-${item.label}`"
+              class="grid suixi-grid text-xs border-b border-dashed border-dunhuang-yellow/20 bg-[#fdf9f1]"
+            >
+              <div></div>
+              <div class="px-4 py-1.5 pl-6 text-dunhuang-text/55">
+                └ {{ item.label }}
+              </div>
+              <div class="col-span-4"></div>
+              <div
+                class="px-4 py-1.5 text-center tabular-nums"
+                :class="item.cls"
+              >
+                {{ formatMoney(item.value) }}
+              </div>
+            </div>
+          </template>
           <div
             v-if="rows.length === 0"
             class="py-12 text-center text-sm text-dunhuang-text/40"
@@ -133,6 +163,9 @@
           </div>
           <div class="px-4 py-2 text-center tabular-nums text-dunhuang-red">
             {{ formatMoney(sumSuixi) }}
+          </div>
+          <div class="px-4 py-2 text-center tabular-nums text-dunhuang-orange">
+            {{ formatMoney(sumExpense) }}
           </div>
         </div>
       </div>
@@ -175,10 +208,25 @@ const {
   sumWechat1,
   sumWechat2,
   sumSuixi,
+  sumExpense,
   fetchSummary,
   applyFilters,
   resetFilters,
 } = useSuixiSummary();
+
+/** 当天要单独列出的费用行（车费/船费/其它耗材），没有就不渲染 */
+const dayExpenses = (row: {
+  expense_car?: number;
+  expense_ship?: number;
+  expense_other?: number;
+}) => {
+  const items: { label: string; value: number; cls: string }[] = [
+    { label: "车费", value: row.expense_car || 0, cls: "text-dunhuang-orange/85" },
+    { label: "船费", value: row.expense_ship || 0, cls: "text-dunhuang-orange/85" },
+    { label: "其它支出", value: row.expense_other || 0, cls: "text-dunhuang-text/50" },
+  ];
+  return items.filter((item) => item.value);
+};
 
 // 四张合计卡：标签/强调色随分类走，颜色类名保持字面量以便 Tailwind 扫描
 const summaryCards = computed(() => [
@@ -220,6 +268,8 @@ onMounted(() => {
 <style scoped>
 /* 表头 / 数据行 / 总计行共用同一套列宽，保证三处对齐 */
 .suixi-grid {
-  grid-template-columns: 64px minmax(88px, 1.15fr) repeat(4, minmax(72px, 1fr));
+  grid-template-columns:
+    64px minmax(88px, 1.15fr) repeat(4, minmax(72px, 1fr))
+    minmax(96px, 0.95fr);
 }
 </style>

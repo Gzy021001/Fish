@@ -10,6 +10,11 @@ export interface SuixiDailyRow {
   wechat1_amount: number | null
   wechat2_amount: number | null
   suixi_amount: number | null
+  /** 当天车费/船费（模板表尾的费用行） */
+  expense_car?: number
+  expense_ship?: number
+  expense_other?: number
+  expense_total?: number
 }
 
 /**
@@ -30,6 +35,10 @@ export function useSuixiSummary() {
   const sumWechat1 = ref(0)
   const sumWechat2 = ref(0)
   const sumSuixi = ref(0)
+  // 车费/船费合计（与当前筛选一致）
+  const sumExpenseCar = ref(0)
+  const sumExpenseShip = ref(0)
+  const sumExpense = ref(0)
 
   const totalPages = computed(() => Math.ceil(totalItems.value / pageSize.value))
 
@@ -74,6 +83,9 @@ export function useSuixiSummary() {
         sumWechat1.value = Number(data.sum_wechat1 ?? data.sum_wechat ?? 0)
         sumWechat2.value = Number(data.sum_wechat2 || 0)
         sumSuixi.value = Number(data.sum_suixi || 0)
+        sumExpenseCar.value = Number(data.sum_expense_car || 0)
+        sumExpenseShip.value = Number(data.sum_expense_ship || 0)
+        sumExpense.value = Number(data.sum_expense || 0)
       } else {
         rows.value = []
         totalItems.value = 0
@@ -81,6 +93,9 @@ export function useSuixiSummary() {
         sumWechat1.value = 0
         sumWechat2.value = 0
         sumSuixi.value = 0
+        sumExpenseCar.value = 0
+        sumExpenseShip.value = 0
+        sumExpense.value = 0
       }
 
       // 删除/筛选后当前页可能越界：回退到最后一页（watch(currentPage) 统一重新拉取）
@@ -138,6 +153,9 @@ export function useSuixiSummary() {
     sumWechat1,
     sumWechat2,
     sumSuixi,
+    sumExpenseCar,
+    sumExpenseShip,
+    sumExpense,
     fetchSummary,
     applyFilters,
     resetFilters,
