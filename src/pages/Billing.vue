@@ -1130,7 +1130,7 @@
     <Transition name="slide-up">
       <div
         v-if="showViewModal"
-        class="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-50 bg-white rounded-2xl shadow-2xl border border-dunhuang-yellow/30 w-[calc(100vw-1.5rem)] max-w-xl max-h-[85vh] flex flex-col overflow-hidden"
+        class="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-50 bg-white rounded-2xl shadow-2xl border border-dunhuang-yellow/30 w-[calc(100vw-1.5rem)] max-w-md max-h-[85vh] flex flex-col overflow-hidden"
       >
         <!-- 标题栏 -->
         <div
@@ -1166,12 +1166,14 @@
         <div class="px-6 py-5 overflow-y-auto">
           <!-- 品种 + 放生日期 -->
           <div
-            class="flex items-start justify-between gap-6 pb-5 border-b border-dunhuang-yellow/15"
+            class="flex items-start justify-between gap-6 pb-4 border-b border-dunhuang-yellow/15"
           >
             <div class="min-w-0">
-              <div class="text-xs text-dunhuang-text/45 mb-1.5">品种</div>
+              <div class="text-[11px] tracking-wide text-dunhuang-text/45 mb-1">
+                品种
+              </div>
               <div
-                class="text-lg font-serif font-bold text-dunhuang-blue truncate"
+                class="text-lg font-serif font-bold text-dunhuang-blue leading-6 truncate"
               >
                 {{
                   getSpeciesName(
@@ -1182,92 +1184,107 @@
               </div>
             </div>
             <div class="text-right shrink-0">
-              <div class="text-xs text-dunhuang-text/45 mb-1.5">放生日期</div>
-              <div class="text-sm font-medium text-dunhuang-blue tabular-nums">
-                {{ dateStr(viewingBill?.release_date || viewingBill?.created_at) || "-" }}
+              <div class="text-[11px] tracking-wide text-dunhuang-text/45 mb-1">
+                放生日期
+              </div>
+              <div
+                class="text-sm font-medium text-dunhuang-blue tabular-nums leading-6"
+              >
+                {{
+                  dateStr(
+                    viewingBill?.release_date || viewingBill?.created_at,
+                  ) || "-"
+                }}
               </div>
             </div>
           </div>
 
-          <!-- 数量与金额 -->
-          <div class="grid grid-cols-2 gap-x-6 gap-y-5 py-5">
-            <div>
-              <div class="text-xs text-dunhuang-text/45 mb-1.5">重量（斤）</div>
-              <div class="tabular-nums text-sm text-dunhuang-text/80">
-                {{ formatMoney(inJin(viewingBill?.weight)) }}
-              </div>
-            </div>
-            <div>
-              <div class="text-xs text-dunhuang-text/45 mb-1.5">
-                单价（元/斤）
-              </div>
-              <div class="tabular-nums text-sm text-dunhuang-red">
-                {{ formatMoney(pricePerJin(viewingBill?.unit_price)) }}
-              </div>
-            </div>
-            <div>
-              <div class="text-xs text-dunhuang-text/45 mb-1.5">总计（元）</div>
-              <div
-                class="tabular-nums text-sm text-dunhuang-green font-medium"
+          <!-- 数量与金额：标签靠左、数值靠右，逐行对齐 -->
+          <div class="divide-y divide-dunhuang-yellow/10">
+            <div class="flex items-baseline justify-between gap-4 py-2.5">
+              <span class="text-xs text-dunhuang-text/50">重量（斤）</span>
+              <span
+                class="text-sm font-medium text-dunhuang-text/85 tabular-nums"
               >
+                {{ formatMoney(inJin(viewingBill?.weight)) }}
+              </span>
+            </div>
+            <div class="flex items-baseline justify-between gap-4 py-2.5">
+              <span class="text-xs text-dunhuang-text/50">单价（元/斤）</span>
+              <span class="text-sm font-medium text-dunhuang-red tabular-nums">
+                {{ formatMoney(pricePerJin(viewingBill?.unit_price)) }}
+              </span>
+            </div>
+            <div class="flex items-baseline justify-between gap-4 py-2.5">
+              <span class="text-xs text-dunhuang-text/50">总计（元）</span>
+              <span class="text-sm font-semibold text-dunhuang-green tabular-nums">
                 {{ formatMoney(viewingBill?.subtotal) }}
-              </div>
+              </span>
             </div>
-            <div>
-              <div class="text-xs text-dunhuang-text/45 mb-1.5">服务费（元）</div>
-              <div class="tabular-nums text-sm text-dunhuang-text/70">
+            <div class="flex items-baseline justify-between gap-4 py-2.5">
+              <span class="text-xs text-dunhuang-text/50">服务费（元）</span>
+              <span class="text-sm font-medium text-dunhuang-text/70 tabular-nums">
                 {{ viewingBill ? formatFee(viewingBill) : "" }}
-              </div>
+              </span>
             </div>
-            <div v-if="viewingBill?.alipay_amount != null">
-              <div class="text-xs text-dunhuang-text/45 mb-1.5">支付宝（元）</div>
-              <div class="tabular-nums text-sm text-dunhuang-text/70">
+            <div
+              v-if="viewingBill?.alipay_amount != null"
+              class="flex items-baseline justify-between gap-4 py-2.5"
+            >
+              <span class="text-xs text-dunhuang-text/50">支付宝（元）</span>
+              <span class="text-sm font-medium text-dunhuang-text/70 tabular-nums">
                 {{ formatMoney(viewingBill.alipay_amount) }}
-              </div>
+              </span>
             </div>
-            <div v-if="viewingBill?.wechat_amount != null">
-              <div class="text-xs text-dunhuang-text/45 mb-1.5">微信（元）</div>
-              <div class="tabular-nums text-sm text-dunhuang-text/70">
+            <div
+              v-if="viewingBill?.wechat_amount != null"
+              class="flex items-baseline justify-between gap-4 py-2.5"
+            >
+              <span class="text-xs text-dunhuang-text/50">微信（元）</span>
+              <span class="text-sm font-medium text-dunhuang-text/70 tabular-nums">
                 {{ formatMoney(viewingBill.wechat_amount) }}
-              </div>
+              </span>
             </div>
-            <div v-if="viewingBill?.suixi_amount != null">
-              <div class="text-xs text-dunhuang-text/45 mb-1.5">
-                随喜放生（元）
-              </div>
-              <div class="tabular-nums text-sm text-dunhuang-text/70">
+            <div
+              v-if="viewingBill?.suixi_amount != null"
+              class="flex items-baseline justify-between gap-4 py-2.5"
+            >
+              <span class="text-xs text-dunhuang-text/50">随喜放生（元）</span>
+              <span class="text-sm font-medium text-dunhuang-text/70 tabular-nums">
                 {{ formatMoney(viewingBill.suixi_amount) }}
-              </div>
+              </span>
             </div>
           </div>
 
           <!-- 实付：本行分摊 + 本批总额 -->
           <div
-            class="rounded-xl border border-dunhuang-red/15 bg-dunhuang-red/[0.04] px-4 py-3.5 flex items-end justify-between"
+            class="mt-4 rounded-xl border border-dunhuang-red/15 bg-dunhuang-red/[0.04] px-4 py-3.5"
           >
-            <div>
-              <div class="text-xs text-dunhuang-text/55">实付（元）</div>
-              <div
-                v-if="viewingBill?.batch_paid != null"
-                class="text-[11px] text-dunhuang-text/45 mt-1 tabular-nums"
-              >
-                本批实付 {{ formatMoney(viewingBill.batch_paid) }}
+            <div class="flex items-end justify-between gap-4">
+              <div class="min-w-0">
+                <div class="text-xs text-dunhuang-text/55">实付（元）</div>
+                <div
+                  v-if="viewingBill?.batch_paid != null"
+                  class="text-[11px] text-dunhuang-text/45 mt-1 tabular-nums"
+                >
+                  本批实付 {{ formatMoney(viewingBill.batch_paid) }}
+                </div>
               </div>
-            </div>
-            <div
-              class="tabular-nums font-bold text-dunhuang-red text-2xl leading-none"
-            >
-              {{
-                viewingBill?.paid_amount != null
-                  ? formatMoney(viewingBill.paid_amount)
-                  : "—"
-              }}
+              <div
+                class="tabular-nums font-bold text-dunhuang-red text-2xl leading-none"
+              >
+                {{
+                  viewingBill?.paid_amount != null
+                    ? formatMoney(viewingBill.paid_amount)
+                    : "—"
+                }}
+              </div>
             </div>
           </div>
 
           <!-- 记录时间 -->
           <div
-            class="flex items-center justify-between pt-4 mt-5 border-t border-dunhuang-yellow/15 text-[11px] text-dunhuang-text/40"
+            class="flex items-center justify-between pt-3.5 mt-4 border-t border-dunhuang-yellow/15 text-[11px] text-dunhuang-text/40"
           >
             <span>记录添加时间</span>
             <span class="tabular-nums">{{
